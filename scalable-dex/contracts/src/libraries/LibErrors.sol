@@ -1,0 +1,78 @@
+pragma solidity ^0.5.2;
+
+contract LibErrors {
+    // Users.
+    string constant INVALID_SIGNATURE = "INVALID_SIGNATURE";
+    string constant USER_UNREGISTERED = "USER_UNREGISTERED";
+    string constant INVALID_STARK_KEY = "INVALID_STARK_KEY";
+    string constant INVALID_ETHER_KEY = "INVALID_ETHER_KEY";
+    string constant STARK_KEY_UNAVAILABLE = "STARK_KEY_UNAVAILABLE";
+    string constant ETHER_KEY_UNAVAILABLE = "ETHER_KEY_UNAVAILABLE";
+
+    // Tokens.
+    string constant ONLY_TOKENS_ADMIN = "ONLY_TOKENS_ADMIN";
+    string constant TOKEN_UNREGISTERED = "TOKEN_UNREGISTERED";
+    string constant TOKEN_REGISTERED = "TOKEN_REGISTERED";
+    string constant INVALID_QUANTUM = "INVALID_QUANTUM";
+    string constant INVALID_AMOUNT = "INVALID_AMOUNT";
+    string constant INVALID_ASSET_STRING = "INVALID_ASSET_STRING";
+    string constant INVALID_TOKEN_ID = "INVALID_TOKEN_ID";
+    string constant DEQUANTIZATION_OVERFLOW = "DEQUANTIZATION_OVERFLOW";
+
+    // Deposits.
+    string constant DEPOSIT_OVERFLOW = "DEPOSIT_OVERFLOW";
+    string constant DEPOSIT_LOCKED = "DEPOSIT_LOCKED";
+    string constant DEPOSIT_INSUFFICIENT = "DEPOSIT_INSUFFICIENT";
+    string constant DEPOSIT_NOT_CANCELED = "DEPOSIT_NOT_CANCELED";
+    string constant OUT_OF_RANGE_VAULT_ID = "OUT_OF_RANGE_VAULT_ID";
+
+    // Withdrawals.
+    string constant WITHDRAWAL_OVERFLOW = "WITHDRAWAL_OVERFLOW";
+
+    // FullWithdrawals
+    string constant FULL_WITHDRAWAL_UNREQUESTED = "FULL_WITHDRAWAL_UNREQUESTED";
+    string constant FULL_WITHDRAWAL_PENDING = "FULL_WITHDRAWAL_PENDING";
+
+    string constant ESCAPE_ALREADY_USED = "ESCAPE_ALREADY_USED";
+    string constant ESCAPE_LACKS_PROOF = "ESCAPE_LACKS_PROOF";
+
+    // Freezable.
+    string constant STATE_IS_FROZEN = "STATE_IS_FROZEN";
+    string constant STATE_NOT_FROZEN = "STATE_NOT_FROZEN";
+    string constant UNFREEZE_NOT_ALLOWED_YET = "UNFREEZE_NOT_ALLOWED_YET";
+
+    // State.
+    string constant VAULT_ROOT_INCORRECT = "VAULT_ROOT_INCORRECT";
+    string constant ORDER_ROOT_INCORRECT = "ORDER_ROOT_INCORRECT";
+    string constant VAULT_HEIGHT_INCORRECT = "VAULT_HEIGHT_INCORRECT";
+    string constant ORDER_HEIGHT_INCORRECT = "ORDER_HEIGHT_INCORRECT";
+    string constant NO_AVAILABILITY_PROOF = "NO_AVAILABILITY_PROOF";
+    string constant NO_STATE_TRANSITION_PROOF = "NO_STATE_TRANSITION_PROOF";
+    string constant NO_AVAILABILITY_VERIFIERS = "NO_AVAILABILITY_VERIFIERS";
+    string constant NO_STATE_TRANSITION_VERIFIERS = "NO_STATE_TRANSITION_VERIFIERS";
+
+    // Governance.
+    string constant ONLY_GOVERNANCE = "ONLY_GOVERNANCE";
+    string constant ONLY_CANDIDATE_GOVERNOR = "ONLY_CANDIDATE_GOVERNOR";
+    string constant ALREADY_GOVERNOR = "ALREADY_GOVERNOR";
+    string constant TOO_MANY_GOVERNORS = "TOO_MANY_GOVERNORS";
+    string constant NOT_GOVERNOR = "NOT_GOVERNOR";
+    string constant GOVERNOR_SELF_REMOVE = "GOVERNOR_SELF_REMOVE";
+
+    // Operator
+    string constant ONLY_OPERATOR = "ONLY_OPERATOR";
+    string constant ONLY_CANDIDATE_OPERATOR = "ONLY_CANDIDATE_OPERATOR";
+
+    // Main
+    string constant INCORRECT_INIT_DATA_SIZE = "INCORRECT_INIT_DATA_SIZE";
+
+    // APROVAL_CHAIN
+    string constant CHAIN_AT_MAX_CAPACITY = "CHAIN_AT_MAX_CAPACITY";
+    string constant ENTRY_ALREADY_EXISTS = "ENTRY_ALREADY_EXISTS";
+    string constant ENTRY_DOES_NOT_EXIST = "ENTRY_DOES_NOT_EXIST";
+    string constant ENTRY_NOT_ENABLED = "ENTRY_NOT_ENABLED";
+    string constant REMOVAL_NOT_ANNOUNCED = "REMOVAL_NOT_ANNOUNCED";
+    string constant REMOVAL_NOT_ENABLED_YET = "REMOVAL_NOT_ENABLED_YET";
+    string constant UNEXPECTED_CONTRACT_IDENTIFIER = "UNEXPECTED_CONTRACT_IDENTIFIER";
+    string constant LAST_ENTRY_MAY_NOT_BE_REMOVED = "LAST_ENTRY_MAY_NOT_BE_REMOVED";
+}
