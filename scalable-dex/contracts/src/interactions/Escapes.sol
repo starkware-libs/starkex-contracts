@@ -1,6 +1,5 @@
 pragma solidity ^0.5.2;
 
-import "../libraries/LibErrors.sol";
 import "../libraries/LibConstants.sol";
 import "../interfaces/IVerifierActions.sol";
 import "../interfaces/MFreezable.sol";
@@ -29,7 +28,7 @@ import "../components/MainStorage.sol";
 
   Uses MFreezable, MStateRoot and MWithdrawal.
 */
-contract Escapes is MainStorage, LibErrors, MFreezable, MStateRoot, MWithdrawal {
+contract Escapes is MainStorage, MFreezable, MStateRoot, MWithdrawal {
     function initialize (
         IFactRegistry escapeVerifier
     ) internal
@@ -49,7 +48,7 @@ contract Escapes is MainStorage, LibErrors, MFreezable, MStateRoot, MWithdrawal 
         external
         onlyFrozen()
     {
-        require(escapesUsed[vaultId] == false, ESCAPE_ALREADY_USED);
+        require(escapesUsed[vaultId] == false, "ESCAPE_ALREADY_USED");
 
         // Escape can be used only once.
         escapesUsed[vaultId] = true;
@@ -59,7 +58,7 @@ contract Escapes is MainStorage, LibErrors, MFreezable, MStateRoot, MWithdrawal 
             abi.encode(
         starkKey, tokenId, quantizedAmount, getVaultRoot(), getVaultTreeHeight(), vaultId));
 
-        require(escapeVerifier_.isValid(claimHash) == true, ESCAPE_LACKS_PROOF);
+        require(escapeVerifier_.isValid(claimHash) == true, "ESCAPE_LACKS_PROOF");
 
         allowWithdrawal(starkKey, tokenId, quantizedAmount);
     }

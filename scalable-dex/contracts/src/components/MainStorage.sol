@@ -89,4 +89,7 @@ contract MainStorage is ProxyStorage {
     // Timelocked state transition and availability verification chain.
     ApprovalChainData verifiersChain;
     ApprovalChainData availabilityVerifiersChain;
+
+    // Batch id of last accepted proof.
+    uint256 lastBatchId;
 }

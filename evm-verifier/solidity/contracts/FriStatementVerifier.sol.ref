@@ -9,7 +9,7 @@ import "../VerifierChannel.sol";
 /*
   This contract verifies all the FRI layer, one by one, using the FriStatementContract.
   The first layer is computed from decommitments, the last layer is computed by evaluating the
-  fully commited polynomial, and the mid-layers are provided in the proof only as hashed data.
+  fully committed polynomial, and the mid-layers are provided in the proof only as hashed data.
 */
 contract FriStatementVerifier is MemoryMap, MemoryAccessUtils, VerifierChannel, HornerEvaluator {
     event LogGas(string name, uint256 val);

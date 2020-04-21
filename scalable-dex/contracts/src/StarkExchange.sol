@@ -15,10 +15,8 @@ import "./interactions/StateRoot.sol";
 import "./interactions/UpdateState.sol";
 import "./interactions/Withdrawals.sol";
 import "./interfaces/IFactRegistry.sol";
-import "./libraries/LibErrors.sol";
 
 contract StarkExchange is
-    LibErrors,
     IVerifierActions,
     MainGovernance,
     ApprovalChain,
@@ -35,8 +33,8 @@ contract StarkExchange is
     Escapes,
     UpdateState
 {
-    string constant public VERSION = "0.0.1-alpha";
-    string constant INIT_TAG = "INIT_TAG_Starkware.StarkExchange.2019";
+    string constant public VERSION = "1.0.1";
+    string constant INIT_TAG = "INIT_TAG_Starkware.StarkExchange.2020";
 
     /*
       Determines the key to the intialized mapping.
@@ -106,7 +104,7 @@ contract StarkExchange is
             if (data.length > 0){
                 // Ensure data length is exactly the correct size.
                 // 192 = sizeof(address) + 5 * sizeof(uint256).
-                require(data.length == 192, INCORRECT_INIT_DATA_SIZE);
+                require(data.length == 192, "INCORRECT_INIT_DATA_SIZE");
                 IFactRegistry escapeVerifier;
                 uint256 initialSequenceNumber;
                 uint256 initialVaultRoot;

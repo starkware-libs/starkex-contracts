@@ -7,7 +7,7 @@ import "../HornerEvaluator.sol";
 
 /*
   This contract computes and verifies all the FRI layer, one by one. The final layer is verified
-  by evaluating the fully commited polynomial, and requires specific handling.
+  by evaluating the fully committed polynomial, and requires specific handling.
 */
 contract Fri is MemoryMap, MemoryAccessUtils, HornerEvaluator, FriLayer {
     event LogGas(string name, uint256 val);

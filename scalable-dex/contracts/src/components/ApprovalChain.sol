@@ -6,14 +6,13 @@ import "../interfaces/Identity.sol";
 import "../interfaces/MApprovalChain.sol";
 import "../interfaces/MFreezable.sol";
 import "../interfaces/MGovernance.sol";
-import "../libraries/LibErrors.sol";
 import "./MainStorage.sol";
 
 /*
   Implements a data structure that supports instant registration
   and slow time-locked removal of entries.
 */
-contract ApprovalChain is MainStorage, MApprovalChain, LibErrors, MGovernance, MFreezable {
+contract ApprovalChain is MainStorage, MApprovalChain, MGovernance, MFreezable {
 
     function addEntry(
         ApprovalChainData storage chain, address entry, uint256 maxLength, string memory identifier)
@@ -24,15 +23,15 @@ contract ApprovalChain is MainStorage, MApprovalChain, LibErrors, MGovernance, M
         address[] storage list = chain.list;
         bytes32 hash_real = keccak256(abi.encodePacked(Identity(entry).identify()));
         bytes32 hash_identifier = keccak256(abi.encodePacked(identifier));
-        require(hash_real == hash_identifier, UNEXPECTED_CONTRACT_IDENTIFIER);
-        require(list.length < maxLength, CHAIN_AT_MAX_CAPACITY);
-        require(findEntry(list, entry) == ENTRY_NOT_FOUND, ENTRY_ALREADY_EXISTS);
+        require(hash_real == hash_identifier, "UNEXPECTED_CONTRACT_IDENTIFIER");
+        require(list.length < maxLength, "CHAIN_AT_MAX_CAPACITY");
+        require(findEntry(list, entry) == ENTRY_NOT_FOUND, "ENTRY_ALREADY_EXISTS");
 
         // Verifier must have at least one fact registered before adding to chain,
         // unless it's the first verifier in te chain.
         require(
             list.length == 0 || IQueryableFactRegistry(entry).hasRegisteredFact(),
-            ENTRY_NOT_ENABLED);
+            "ENTRY_NOT_ENABLED");
         chain.list.push(entry);
         chain.unlockedForRemovalTime[entry] = 0;
     }
@@ -56,7 +55,7 @@ contract ApprovalChain is MainStorage, MApprovalChain, LibErrors, MGovernance, M
     {
         idx = findEntry(list, entry);
 
-        require(idx != ENTRY_NOT_FOUND, ENTRY_DOES_NOT_EXIST);
+        require(idx != ENTRY_NOT_FOUND, "ENTRY_DOES_NOT_EXIST");
     }
 
     function announceRemovalIntent(
@@ -83,14 +82,14 @@ contract ApprovalChain is MainStorage, MApprovalChain, LibErrors, MGovernance, M
         uint256 unlockedForRemovalTime = chain.unlockedForRemovalTime[entry];
 
         // solium-disable-next-line security/no-block-members
-        require(unlockedForRemovalTime > 0, REMOVAL_NOT_ANNOUNCED);
+        require(unlockedForRemovalTime > 0, "REMOVAL_NOT_ANNOUNCED");
         // solium-disable-next-line security/no-block-members
-        require(now >= unlockedForRemovalTime, REMOVAL_NOT_ENABLED_YET);
+        require(now >= unlockedForRemovalTime, "REMOVAL_NOT_ENABLED_YET");
 
         uint256 n_entries = list.length;
 
         // Removal of last entry is forbidden.
-        require(n_entries > 1, LAST_ENTRY_MAY_NOT_BE_REMOVED);
+        require(n_entries > 1, "LAST_ENTRY_MAY_NOT_BE_REMOVED");
 
         if (idx != n_entries - 1) {
             list[idx] = list[n_entries - 1];

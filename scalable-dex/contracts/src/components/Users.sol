@@ -1,7 +1,6 @@
 pragma solidity ^0.5.2;
 
 import "../libraries/LibConstants.sol";
-import "../libraries/LibErrors.sol";
 import "../interfaces/MUsers.sol";
 import "../interfaces/MGovernance.sol";
 import "./MainStorage.sol";
@@ -43,8 +42,10 @@ import "./MainStorage.sol";
 /*
   Implements MUsers.
 */
-contract Users is MainStorage, LibErrors, LibConstants, MGovernance, MUsers {
+contract Users is MainStorage, LibConstants, MGovernance, MUsers {
     event LogUserRegistered(address etherKey, uint256 starkKey);
+    event LogUserAdminAdded(address userAdmin);
+    event LogUserAdminRemoved(address userAdmin);
 
     function isOnCurve(uint256 starkKey) private view returns (bool) {
         uint256 xCubed = mulmod(mulmod(starkKey, starkKey, K_MODULUS), starkKey, K_MODULUS);
@@ -53,10 +54,12 @@ contract Users is MainStorage, LibErrors, LibConstants, MGovernance, MUsers {
 
     function registerUserAdmin(address newAdmin) external onlyGovernance() {
         userAdmins[newAdmin] = true;
+        emit LogUserAdminAdded(newAdmin);
     }
 
     function unregisterUserAdmin(address oldAdmin) external onlyGovernance() {
         userAdmins[oldAdmin] = false;
+        emit LogUserAdminRemoved(oldAdmin);
     }
 
     function isUserAdmin(address testedAdmin) public view returns (bool) {

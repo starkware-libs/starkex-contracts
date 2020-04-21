@@ -1,6 +1,5 @@
 pragma solidity ^0.5.2;
 
-import "../libraries/LibErrors.sol";
 import "../interfaces/IVerifierActions.sol";
 import "../interfaces/MFreezable.sol";
 import "../interfaces/MOperator.sol";
@@ -51,17 +50,19 @@ import "../components/MainStorage.sol";
   Implements IVerifierActions.acceptWithdrawal.
   Uses MFreezable, MOperator, MVerifiers, MUsers and MTokens.
 */
-contract Withdrawals is MainStorage, LibErrors, IVerifierActions, MFreezable, MOperator,
+contract Withdrawals is MainStorage, IVerifierActions, MFreezable, MOperator,
                         MUsers, MTokens, MWithdrawal {
     event LogWithdrawal(
         uint256 starkKey,
         uint256 tokenId,
+        uint256 nonQuantizedAmount,
         uint256 quantizedAmount
     );
 
     event LogUserWithdrawal(
         uint256 starkKey,
         uint256 tokenId,
+        uint256 nonQuantizedAmount,
         uint256 quantizedAmount
     );
 
@@ -95,7 +96,8 @@ contract Withdrawals is MainStorage, LibErrors, IVerifierActions, MFreezable, MO
 
         // Transfer funds.
         transferOut(tokenId, quantizedAmount);
-        emit LogUserWithdrawal(starkKey, tokenId, quantizedAmount);
+        emit LogUserWithdrawal(
+            starkKey, tokenId, fromQuantized(tokenId, quantizedAmount), quantizedAmount);
     }
 
     /*
@@ -113,13 +115,14 @@ contract Withdrawals is MainStorage, LibErrors, IVerifierActions, MFreezable, MO
 
         // Add accepted quantized amount.
         withdrawal += quantizedAmount;
-        require(withdrawal >= quantizedAmount, WITHDRAWAL_OVERFLOW);
+        require(withdrawal >= quantizedAmount, "WITHDRAWAL_OVERFLOW");
 
         // Store withdrawal.
         pendingWithdrawals[starkKey][tokenId] = withdrawal;
 
         // Log event.
-        emit LogWithdrawal(starkKey, tokenId, quantizedAmount);
+        emit LogWithdrawal(
+            starkKey, tokenId, fromQuantized(tokenId, quantizedAmount), quantizedAmount);
     }
 
 

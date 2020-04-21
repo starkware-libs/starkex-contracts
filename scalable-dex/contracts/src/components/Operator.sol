@@ -1,6 +1,5 @@
 pragma solidity ^0.5.2;
 
-import "../libraries/LibErrors.sol";
 import "../interfaces/MOperator.sol";
 import "../interfaces/MGovernance.sol";
 import "./MainStorage.sol";
@@ -13,30 +12,40 @@ import "./MainStorage.sol";
   (see :sol:mod:`MainGovernance`). Typically, the Operator is the hot wallet of the StarkEx service
   submitting proofs for state updates.
 */
-contract Operator is MainStorage, LibErrors, MGovernance, MOperator {
+contract Operator is MainStorage, MGovernance, MOperator {
+    event LogOperatorAdded(address operator);
+    event LogOperatorRemoved(address operator);
+
     function initialize()
         internal
     {
         operators[msg.sender] = true;
+        emit LogOperatorAdded(msg.sender);
     }
 
     modifier onlyOperator()
     {
-        require(operators[msg.sender], ONLY_OPERATOR);
+        require(operators[msg.sender], "ONLY_OPERATOR");
         _;
     }
 
-    function addNewOperator(address newOperator)
+    function registerOperator(address newOperator)
         external
         onlyGovernance
     {
         operators[newOperator] = true;
+        emit LogOperatorAdded(newOperator);
     }
 
-    function removeOperator(address removedOperator)
+    function unregisterOperator(address removedOperator)
         external
         onlyGovernance
     {
         operators[removedOperator] = false;
+        emit LogOperatorRemoved(removedOperator);
+    }
+
+    function isOperator(address testedOperator) external view returns (bool) {
+        return operators[testedOperator];
     }
 }

@@ -12,8 +12,10 @@ contract PublicInputOffsets {
     uint256 internal constant OFFSET_VAULT_TREE_HEIGHT = 7;
     uint256 internal constant OFFSET_ORDER_TREE_HEIGHT = 8;
     uint256 internal constant OFFSET_MODIFICATION_DATA = 9;
-    uint256 internal constant APPLICATION_DATA_N_MODIFICATIONS_OFFSET = 0;
-    uint256 internal constant APPLICATION_DATA_MODIFICATIONS_OFFSET = 1;
+    uint256 internal constant APPLICATION_DATA_BATCH_ID_OFFSET = 0;
+    uint256 internal constant APPLICATION_DATA_PREVIOUS_BATCH_ID_OFFSET = 1;
+    uint256 internal constant APPLICATION_DATA_N_MODIFICATIONS_OFFSET = 2;
+    uint256 internal constant APPLICATION_DATA_MODIFICATIONS_OFFSET = 3;
 
     uint256 internal constant N_WORDS_PER_MODIFICATION = 3;
 }

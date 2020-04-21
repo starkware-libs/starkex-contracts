@@ -1,6 +1,5 @@
 pragma solidity ^0.5.2;
 
-import "../libraries/LibErrors.sol";
 import "../libraries/LibConstants.sol";
 import "../interfaces/IVerifierActions.sol";
 import "../interfaces/MFreezable.sol";
@@ -40,12 +39,13 @@ import "../components/MainStorage.sol";
   Implements IVerifierActions.acceptDeposit.
   Uses MFreezable, MVerifiers, MUsers and MTokens.
 */
-contract Deposits is MainStorage, LibErrors, LibConstants, IVerifierActions, MFreezable, MOperator,
+contract Deposits is MainStorage, LibConstants, IVerifierActions, MFreezable, MOperator,
                      MUsers, MTokens {
     event LogDeposit(
         uint256 starkKey,
         uint256 vaultId,
         uint256 tokenId,
+        uint256 nonQuantizedAmount,
         uint256 quantizedAmount
     );
 
@@ -58,7 +58,9 @@ contract Deposits is MainStorage, LibErrors, LibConstants, IVerifierActions, MFr
     event LogDepositCancelReclaimed(
         uint256 starkKey,
         uint256 vaultId,
-        uint256 tokenId
+        uint256 tokenId,
+        uint256 nonQuantizedAmount,
+        uint256 quantizedAmount
     );
 
     function getDepositBalance(
@@ -72,6 +74,28 @@ contract Deposits is MainStorage, LibErrors, LibConstants, IVerifierActions, MFr
         balance = fromQuantized(tokenId, pendingDeposits[starkKey][tokenId][vaultId]);
     }
 
+    function getQuantizedDepositBalance(
+        uint256 starkKey,
+        uint256 tokenId,
+        uint256 vaultId
+    )
+        external view
+        returns (uint256 balance)
+    {
+        balance = pendingDeposits[starkKey][tokenId][vaultId];
+    }
+
+    function getCancellationRequest(
+        uint256 starkKey,
+        uint256 tokenId,
+        uint256 vaultId
+    )
+        external view
+        returns (uint256 request)
+    {
+        request = cancellationRequests[starkKey][tokenId][vaultId];
+    }
+
     function deposit(
         uint256 tokenId,
         uint256 vaultId,
@@ -81,7 +105,7 @@ contract Deposits is MainStorage, LibErrors, LibConstants, IVerifierActions, MFr
         notFrozen()
     {
         // No need to verify amount > 0, a deposit with amount = 0 can be used to undo cancellation.
-        require(vaultId <= MAX_VAULT_ID, OUT_OF_RANGE_VAULT_ID);
+        require(vaultId <= MAX_VAULT_ID, "OUT_OF_RANGE_VAULT_ID");
 
         // Fetch user and key.
         address user = msg.sender;
@@ -89,7 +113,7 @@ contract Deposits is MainStorage, LibErrors, LibConstants, IVerifierActions, MFr
 
         // Update the balance.
         pendingDeposits[starkKey][tokenId][vaultId] += quantizedAmount;
-        require(pendingDeposits[starkKey][tokenId][vaultId] >= quantizedAmount, DEPOSIT_OVERFLOW);
+        require(pendingDeposits[starkKey][tokenId][vaultId] >= quantizedAmount, "DEPOSIT_OVERFLOW");
 
         // Disable the timeout.
         delete cancellationRequests[starkKey][tokenId][vaultId];
@@ -98,7 +122,8 @@ contract Deposits is MainStorage, LibErrors, LibConstants, IVerifierActions, MFr
         transferIn(tokenId, quantizedAmount);
 
         // Log event.
-        emit LogDeposit(starkKey, vaultId, tokenId, quantizedAmount);
+        emit LogDeposit(
+            starkKey, vaultId, tokenId, fromQuantized(tokenId, quantizedAmount), quantizedAmount);
     }
 
     function deposit(
@@ -107,7 +132,7 @@ contract Deposits is MainStorage, LibErrors, LibConstants, IVerifierActions, MFr
     )
         external payable
     {
-        require(isEther(tokenId), INVALID_TOKEN_ID);
+        require(isEther(tokenId), "INVALID_TOKEN_ID");
         deposit(tokenId, vaultId, toQuantized(tokenId, msg.value));
     }
 
@@ -116,7 +141,7 @@ contract Deposits is MainStorage, LibErrors, LibConstants, IVerifierActions, MFr
         external
         // No modifiers: This function can always be used, even when frozen.
     {
-        require(vaultId <= MAX_VAULT_ID, OUT_OF_RANGE_VAULT_ID);
+        require(vaultId <= MAX_VAULT_ID, "OUT_OF_RANGE_VAULT_ID");
 
         // Fetch user and key.
         address user = msg.sender;
@@ -134,7 +159,7 @@ contract Deposits is MainStorage, LibErrors, LibConstants, IVerifierActions, MFr
         external
         // No modifiers: This function can always be used, even when frozen.
     {
-        require(vaultId <= MAX_VAULT_ID, OUT_OF_RANGE_VAULT_ID);
+        require(vaultId <= MAX_VAULT_ID, "OUT_OF_RANGE_VAULT_ID");
 
         // Fetch user and key.
         address user = msg.sender;
@@ -142,11 +167,11 @@ contract Deposits is MainStorage, LibErrors, LibConstants, IVerifierActions, MFr
 
         // Make sure enough time has passed.
         uint256 requestTime = cancellationRequests[starkKey][tokenId][vaultId];
-        require(requestTime != 0, DEPOSIT_NOT_CANCELED);
+        require(requestTime != 0, "DEPOSIT_NOT_CANCELED");
         uint256 freeTime = requestTime + DEPOSIT_CANCEL_DELAY;
         assert(freeTime >= DEPOSIT_CANCEL_DELAY);
         // solium-disable-next-line security/no-block-members
-        require(now >= freeTime, DEPOSIT_LOCKED);
+        require(now >= freeTime, "DEPOSIT_LOCKED");
 
         // Clear deposit.
         uint256 quantizedAmount = pendingDeposits[starkKey][tokenId][vaultId];
@@ -157,7 +182,8 @@ contract Deposits is MainStorage, LibErrors, LibConstants, IVerifierActions, MFr
         transferOut(tokenId, quantizedAmount);
 
         // Log event.
-        emit LogDepositCancelReclaimed(starkKey, vaultId, tokenId);
+        emit LogDepositCancelReclaimed(
+            starkKey, vaultId, tokenId, fromQuantized(tokenId, quantizedAmount), quantizedAmount);
     }
 
     function acceptDeposit(
@@ -171,7 +197,7 @@ contract Deposits is MainStorage, LibErrors, LibConstants, IVerifierActions, MFr
         // Fetch deposit.
         require(
             pendingDeposits[starkKey][tokenId][vaultId] >= quantizedAmount,
-            DEPOSIT_INSUFFICIENT);
+            "DEPOSIT_INSUFFICIENT");
 
         // Subtract accepted quantized amount.
         pendingDeposits[starkKey][tokenId][vaultId] -= quantizedAmount;

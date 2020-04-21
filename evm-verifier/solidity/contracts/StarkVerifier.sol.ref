@@ -257,7 +257,7 @@ contract StarkVerifier is MemoryMap, MemoryAccessUtils, VerifierChannel, IStarkV
         }
     }
 
-    function readQuriesResponsesAndDecommit(
+    function readQueryResponsesAndDecommit(
         uint256[] memory ctx, uint256 nColumns, uint256 proofDataPtr, bytes32 merkleRoot)
          internal view {
         require(nColumns <= getNColumnsInTrace() + getNColumnsInComposition(), "Too many columns.");
@@ -315,12 +315,12 @@ contract StarkVerifier is MemoryMap, MemoryAccessUtils, VerifierChannel, IStarkV
     function computeFirstFriLayer(uint256[] memory ctx) internal {
         adjustQueryIndicesAndPrepareEvalPoints(ctx);
         // emit LogGas("Prepare evaluation points", gasleft());
-        readQuriesResponsesAndDecommit(
+        readQueryResponsesAndDecommit(
             ctx, getNColumnsInTrace(), getPtr(ctx, MM_TRACE_QUERY_RESPONSES),
             bytes32(ctx[MM_TRACE_COMMITMENT]));
         // emit LogGas("Read and decommit trace", gasleft());
 
-        readQuriesResponsesAndDecommit(
+        readQueryResponsesAndDecommit(
             ctx, getNColumnsInComposition(), getPtr(ctx, MM_COMPOSITION_QUERY_RESPONSES),
             bytes32(ctx[MM_OODS_COMMITMENT]));
 
@@ -387,7 +387,6 @@ contract StarkVerifier is MemoryMap, MemoryAccessUtils, VerifierChannel, IStarkV
             mstore(add(channelPtr, 0x40), 0)
 
             // Note: proof pointer is not incremented until this point.
-
             mstore(channelPtr, lastLayerEnd)
         }
 

@@ -6,7 +6,6 @@ import "../interfaces/MApprovalChain.sol";
 import "../interfaces/MFreezable.sol";
 import "../interfaces/MOperator.sol";
 import "../libraries/LibConstants.sol";
-import "../libraries/LibErrors.sol";
 import "../public/PublicInputOffsets.sol";
 
 /**
@@ -50,7 +49,6 @@ import "../public/PublicInputOffsets.sol";
 */
 contract UpdateState is
     MApprovalChain,
-    LibErrors,
     LibConstants,
     IVerifierActions,
     MFreezable,
@@ -71,11 +69,15 @@ contract UpdateState is
             "publicInput does not contain all required fields.");
         require(publicInput[OFFSET_VAULT_FINAL_ROOT] < K_MODULUS, "New vault root >= PRIME.");
         require(publicInput[OFFSET_ORDER_FINAL_ROOT] < K_MODULUS, "New order root >= PRIME.");
+        require(
+            lastBatchId == 0 ||
+            applicationData[APPLICATION_DATA_PREVIOUS_BATCH_ID_OFFSET] == lastBatchId,
+            "WRONG_PREVIOUS_BATCH_ID");
 
         bytes32 publicInputFact = keccak256(abi.encodePacked(publicInput));
         verifyFact(
-            verifiersChain, publicInputFact, NO_STATE_TRANSITION_VERIFIERS,
-            NO_STATE_TRANSITION_PROOF);
+            verifiersChain, publicInputFact, "NO_STATE_TRANSITION_VERIFIERS",
+            "NO_STATE_TRANSITION_PROOF");
 
         bytes32 availabilityFact = keccak256(
             abi.encodePacked(
@@ -83,8 +85,8 @@ contract UpdateState is
             publicInput[OFFSET_ORDER_FINAL_ROOT], publicInput[OFFSET_ORDER_TREE_HEIGHT],
             sequenceNumber + 1));
         verifyFact(
-            availabilityVerifiersChain, availabilityFact, NO_AVAILABILITY_VERIFIERS,
-            NO_AVAILABILITY_PROOF);
+            availabilityVerifiersChain, availabilityFact, "NO_AVAILABILITY_VERIFIERS",
+            "NO_AVAILABILITY_PROOF");
 
         performUpdateState(publicInput, applicationData);
     }
@@ -101,7 +103,8 @@ contract UpdateState is
             publicInput[OFFSET_ORDER_INITIAL_ROOT],
             publicInput[OFFSET_ORDER_FINAL_ROOT],
             publicInput[OFFSET_VAULT_TREE_HEIGHT],
-            publicInput[OFFSET_ORDER_TREE_HEIGHT]
+            publicInput[OFFSET_ORDER_TREE_HEIGHT],
+            applicationData[APPLICATION_DATA_BATCH_ID_OFFSET]
         );
         sendModifications(publicInput, applicationData);
     }
@@ -124,7 +127,7 @@ contract UpdateState is
         for (uint256 i = 0; i < nModifications; i++) {
             uint256 modificationOffset = OFFSET_MODIFICATION_DATA + i * N_WORDS_PER_MODIFICATION;
             uint256 starkKey = publicInput[modificationOffset];
-            uint256 requestingKey = applicationData[i + 1];
+            uint256 requestingKey = applicationData[i + APPLICATION_DATA_MODIFICATIONS_OFFSET];
             uint256 tokenId = publicInput[modificationOffset + 1];
 
             require(starkKey < K_MODULUS, "Stark key >= PRIME");

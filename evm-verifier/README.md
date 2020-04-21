@@ -16,10 +16,9 @@ costs.
 3. MerkleStatementContract - Merkle verifier used by the DexFrilessStatementVerifier.
 4. FriStatementContract - Fri verifier used by the DexFrilessStatementVerifier.
 5. Auxilliary contracts used by the Dex Verifiers to calculate polynomial evaluations:
-   a. DexConstraintPoly
-   b. DexHashPointsXColumn
-   c. DexHashPointsYColumn
-   d. DexEcdsaPointsXColumn
-   e. DexEcdsaPointsYColumn
-   f. DexOods
-
+   1. DexConstraintPoly
+   2. DexHashPointsXColumn
+   3. DexHashPointsYColumn
+   4. DexEcdsaPointsXColumn
+   5. DexEcdsaPointsYColumn
+   6. DexOods

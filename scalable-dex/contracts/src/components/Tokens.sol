@@ -1,10 +1,9 @@
 pragma solidity ^0.5.2;
 
-import "../libraries/LibErrors.sol";
 import "../libraries/LibConstants.sol";
 import "../interfaces/MTokens.sol";
 import "../interfaces/MGovernance.sol";
-import "../ERC20/IERC20.sol";
+import "../tokens/ERC20/IERC20.sol";
 import "./MainStorage.sol";
 
 /**
@@ -26,6 +25,11 @@ import "./MainStorage.sol";
   Stark exchange. Only amounts in the native representation that represent an integer number of
   quanta are allowed in the system.
 
+  The token ID is restricted to be the result of a hash of the `assetData` and the `quantum` masked
+  to 250 bits (to be less than the prime used) according to the following formula:
+
+  ``uint256 tokenID = uint256(keccak256(abi.encodePacked(assetData, quantum))) & 0x03FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF;``
+
   Once registered, tokens cannot be removed from the system, as their IDs may be used by off-chain
   accounts.
 
@@ -37,7 +41,7 @@ import "./MainStorage.sol";
   Implements MTokens.
   Uses MGovernance.
 */
-contract Tokens is MainStorage, LibErrors, LibConstants, MGovernance, MTokens {
+contract Tokens is MainStorage, LibConstants, MGovernance, MTokens {
     bytes4 constant internal ERC20_SELECTOR = bytes4(keccak256("ERC20Token(address)"));
     bytes4 constant internal ETH_SELECTOR = bytes4(keccak256("ETH()"));
 
@@ -48,6 +52,8 @@ contract Tokens is MainStorage, LibErrors, LibConstants, MGovernance, MTokens {
 
 
     event LogTokenRegistered(uint256 tokenId, bytes assetData);
+    event LogTokenAdminAdded(address tokenAdmin);
+    event LogTokenAdminRemoved(address tokenAdmin);
 
     modifier onlyTokensAdmin()
     {
@@ -60,6 +66,7 @@ contract Tokens is MainStorage, LibErrors, LibConstants, MGovernance, MTokens {
         onlyGovernance()
     {
         tokenAdmins[newAdmin] = true;
+        emit LogTokenAdminAdded(newAdmin);
     }
 
     function unregisterTokenAdmin(address oldAdmin)
@@ -67,6 +74,11 @@ contract Tokens is MainStorage, LibErrors, LibConstants, MGovernance, MTokens {
         onlyGovernance()
     {
         tokenAdmins[oldAdmin] = false;
+        emit LogTokenAdminRemoved(oldAdmin);
+    }
+
+    function isTokenAdmin(address testedAdmin) external view returns (bool) {
+        return tokenAdmins[testedAdmin];
     }
 
     /*

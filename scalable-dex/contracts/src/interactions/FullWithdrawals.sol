@@ -1,6 +1,5 @@
 pragma solidity ^0.5.2;
 
-import "../libraries/LibErrors.sol";
 import "../libraries/LibConstants.sol";
 import "../interfaces/IVerifierActions.sol";
 import "../interfaces/MFreezable.sol";
@@ -39,7 +38,7 @@ import "../components/MainStorage.sol";
   Implements IVerifierActions.clearFullWithdrawalRequest.
   Uses MFreezable, MOperator, MUsers.
 */
-contract FullWithdrawals is MainStorage, LibErrors, LibConstants, IVerifierActions, MFreezable,
+contract FullWithdrawals is MainStorage, LibConstants, IVerifierActions, MFreezable,
     MOperator, MUsers {
 
     event LogFullWithdrawalRequest(
@@ -58,7 +57,7 @@ contract FullWithdrawals is MainStorage, LibErrors, LibConstants, IVerifierActio
         uint256 starkKey = getStarkKey(user);
 
         // Verify vault ID in range.
-        require(vaultId <= MAX_VAULT_ID, OUT_OF_RANGE_VAULT_ID);
+        require(vaultId <= MAX_VAULT_ID, "OUT_OF_RANGE_VAULT_ID");
 
         // Start timer on escape request.
         // solium-disable-next-line security/no-block-members
@@ -95,17 +94,17 @@ contract FullWithdrawals is MainStorage, LibErrors, LibConstants, IVerifierActio
         uint256 starkKey = getStarkKey(user);
 
         // Verify vaultId in range.
-        require(vaultId <= MAX_VAULT_ID, OUT_OF_RANGE_VAULT_ID);
+        require(vaultId <= MAX_VAULT_ID, "OUT_OF_RANGE_VAULT_ID");
 
         // Load request time.
         uint256 requestTime = fullWithdrawalRequests[starkKey][vaultId];
-        require(requestTime != 0, FULL_WITHDRAWAL_UNREQUESTED);
+        require(requestTime != 0, "FULL_WITHDRAWAL_UNREQUESTED");
 
         // Verify timer on escape request.
         uint256 freezeTime = requestTime + FREEZE_GRACE_PERIOD;
         assert(freezeTime >= FREEZE_GRACE_PERIOD);
         // solium-disable-next-line security/no-block-members
-        require(now >= freezeTime, FULL_WITHDRAWAL_PENDING);
+        require(now >= freezeTime, "FULL_WITHDRAWAL_PENDING");
 
         // The only place this function is called.
         freeze();

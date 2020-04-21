@@ -1,6 +1,5 @@
 pragma solidity ^0.5.2;
 
-import "../libraries/LibErrors.sol";
 import "../libraries/LibConstants.sol";
 import "../interfaces/MFreezable.sol";
 import "../interfaces/MGovernance.sol";
@@ -9,19 +8,19 @@ import "./MainStorage.sol";
 /*
   Implements MFreezable.
 */
-contract Freezable is MainStorage, LibErrors, LibConstants, MGovernance, MFreezable {
+contract Freezable is MainStorage, LibConstants, MGovernance, MFreezable {
     event LogFrozen();
     event LogUnFrozen();
 
     modifier notFrozen()
     {
-        require(stateFrozen == false, STATE_IS_FROZEN);
+        require(stateFrozen == false, "STATE_IS_FROZEN");
         _;
     }
 
     modifier onlyFrozen()
     {
-        require(stateFrozen == true, STATE_NOT_FROZEN);
+        require(stateFrozen == true, "STATE_NOT_FROZEN");
         _;
     }
 
@@ -51,7 +50,7 @@ contract Freezable is MainStorage, LibErrors, LibConstants, MGovernance, MFreeza
         onlyGovernance()
     {
         // solium-disable-next-line security/no-block-members
-        require(now >= unFreezeTime, UNFREEZE_NOT_ALLOWED_YET);
+        require(now >= unFreezeTime, "UNFREEZE_NOT_ALLOWED_YET");
 
         // Update state.
         stateFrozen = false;

@@ -22,7 +22,8 @@ contract IVerifierActions {
         uint256 oldOrderRoot,
         uint256 newOrderRoot,
         uint256 vaultTreeHeightSent,
-        uint256 orderTreeHeightSent
+        uint256 orderTreeHeightSent,
+        uint256 batchId
     )
         internal;
 

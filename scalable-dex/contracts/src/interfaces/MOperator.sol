@@ -10,10 +10,10 @@ contract MOperator {
         _;
     }
 
-    function addNewOperator(address newOperator)
+    function registerOperator(address newOperator)
         external;
 
-    function removeOperator(address removedOperator)
+    function unregisterOperator(address removedOperator)
         external;
 
 }
