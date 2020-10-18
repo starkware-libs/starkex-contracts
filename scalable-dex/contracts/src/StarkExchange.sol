@@ -1,136 +1,71 @@
 pragma solidity ^0.5.2;
 
-import "./components/ApprovalChain.sol";
-import "./components/AvailabilityVerifiers.sol";
-import "./components/Freezable.sol";
-import "./components/MainGovernance.sol";
-import "./components/Operator.sol";
-import "./components/Tokens.sol";
-import "./components/Users.sol";
-import "./components/Verifiers.sol";
-import "./interactions/Deposits.sol";
-import "./interactions/Escapes.sol";
-import "./interactions/FullWithdrawals.sol";
-import "./interactions/StateRoot.sol";
-import "./interactions/UpdateState.sol";
-import "./interactions/Withdrawals.sol";
-import "./interfaces/IFactRegistry.sol";
+import "./components/MainStorage.sol";
+import "./interfaces/MainDispatcher.sol";
 
-contract StarkExchange is
-    IVerifierActions,
-    MainGovernance,
-    ApprovalChain,
-    AvailabilityVerifiers,
-    Operator,
-    Freezable,
-    Tokens,
-    Users,
-    StateRoot,
-    Deposits,
-    Verifiers,
-    Withdrawals,
-    FullWithdrawals,
-    Escapes,
-    UpdateState
-{
-    string constant public VERSION = "1.0.1";
-    string constant INIT_TAG = "INIT_TAG_Starkware.StarkExchange.2020";
+contract StarkExchange is MainStorage, MainDispatcher {
+    string public constant VERSION = "2.0.1";
+    string constant INIT_TAG = "INIT_TAG_Starkware.StarkExchange.2020.2.0.1";
 
-    /*
-      Determines the key to the intialized mapping.
-    */
-    function initKey() internal pure returns(bytes32 key){
-        key = keccak256(abi.encode(INIT_TAG, VERSION));
+    uint256 constant SUBCONTRACT_BITS = 4;
+
+    // Salt for a 7 bit unique spread of all relevant selectors. Pre-calculated.
+    // ---------- The following code was auto-generated. PLEASE DO NOT EDIT. ----------
+    uint256 constant MAGIC_SALT = 45733;
+    uint256 constant IDX_MAP_0 = 0x201220230201001000221220210222000000020303010211120120200003002;
+    uint256 constant IDX_MAP_1 = 0x2100003000200010003000000300100220220203000020000101022100011100;
+    // ---------- End of auto-generated code. ----------
+
+    function validateSubContractIndex(uint256 index, address subContract) internal pure{
+        string memory id = SubContractor(subContract).identify();
+        bytes32 hashed_expected_id = keccak256(abi.encodePacked(expectedIdByIndex(index)));
+        require(
+            hashed_expected_id == keccak256(abi.encodePacked(id)),
+            "MISPLACED_INDEX_OR_BAD_CONTRACT_ID");
     }
 
-
-    // Mixins are instantiated in the order they are inherited.
-    constructor (
-        IFactRegistry escapeVerifier,
-        uint256 initialSequenceNumber,
-        uint256 initialVaultRoot,
-        uint256 initialOrderRoot,
-        uint256 initialVaultTreeHeight,
-        uint256 initialOrderTreeHeight
-    )
-        public
-    {
-        // The method internalInitialize is the de-facto initializer.
-        // It's called directly from the constructor, to allow compatibility with no-upgradability
-        // mode, and called from the initialize() method (after call protection and args decode)
-        // to allow upgradability mode.
-        internalInitialize(
-            escapeVerifier,
-            initialSequenceNumber,
-            initialVaultRoot,
-            initialOrderRoot,
-            initialVaultTreeHeight,
-            initialOrderTreeHeight
-        );
-    }
-
-    function internalInitialize(
-        IFactRegistry escapeVerifier,
-        uint256 initialSequenceNumber,
-        uint256 initialVaultRoot,
-        uint256 initialOrderRoot,
-        uint256 initialVaultTreeHeight,
-        uint256 initialOrderTreeHeight
-    )
-    internal
-    {
-        initGovernance();
-        Operator.initialize();
-        StateRoot.initialize(initialSequenceNumber, initialVaultRoot,
-            initialOrderRoot, initialVaultTreeHeight, initialOrderTreeHeight);
-        Escapes.initialize(escapeVerifier);
-    }
-
-    /*
-      Called from the proxy, upon upgradeTo.
-      If already initialized (determinted by the initKey) - will skip altogether.
-      If not init yet && init data is not empty:
-      1. extract data to init parameters.
-      2. call internalInitializer with those params.
-    */
-    function initialize(bytes calldata data)
-        external
-    {
-        bytes32 key = initKey();
-
-        // Skip initialize if already been initialized.
-        if (initialized[key] == false){
-            // If data is empty - skip internalInitializer.
-            if (data.length > 0){
-                // Ensure data length is exactly the correct size.
-                // 192 = sizeof(address) + 5 * sizeof(uint256).
-                require(data.length == 192, "INCORRECT_INIT_DATA_SIZE");
-                IFactRegistry escapeVerifier;
-                uint256 initialSequenceNumber;
-                uint256 initialVaultRoot;
-                uint256 initialOrderRoot;
-                uint256 initialVaultTreeHeight;
-                uint256 initialOrderTreeHeight;
-                (
-                    escapeVerifier,
-                    initialSequenceNumber,
-                    initialVaultRoot,
-                    initialOrderRoot,
-                    initialVaultTreeHeight,
-                    initialOrderTreeHeight
-                ) = abi.decode(data,
-                    (IFactRegistry, uint256, uint256, uint256, uint256, uint256));
-
-                internalInitialize(
-                    escapeVerifier,
-                    initialSequenceNumber,
-                    initialVaultRoot,
-                    initialOrderRoot,
-                    initialVaultTreeHeight,
-                    initialOrderTreeHeight
-                );
-            }
-            initialized[key] = true;
+    function expectedIdByIndex(uint256 index)
+        private pure returns (string memory id) {
+        if (index == 1){
+            id = "StarkWare_AllVerifiers_2020_1";
+        } else if (index == 2){
+            id = "StarkWare_TokensAndRamping_2020_1";
+        } else if (index == 3){
+            id = "StarkWare_StarkExState_2020_1";
+        } else {
+            revert("UNEXPECTED_INDEX");
         }
+    }
+
+    function getNumSubcontracts() internal pure returns (uint256) {
+        return 3;
+    }
+
+    function getSubContract(bytes4 selector)
+        internal view returns (address) {
+        uint256 location = 0x7F & uint256(keccak256(abi.encodePacked(selector, MAGIC_SALT)));
+        uint256 subContractIdx;
+        uint256 offset = SUBCONTRACT_BITS * location % 256;
+        if (location < 64) {
+            subContractIdx = (IDX_MAP_0 >> offset) & 0xF;
+        } else {
+            subContractIdx = (IDX_MAP_1 >> offset) & 0xF;
+        }
+        return subContracts[subContractIdx];
+    }
+
+    function setSubContractAddress(uint256 index, address subContractAddress) internal {
+        subContracts[index] = subContractAddress;
+    }
+
+    function initializationSentinel()
+        internal view {
+        string memory REVERT_MSG = "INITIALIZATION_BLOCKED";
+        // This initializer sets roots etc. It must not be applied twice.
+        // I.e. it can run only when the state is still empty.
+        require(vaultRoot == 0, REVERT_MSG);
+        require(vaultTreeHeight == 0, REVERT_MSG);
+        require(orderRoot == 0, REVERT_MSG);
+        require(orderTreeHeight == 0, REVERT_MSG);
     }
 }

@@ -37,16 +37,27 @@ contract Governance is GovernanceStorage, MGovernance {
         returns (GovernanceInfoStruct storage) {
         string memory tag = getGovernanceTag();
         GovernanceInfoStruct storage gub = governanceInfo[tag];
-        require(gub.initialized == true, "NOT_INITIALIZED");
+        require(gub.initialized, "NOT_INITIALIZED");
         return gub;
     }
 
+    /*
+      Current code intentionally prevents governance re-initialization.
+      This may be a problem in an upgrade situation, in a case that the upgrade-to implementation
+      performs an initialization (for real) and within that calls initGovernance().
+
+      Possible workarounds:
+      1. Clearing the governance info altogether by changing the MAIN_GOVERNANCE_INFO_TAG.
+         This will remove existing main governance information.
+      2. Modify the require part in this function, so that it will exit quietly
+         when trying to re-initialize (uncomment the lines below).
+    */
     function initGovernance()
         internal
     {
         string memory tag = getGovernanceTag();
         GovernanceInfoStruct storage gub = governanceInfo[tag];
-        require(gub.initialized == false, "ALREADY_INITIALIZED");
+        require(!gub.initialized, "ALREADY_INITIALIZED");
         gub.initialized = true;  // to ensure addGovernor() won't fail.
         // Add the initial governer.
         addGovernor(msg.sender);
@@ -66,7 +77,7 @@ contract Governance is GovernanceStorage, MGovernance {
     }
 
     /*
-      Cancels the nomination of a governor condidate.
+      Cancels the nomination of a governor candidate.
     */
     function cancelNomination() internal onlyGovernance() {
         GovernanceInfoStruct storage gub = contractGovernanceInfo();
@@ -76,7 +87,7 @@ contract Governance is GovernanceStorage, MGovernance {
 
     function nominateNewGovernor(address newGovernor) internal onlyGovernance() {
         GovernanceInfoStruct storage gub = contractGovernanceInfo();
-        require(isGovernor(newGovernor) == false, "ALREADY_GOVERNOR");
+        require(!isGovernor(newGovernor), "ALREADY_GOVERNOR");
         gub.candidateGovernor = newGovernor;
         emit LogNominatedGovernor(newGovernor);
     }
@@ -89,7 +100,7 @@ contract Governance is GovernanceStorage, MGovernance {
       that would fail because of the onlyGovernance modifier.
     */
     function addGovernor(address newGovernor) private {
-        require(isGovernor(newGovernor) == false, "ALREADY_GOVERNOR");
+        require(!isGovernor(newGovernor), "ALREADY_GOVERNOR");
         GovernanceInfoStruct storage gub = contractGovernanceInfo();
         gub.effectiveGovernors[newGovernor] = true;
     }

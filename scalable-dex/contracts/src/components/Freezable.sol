@@ -14,13 +14,13 @@ contract Freezable is MainStorage, LibConstants, MGovernance, MFreezable {
 
     modifier notFrozen()
     {
-        require(stateFrozen == false, "STATE_IS_FROZEN");
+        require(!stateFrozen, "STATE_IS_FROZEN");
         _;
     }
 
     modifier onlyFrozen()
     {
-        require(stateFrozen == true, "STATE_NOT_FROZEN");
+        require(stateFrozen, "STATE_NOT_FROZEN");
         _;
     }
 
@@ -50,7 +50,7 @@ contract Freezable is MainStorage, LibConstants, MGovernance, MFreezable {
         onlyGovernance()
     {
         // solium-disable-next-line security/no-block-members
-        require(now >= unFreezeTime, "UNFREEZE_NOT_ALLOWED_YET");
+        require(now >= unFreezeTime, "UNFREEZE_NOT_ALLOWED_YET");  // NOLINT: timestamp.
 
         // Update state.
         stateFrozen = false;

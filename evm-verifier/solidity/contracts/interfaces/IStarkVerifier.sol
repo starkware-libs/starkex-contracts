@@ -7,5 +7,5 @@ contract IStarkVerifier {
         uint256[] memory proof,
         uint256[] memory publicInput
     )
-        internal;
+        internal view;
 }

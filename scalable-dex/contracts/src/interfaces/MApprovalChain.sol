@@ -1,12 +1,12 @@
 pragma solidity ^0.5.2;
 
-import "../components/MainStorage.sol";
+import "../libraries/Common.sol";
 
 /*
   Implements a data structure that supports instant registration
   and slow time-locked removal of entries.
 */
-contract MApprovalChain is MainStorage {
+contract MApprovalChain {
     uint256 constant ENTRY_NOT_FOUND = uint256(~0);
 
     /*
@@ -15,7 +15,8 @@ contract MApprovalChain is MainStorage {
       Fails if identifier is not identical to the value returned from entry.identify().
     */
     function addEntry(
-        ApprovalChainData storage chain, address entry, uint256 maxLength, string memory identifier)
+        StarkExTypes.ApprovalChainData storage chain,
+        address entry, uint256 maxLength, string memory identifier)
         internal;
 
     /*
@@ -37,21 +38,12 @@ contract MApprovalChain is MainStorage {
       Reverts if the verifier is not found.
     */
     function announceRemovalIntent(
-        ApprovalChainData storage chain, address entry, uint256 removalDelay)
+        StarkExTypes.ApprovalChainData storage chain, address entry, uint256 removalDelay)
         internal;
 
     /*
       Removes a verifier assuming the expected time has passed.
     */
-    function removeEntry(ApprovalChainData storage chain, address entry)
+    function removeEntry(StarkExTypes.ApprovalChainData storage chain, address entry)
         internal;
-
-    /*
-      Verifies a given fact on all existing verifiers.
-      Reverts if the fact is not accepted by one or more verifiers.
-    */
-    function verifyFact(
-        ApprovalChainData storage chain, bytes32 fact, string memory noVerifiersErrorMessage,
-        string memory invalidFactErrorMessage)
-        internal view;
 }

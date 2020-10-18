@@ -39,7 +39,7 @@ contract FriStatementContract is FriLayer, FactRegistry {
 
         uint256 mmFriCtxSize = FRI_CTX_SIZE;
         uint256 nQueries = friQueue.length / 3;
-        friQueue[3*nQueries] = 0;
+        friQueue[3*nQueries] = 0;  // NOLINT: divide-before-multiply.
         uint256 merkleQueuePtr;
         uint256 friQueuePtr;
         uint256 channelPtr;
@@ -65,6 +65,7 @@ contract FriStatementContract is FriLayer, FactRegistry {
         }
 
         // Verify all queries are on the same logarithmic step.
+        // NOLINTNEXTLINE: divide-before-multiply.
         require((friQueue[0] ^ friQueue[3*nQueries-3]) < friQueue[0], "INVALID_QUERIES_RANGE");
 
         // Allocate memory queues: channelPtr, merkleQueue, friCtx, dataToHash.

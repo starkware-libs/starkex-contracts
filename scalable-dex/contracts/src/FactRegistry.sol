@@ -16,6 +16,20 @@ contract FactRegistry is IQueryableFactRegistry {
         external view
         returns(bool)
     {
+        return _factCheck(fact);
+    }
+
+
+    /*
+      This is an internal method to check if the fact is already registered.
+      In current implementation of FactRegistry it's identical to isValid().
+      But the check is against the local fact registry,
+      So for a derived referral fact registry, it's not the same.
+    */
+    function _factCheck(bytes32 fact)
+        internal view
+        returns(bool)
+    {
         return verifiedFact[fact];
     }
 
@@ -24,7 +38,7 @@ contract FactRegistry is IQueryableFactRegistry {
         )
         internal
     {
-        // This function stores the testiment hash in the mapping.
+        // This function stores the fact hash in the mapping.
         verifiedFact[factHash] = true;
 
         // Mark first time off.

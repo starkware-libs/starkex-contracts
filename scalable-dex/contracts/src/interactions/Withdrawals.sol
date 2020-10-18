@@ -1,11 +1,12 @@
 pragma solidity ^0.5.2;
 
-import "../interfaces/IVerifierActions.sol";
+import "../interfaces/MAcceptModifications.sol";
+import "../interfaces/MTokenQuantization.sol";
+import "../interfaces/MTokenAssetData.sol";
 import "../interfaces/MFreezable.sol";
 import "../interfaces/MOperator.sol";
-import "../interfaces/MUsers.sol";
+import "../interfaces/MKeyGetters.sol";
 import "../interfaces/MTokens.sol";
-import "../interfaces/MWithdrawal.sol";
 import "../components/MainStorage.sol";
 
 /**
@@ -13,7 +14,7 @@ import "../components/MainStorage.sol";
   two calls are required:
 
   1. A call to an offchain exchange API, requesting a withdrawal from a user account (vault).
-  2. A call to the on-chain :sol:func:`withdraw` function to perform the actual withdrawal of funds transfering them to the users Eth or ERC20 account (depending on the token type).
+  2. A call to the on-chain :sol:func:`withdraw` function to perform the actual withdrawal of funds transferring them to the users Eth or ERC20 account (depending on the token type).
 
   For simplicity, hereafter it is assumed that all tokens are ERC20 tokens but the text below
   applies to Eth in the same manner.
@@ -22,7 +23,7 @@ import "../components/MainStorage.sol";
   amount from a given vault. Following the request, the exchange may include the withdrawal in a
   STARK proof. The submission of a proof then results in the addition of the amount(s) withdrawn to
   an on-chain pending withdrawals account under the stark key of the vault owner and the appropriate
-  token ID. At the same time, this also implies that this amount is deducted from the off-chain
+  asset ID. At the same time, this also implies that this amount is deducted from the off-chain
   vault.
 
   Once the amount to be withdrawn has been transfered to the on-chain pending withdrawals account,
@@ -31,7 +32,7 @@ import "../components/MainStorage.sol";
   corresponding to the Stark Key of a pending withdrawals account may perform this operation.
 
   It is possible that for multiple withdrawal calls to the API, a single withdrawal call to the
-  contract may retrieve all funds, as long as they are all for the same token ID.
+  contract may retrieve all funds, as long as they are all for the same asset ID.
 
   The result of the operation, assuming all requirements are met, is that an amount of ERC20 tokens
   in the pending withdrawal account times the quantization factor is transferred to the ERC20
@@ -46,94 +47,140 @@ import "../components/MainStorage.sol";
   with an :sol:func:`escape` call to the on-chain contract (see :sol:mod:`Escapes`) proving the
   ownership of off-chain funds. If such proof is accepted, the user may proceed as above with
   the :sol:func:`withdraw` call to the contract to complete the operation.
-
-  Implements IVerifierActions.acceptWithdrawal.
-  Uses MFreezable, MOperator, MVerifiers, MUsers and MTokens.
 */
-contract Withdrawals is MainStorage, IVerifierActions, MFreezable, MOperator,
-                        MUsers, MTokens, MWithdrawal {
-    event LogWithdrawal(
+contract Withdrawals is MainStorage, MAcceptModifications, MTokenQuantization, MTokenAssetData,
+                        MFreezable, MOperator, MKeyGetters, MTokens  {
+    event LogWithdrawalPerformed(
         uint256 starkKey,
-        uint256 tokenId,
+        uint256 assetType,
         uint256 nonQuantizedAmount,
-        uint256 quantizedAmount
+        uint256 quantizedAmount,
+        address recipient
     );
 
-    event LogUserWithdrawal(
+    event LogNftWithdrawalPerformed(
+        uint256 starkKey,
+        uint256 assetType,
+        uint256 tokenId,
+        uint256 assetId,
+        address recipient
+    );
+
+    event LogMintWithdrawalPerformed(
         uint256 starkKey,
         uint256 tokenId,
         uint256 nonQuantizedAmount,
-        uint256 quantizedAmount
+        uint256 quantizedAmount,
+        uint256 assetId
     );
 
     function getWithdrawalBalance(
         uint256 starkKey,
-        uint256 tokenId
+        uint256 assetId
     )
-        external view
+        external
+        view
         returns (uint256 balance)
     {
-        balance = fromQuantized(tokenId, pendingWithdrawals[starkKey][tokenId]);
+        uint256 presumedAssetType = assetId;
+        balance = fromQuantized(presumedAssetType, pendingWithdrawals[starkKey][assetId]);
     }
 
     /*
-      Allows a user to withdraw accepted funds.
+      Allows a user to withdraw accepted funds to a recipient's account.
       This function can be called normally while frozen.
     */
-    function withdraw(
+    function withdrawTo(uint256 starkKey, uint256 assetType, address payable recipient)
+        public
+        isSenderStarkKey(starkKey)
+    // No notFrozen modifier: This function can always be used, even when frozen.
+    {
+        require(!isMintableAssetType(assetType), "MINTABLE_ASSET_TYPE");
+        uint256 assetId = assetType;
+        // Fetch and clear quantized amount.
+        uint256 quantizedAmount = pendingWithdrawals[starkKey][assetId];
+        pendingWithdrawals[starkKey][assetId] = 0;
+
+        // Transfer funds.
+        transferOut(recipient, assetType, quantizedAmount);
+        emit LogWithdrawalPerformed(
+            starkKey,
+            assetType,
+            fromQuantized(assetType, quantizedAmount),
+            quantizedAmount,
+            recipient
+        );
+    }
+
+    /*
+      Allows a user to withdraw accepted funds to its own account.
+      This function can be called normally while frozen.
+    */
+    function withdraw(uint256 starkKey, uint256 assetType)
+        external
+    // No notFrozen modifier: This function can always be used, even when frozen.
+    {
+        withdrawTo(starkKey, assetType, msg.sender);
+    }
+
+    /*
+      Allows a user to withdraw an accepted NFT to a recipient's account.
+      This function can be called normally while frozen.
+    */
+    function withdrawNftTo(
+        uint256 starkKey,
+        uint256 assetType,
+        uint256 tokenId,
+        address recipient
+    )
+        public
+        isSenderStarkKey(starkKey)
+    // No notFrozen modifier: This function can always be used, even when frozen.
+    {
+        // Calculate assetId.
+        uint256 assetId = calculateNftAssetId(assetType, tokenId);
+        require(!isMintableAssetType(assetType), "MINTABLE_ASSET_TYPE");
+        if (pendingWithdrawals[starkKey][assetId] > 0) {
+            require(pendingWithdrawals[starkKey][assetId] == 1, "ILLEGAL_NFT_BALANCE");
+            pendingWithdrawals[starkKey][assetId] = 0;
+
+            // Transfer funds.
+            transferOutNft(recipient, assetType, tokenId);
+            emit LogNftWithdrawalPerformed(starkKey, assetType, tokenId, assetId, recipient);
+        }
+    }
+
+    /*
+      Allows a user to withdraw an accepted NFT to its own account.
+      This function can be called normally while frozen.
+    */
+    function withdrawNft(
+        uint256 starkKey,
+        uint256 assetType,
         uint256 tokenId
     )
         external
-        // Can be called normally and while frozen.
+    // No notFrozen modifier: This function can always be used, even when frozen.
     {
-        // Fetch user and key.
-        address etherKey = msg.sender;
-        uint256 starkKey = getStarkKey(etherKey);
-
-        // Fetch and clear quantized amount.
-        uint256 quantizedAmount = pendingWithdrawals[starkKey][tokenId];
-        pendingWithdrawals[starkKey][tokenId] = 0;
-
-        // Transfer funds.
-        transferOut(tokenId, quantizedAmount);
-        emit LogUserWithdrawal(
-            starkKey, tokenId, fromQuantized(tokenId, quantizedAmount), quantizedAmount);
+        withdrawNftTo(starkKey, assetType, tokenId, msg.sender);
     }
 
-    /*
-      Allows a verifier to authorize a withdrawal.
-    */
-    function allowWithdrawal(
+    function withdrawAndMint(
         uint256 starkKey,
-        uint256 tokenId,
-        uint256 quantizedAmount
-    )
-        internal
-    {
-        // Fetch withdrawal.
-        uint256 withdrawal = pendingWithdrawals[starkKey][tokenId];
-
-        // Add accepted quantized amount.
-        withdrawal += quantizedAmount;
-        require(withdrawal >= quantizedAmount, "WITHDRAWAL_OVERFLOW");
-
-        // Store withdrawal.
-        pendingWithdrawals[starkKey][tokenId] = withdrawal;
-
-        // Log event.
-        emit LogWithdrawal(
-            starkKey, tokenId, fromQuantized(tokenId, quantizedAmount), quantizedAmount);
-    }
-
-
-    // Verifier authorizes withdrawal.
-    function acceptWithdrawal(
-        uint256 starkKey,
-        uint256 tokenId,
-        uint256 quantizedAmount
-    )
-        internal
-    {
-        allowWithdrawal(starkKey, tokenId, quantizedAmount);
+        uint256 assetType,
+        bytes calldata mintingBlob
+    ) external isSenderStarkKey(starkKey) {
+        require(registeredAssetType[assetType], "INVALID_ASSET_TYPE");
+        require(isMintableAssetType(assetType), "NON_MINTABLE_ASSET_TYPE");
+        uint256 assetId = calculateMintableAssetId(assetType, mintingBlob);
+        if (pendingWithdrawals[starkKey][assetId] > 0) {
+            uint256 quantizedAmount = pendingWithdrawals[starkKey][assetId];
+            pendingWithdrawals[starkKey][assetId] = 0;
+            // Transfer funds.
+            transferOutMint(assetType, quantizedAmount, mintingBlob);
+            emit LogMintWithdrawalPerformed(
+                starkKey, assetType, fromQuantized(assetType, quantizedAmount), quantizedAmount,
+                assetId);
+        }
     }
 }

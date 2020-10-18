@@ -2,67 +2,52 @@ pragma solidity ^0.5.2;
 
 import "../interfaces/IFactRegistry.sol";
 import "../upgrade/ProxyStorage.sol";
-
+import "../libraries/Common.sol";
 /*
   Holds ALL the main contract state (storage) variables.
 */
 contract MainStorage is ProxyStorage {
 
-    // Structure representing a list of verifiers (validity/availability).
-    // A statement is valid only if all the verifiers in the list agree on it.
-    // Adding a verifier to the list is immediate - this is used for fast resolution of
-    // any soundness issues.
-    // Removing from the list is time-locked, to ensure that any user of the system
-    // not content with the announced removal has ample time to leave the system before it is
-    // removed.
-    struct ApprovalChainData {
-        address[] list;
-        // Represents the time after which the verifier with the given address can be removed.
-        // Removal of the verifier with address A is allowed only in the case the value
-        // of unlockedForRemovalTime[A] != 0 and unlockedForRemovalTime[A] < (current time).
-        mapping (address => uint256) unlockedForRemovalTime;
-    }
-
     IFactRegistry escapeVerifier_;
 
     // Global dex-frozen flag.
-    bool stateFrozen;
+    bool stateFrozen;                               // NOLINT: constable-states.
 
     // Time when unFreeze can be successfully called (UNFREEZE_DELAY after freeze).
-    uint256 unFreezeTime;
+    uint256 unFreezeTime;                           // NOLINT: constable-states.
 
     // Pending deposits.
-    // A map STARK key => token id => vault id => quantized amount.
+    // A map STARK key => asset id => vault id => quantized amount.
     mapping (uint256 => mapping (uint256 => mapping (uint256 => uint256))) pendingDeposits;
 
     // Cancellation requests.
-    // A map STARK key => token id => vault id => request timestamp.
+    // A map STARK key => asset id => vault id => request timestamp.
     mapping (uint256 => mapping (uint256 => mapping (uint256 => uint256))) cancellationRequests;
 
     // Pending withdrawals.
-    // A map STARK key => token id => quantized amount.
+    // A map STARK key => asset id => quantized amount.
     mapping (uint256 => mapping (uint256 => uint256)) pendingWithdrawals;
 
     // vault_id => escape used boolean.
     mapping (uint256 => bool) escapesUsed;
 
     // Number of escapes that were performed when frozen.
-    uint256 escapesUsedCount;
+    uint256 escapesUsedCount;                       // NOLINT: constable-states.
 
     // Full withdrawal requests: stark key => vaultId => requestTime.
     // stark key => vaultId => requestTime.
     mapping (uint256 => mapping (uint256 => uint256)) fullWithdrawalRequests;
 
     // State sequence number.
-    uint256 sequenceNumber;
+    uint256 sequenceNumber;                         // NOLINT: constable-states uninitialized-state.
 
     // Vaults Tree Root & Height.
-    uint256 vaultRoot;
-    uint256 vaultTreeHeight;
+    uint256 vaultRoot;                              // NOLINT: constable-states uninitialized-state.
+    uint256 vaultTreeHeight;                        // NOLINT: constable-states uninitialized-state.
 
     // Order Tree Root & Height.
-    uint256 orderRoot;
-    uint256 orderTreeHeight;
+    uint256 orderRoot;                              // NOLINT: constable-states uninitialized-state.
+    uint256 orderTreeHeight;                        // NOLINT: constable-states uninitialized-state.
 
     // True if and only if the address is allowed to add tokens.
     mapping (address => bool) tokenAdmins;
@@ -73,23 +58,28 @@ contract MainStorage is ProxyStorage {
     // True if and only if the address is an operator (allowed to update state).
     mapping (address => bool) operators;
 
-    // Mapping of token ID to asset data.
-    mapping (uint256 => bytes) tokenIdToAssetData;
+    // Mapping of contract ID to asset data.
+    mapping (uint256 => bytes) assetTypeToAssetInfo;    // NOLINT: uninitialized-state.
 
-    // Mapping of registered token IDs.
-    mapping (uint256 => bool) registeredTokenId;
+    // Mapping of registered contract IDs.
+    mapping (uint256 => bool) registeredAssetType;      // NOLINT: uninitialized-state.
 
-    // Mapping from token ID to quantum.
-    mapping (uint256 => uint256) tokenIdToQuantum;
+    // Mapping from contract ID to quantum.
+    mapping (uint256 => uint256) assetTypeToQuantum;    // NOLINT: uninitialized-state.
 
-    // Correspondence between addresses and STARK public keys.
-    mapping (address => uint256) starkKeys;
-    mapping (uint256 => address) etherKeys;
+    // This mapping is no longer in use, remains for backwards compatibility.
+    mapping (address => uint256) starkKeys_DEPRECATED;  // NOLINT: naming-convention.
+
+    // Mapping from STARK public key to the Ethereum public key of its owner.
+    mapping (uint256 => address) ethKeys;               // NOLINT: uninitialized-state.
 
     // Timelocked state transition and availability verification chain.
-    ApprovalChainData verifiersChain;
-    ApprovalChainData availabilityVerifiersChain;
+    StarkExTypes.ApprovalChainData verifiersChain;
+    StarkExTypes.ApprovalChainData availabilityVerifiersChain;
 
     // Batch id of last accepted proof.
-    uint256 lastBatchId;
+    uint256 lastBatchId;                            // NOLINT: constable-states uninitialized-state.
+
+    // Mapping between sub-contract index to sub-contract address.
+    mapping(uint256 => address) subContracts;       // NOLINT: uninitialized-state.
 }

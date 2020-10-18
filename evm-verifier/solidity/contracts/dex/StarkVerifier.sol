@@ -1,1 +1,0 @@
-../StarkVerifier.sol.ref

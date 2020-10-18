@@ -1,14 +1,14 @@
 pragma solidity ^0.5.2;
 
-import "../libraries/LibConstants.sol";
 import "../interfaces/MApprovalChain.sol";
+import "../libraries/LibConstants.sol";
 import "./MainStorage.sol";
 
 /**
   A Verifier contract is an implementation of a STARK verifier that the exchange service sends
-  STARK proofs to (see :sol:mod:`IDexStatementVerifier`). In addition, the exchange contract can
-  call a verifier to check if a valid proof has been accepted for a given state transition
-  (typically described as a hash on the public input of the assumed proof).
+  STARK proofs to. In addition, the exchange contract can call a verifier to check if a valid proof
+  has been accepted for a given state transition (typically described as a hash on the public input
+  of the assumed proof).
 
   The exchange contract will normally query only one verifier contract for proof validity checks.
   However, in the event that the verifier algorithm needs to updated, additional verifiers may be
@@ -26,7 +26,7 @@ import "./MainStorage.sol";
   The removal delay ensures that a user concerned about the soundness of the system has ample time
   to leave the exchange.
 */
-contract Verifiers is MainStorage, MApprovalChain, LibConstants {
+contract Verifiers is MainStorage, LibConstants, MApprovalChain {
     function getRegisteredVerifiers()
         external view
         returns (address[] memory _verifers)

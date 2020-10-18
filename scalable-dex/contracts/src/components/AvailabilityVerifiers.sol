@@ -1,7 +1,7 @@
 pragma solidity ^0.5.2;
 
-import "../libraries/LibConstants.sol";
 import "../interfaces/MApprovalChain.sol";
+import "../libraries/LibConstants.sol";
 import "./MainStorage.sol";
 
 /**
@@ -29,7 +29,7 @@ import "./MainStorage.sol";
   The removal delay ensures that a user concerned about the soundness of the system has ample time
   to leave the exchange.
 */
-contract AvailabilityVerifiers is MainStorage, MApprovalChain, LibConstants {
+contract AvailabilityVerifiers is MainStorage, LibConstants, MApprovalChain {
     function getRegisteredAvailabilityVerifiers()
         external view
         returns (address[] memory _verifers)

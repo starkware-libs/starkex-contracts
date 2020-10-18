@@ -11,14 +11,14 @@ contract ProxyStorage is GovernanceStorage {
 
     // Stores the hash of the initialization vector of the added implementation.
     // Upon upgradeTo the implementation, the initialization vector is verified
-    // to be identical to the one submitted when adding the implementaion.
+    // to be identical to the one submitted when adding the implementation.
     mapping (address => bytes32) internal initializationHash;
 
     // The time after which we can switch to the implementation.
     mapping (address => uint256) internal enabledTime;
 
     // A central storage of the flags whether implementation has been initialized.
-    // Note - it can be used flexibly enough to accomodate multiple level of initialization
+    // Note - it can be used flexibly enough to accommodate multiple levels of initialization
     // (i.e. using different key salting schemes for different initialization levels).
     mapping (bytes32 => bool) internal initialized;
 }

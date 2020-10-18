@@ -62,31 +62,20 @@ contract PrimeFieldElement0 {
     function fsub(uint256 a, uint256 b) internal pure returns (uint256 res) {
         // uint256 res = addmod(a, kModulus - b, kModulus);
         assembly {
-            res := addmod(a, sub(0x800000000000011000000000000000000000000000000000000000000000001, b),
+            res := addmod(
+                a,
+                sub(0x800000000000011000000000000000000000000000000000000000000000001, b),
                 0x800000000000011000000000000000000000000000000000000000000000001)
         }
         return res;
     }
 
-    function fpow(uint256 val, uint256 exp) internal returns (uint256) {
+    function fpow(uint256 val, uint256 exp) internal view returns (uint256) {
         return expmod(val, exp, K_MODULUS);
     }
 
-    function fpow2(uint256 val, uint256 exp) internal pure returns (uint256) {
-        uint256 curPow = val;
-        uint n = exp;
-        uint256 res = 1;
-        while (n > 0) {
-            if ((n % 2) != 0) {
-                res = fmul(res, curPow);
-            }
-            n = n / 2;
-            curPow = fmul(curPow, curPow);
-        }
-        return res;
-    }
-
-    function expmod(uint256 base, uint256 exponent, uint256 modulus) internal returns (uint256 res)
+    function expmod(uint256 base, uint256 exponent, uint256 modulus)
+        internal view returns (uint256 res)
     {
         assembly {
             let p := mload(0x40)
@@ -97,14 +86,14 @@ contract PrimeFieldElement0 {
             mstore(add(p, 0x80), exponent)   // Exponent.
             mstore(add(p, 0xa0), modulus)    // Modulus.
             // Call modexp precompile.
-            if iszero(call(not(0), 0x05, 0, p, 0xc0, p, 0x20)) {
+            if iszero(staticcall(gas, 0x05, p, 0xc0, p, 0x20)) {
                 revert(0, 0)
             }
             res := mload(p)
         }
     }
 
-    function inverse(uint256 val) internal returns (uint256) {
+    function inverse(uint256 val) internal view returns (uint256) {
         return expmod(val, K_MODULUS - 2, K_MODULUS);
     }
 }

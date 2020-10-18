@@ -1,33 +1,15 @@
 pragma solidity ^0.5.2;
 
 contract MTokens {
-    function toQuantized(
-        uint256 tokenId,
-        uint256 amount
-    )
-        internal view
-        returns (uint256 quantizedAmount);
+    function transferIn(uint256 assetType, uint256 quantizedAmount) internal;
 
-    function fromQuantized(
-        uint256 tokenId,
-        uint256 quantizedAmount
-    )
-        internal view
-        returns (uint256 amount);
+    function transferInNft(uint256 assetType, uint256 tokenId) internal;
 
-    function isEther(
-        uint256 tokenId)
-        internal view returns (bool);
-
-    function transferIn(
-        uint256 tokenId,
-        uint256 quantizedAmount
-    )
+    function transferOut(address payable recipient, uint256 assetType, uint256 quantizedAmount)
         internal;
 
-    function transferOut(
-        uint256 tokenId,
-        uint256 quantizedAmount
-    )
-        internal;
+    function transferOutNft(address recipient, uint256 assetType, uint256 tokenId) internal;
+
+    function transferOutMint(
+        uint256 assetType, uint256 quantizedAmount, bytes memory mintingBlob) internal;
 }

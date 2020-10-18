@@ -494,7 +494,7 @@ contract FriLayer is MerkleVerifier, PrimeFieldElement0 {
     /*
       Initializes the FRI group and half inv group in the FRI context.
     */
-    function initFriGroups(uint256 friCtx) internal {
+    function initFriGroups(uint256 friCtx) internal view {
         uint256 friGroupPtr = friCtx + FRI_CTX_TO_FRI_GROUP_OFFSET;
         uint256 friHalfInvGroupPtr = friCtx + FRI_CTX_TO_FRI_HALF_INV_GROUP_OFFSET;
 

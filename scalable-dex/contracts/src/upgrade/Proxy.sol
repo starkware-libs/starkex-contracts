@@ -2,6 +2,7 @@ pragma solidity ^0.5.2;
 
 import "./ProxyGovernance.sol";
 import "./ProxyStorage.sol";
+import "../libraries/Common.sol";
 
 /**
   The Proxy contract implements delegation of calls to other contracts (`implementations`), with
@@ -52,7 +53,7 @@ contract Proxy is ProxyStorage, ProxyGovernance {
     // Storage slot with the address of the current implementation.
     // The address of the slot is keccak256("StarkWare2019.implemntation-slot").
     // We need to keep this variable stored outside of the commonly used space,
-    // so that it's not overrun by the logical implementaiton (the proxied contract).
+    // so that it's not overrun by the logical implementation (the proxied contract).
     bytes32 internal constant IMPLEMENTATION_SLOT =
     0x177667240aeeea7e35eabe3a35e18306f336219e1386f7710a6bf8783f761b24;
 
@@ -65,6 +66,8 @@ contract Proxy is ProxyStorage, ProxyGovernance {
     0x7d433c6f837e8f93009937c466c82efbb5ba621fae36886d0cac433c5d0aa7d2;
 
     uint256 public constant UPGRADE_ACTIVATION_DELAY = 28 days;
+
+    using Addresses for address;
 
     constructor ( )
         public
@@ -84,6 +87,7 @@ contract Proxy is ProxyStorage, ProxyGovernance {
             return false;
         }
         // solium-disable-next-line security/no-low-level-calls
+        // NOLINTNEXTLINE: reentrancy-events low-level-calls.
         (bool success, bytes memory returndata) = _implementation.delegatecall(
             abi.encodeWithSignature("isFrozen()"));
         require(success, string(returndata));
@@ -112,7 +116,7 @@ contract Proxy is ProxyStorage, ProxyGovernance {
     */
     modifier notFrozen()
     {
-        require(implementationIsFrozen() == false, "STATE_IS_FROZEN");
+        require(!implementationIsFrozen(), "STATE_IS_FROZEN");
         _;
     }
 
@@ -199,7 +203,7 @@ contract Proxy is ProxyStorage, ProxyGovernance {
     */
     function addImplementation(address newImplementation, bytes calldata data, bool finalize)
         external onlyGovernance {
-        require(isContract(newImplementation), "ADDRESS_NOT_CONTRACT");
+        require(newImplementation.isContract(), "ADDRESS_NOT_CONTRACT");
 
         bytes32 init_hash = keccak256(abi.encode(data, finalize));
         initializationHash[newImplementation] = init_hash;
@@ -242,15 +246,25 @@ contract Proxy is ProxyStorage, ProxyGovernance {
       before, and the init vector must be identical ot the one submitted before.
 
       Upon assignment of new implementation address,
-      its initialize will be called with the inititalizing vector (even if empty).
-      Therefore, the implementatin MUST must have such a method.
+      its initialize will be called with the initializing vector (even if empty).
+      Therefore, the implementation MUST must have such a method.
+
+      Note - Initialization data is committed to in advance, therefore it must remain valid
+      until the actual contract upgrade takes place.
+
+      Care should be taken regarding initialization data and flow when planning the contract upgrade.
+
+      When planning contract upgrade, special care is also needed with regard to governance
+      (See comments in Governance.sol).
     */
+    // NOLINTNEXTLINE: reentrancy-events timestamp.
     function upgradeTo(address newImplementation, bytes calldata data, bool finalize)
         external payable onlyGovernance notFinalized notFrozen {
         uint256 activation_time = enabledTime[newImplementation];
 
         require(activation_time > 0, "ADDRESS_NOT_UPGRADE_CANDIDATE");
         // solium-disable-next-line security/no-block-members
+        // NOLINTNEXTLINE: timestamp.
         require(activation_time <= now, "UPGRADE_NOT_ENABLED_YET");
 
         bytes32 init_vector_hash = initializationHash[newImplementation];
@@ -258,30 +272,23 @@ contract Proxy is ProxyStorage, ProxyGovernance {
         setImplementation(newImplementation);
 
         // solium-disable-next-line security/no-low-level-calls
+        // NOLINTNEXTLINE: low-level-calls.
         (bool success, bytes memory returndata) = newImplementation.delegatecall(
             abi.encodeWithSelector(this.initialize.selector, data));
         require(success, string(returndata));
 
         // Verify that the new implementation is not frozen post initialization.
+        // NOLINTNEXTLINE: low-level-calls.
         (success, returndata) = newImplementation.delegatecall(
             abi.encodeWithSignature("isFrozen()"));
         require(success, "CALL_TO_ISFROZEN_REVERTED");
-        require(abi.decode(returndata, (bool)) == false, "NEW_IMPLEMENTATION_FROZEN");
+        require(!abi.decode(returndata, (bool)), "NEW_IMPLEMENTATION_FROZEN");
 
-        if (finalize == true) {
+        if (finalize) {
             setFinalizedFlag();
             emit FinalizedImplementation(newImplementation);
         }
 
         emit Upgraded(newImplementation);
-    }
-
-    function isContract(address account) internal view returns (bool) {
-        uint256 size;
-        // solium-disable-next-line security/no-inline-assembly
-        assembly {
-            size := extcodesize(account)
-        }
-        return size > 0;
     }
 }

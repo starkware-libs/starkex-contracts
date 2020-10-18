@@ -19,7 +19,7 @@ contract Committee is FactRegistry, Identity {
     {
         require(numSignaturesRequired <= committeeMembers.length, "TOO_MANY_REQUIRED_SIGNATURES");
         for (uint256 idx = 0; idx < committeeMembers.length; idx++) {
-            require(isMember[committeeMembers[idx]] == false, "NON_UNIQUE_COMMITTEE_MEMBERS");
+            require(!isMember[committeeMembers[idx]], "NON_UNIQUE_COMMITTEE_MEMBERS");
             isMember[committeeMembers[idx]] = true;
         }
         signaturesRequired = numSignaturesRequired;

@@ -4,7 +4,7 @@ import "../interfaces/IFactRegistry.sol";
 
 /*
   An escapeVerifier is a fact registry contract for claims of the form:
-  (starkKey, tokenId, quantizedAmount) is the leaf in index vaultId of a Merkle tree with
+  (starkKey, assetId, quantizedAmount) is the leaf in index vaultId of a Merkle tree with
   specific height and root.
 */
 contract EscapeVerifier is IFactRegistry {
@@ -45,9 +45,9 @@ contract EscapeVerifier is IFactRegistry {
       submitted (which implies the location of the nodes within the Merkle tree).
 
           +-------------------------------+---------------------------+-----------+
-          | starkKey (252)                | tokenId (252)             | zeros (8) |
+          | starkKey (252)                | assetId (252)             | zeros (8) |
           +-------------------------------+---------------------------+-----------+
-          | hash(starkKey, tokenId) (252) | quantizedAmount (252)     | zeros (8) |
+          | hash(starkKey, assetId) (252) | quantizedAmount (252)     | zeros (8) |
           +-------------------------------+---------------------------+-----------+
           | left_node_0 (252)             | right_node_0 (252)        | zeros (8) |
           +-------------------------------+---------------------------+-----------+
@@ -61,7 +61,7 @@ contract EscapeVerifier is IFactRegistry {
       If the proof is accepted, this is registered under the following claim hash that may later
       be queried for validity:
 
-        `claimHash = keccak256(starkKey, tokenId, quantizedAmount, vaultRoot, treeHeight, vaultId)`
+        `claimHash = keccak256(starkKey, assetId, quantizedAmount, vaultRoot, treeHeight, vaultId)`
 
       For information about when this module is to be used, see :sol:mod:`Escapes`.
 
@@ -120,7 +120,7 @@ contract EscapeVerifier is IFactRegistry {
         require((proofLength & 1) == 0, "Proof length must be even.");
 
         // Each hash takes 2 256bit words and the last two words are the root and vaultId.
-        uint256 nHashes = (proofLength - 2) / 2;
+        uint256 nHashes = (proofLength - 2) / 2; // NOLINT: divide-before-multiply.
 
         // We use 2 hashes to compute the leaf.
         uint256 height = nHashes - 2;
@@ -152,15 +152,15 @@ contract EscapeVerifier is IFactRegistry {
             }
 
             let starkKey := shr(4, mload(proof))
-            let tokenId := and(mload(add(proof, 0x1f)),
+            let assetId := and(mload(add(proof, 0x1f)),
                                0x0fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff)
 
             let primeMinusOne := 0x800000000000011000000000000000000000000000000000000000000000000
-            if or(gt(starkKey, primeMinusOne), gt(tokenId, primeMinusOne)) {
-                raise_error("Bad starkKey or tokenId.", 24)
+            if or(gt(starkKey, primeMinusOne), gt(assetId, primeMinusOne)) {
+                raise_error("Bad starkKey or assetId.", 24)
             }
 
-            // hash(starkKey, tokenId) is on the left of the second hash.
+            // hash(starkKey, assetId) is on the left of the second hash.
             let nodeSelectors := shl(1, vaultId)
 
             // Allocate EC points table with dimensions N_TABLES by N_HASHES.
@@ -247,7 +247,7 @@ contract EscapeVerifier is IFactRegistry {
 
                 // At this point proof[offset + 0x40] holds the next input to be hashed.
                 // This input is typically in the form left_node||right_node||0 and
-                // we need to extract the relevent node for the consistent check below.
+                // we need to extract the relevant node for the consistent check below.
                 // Note that the same logic is reused for the leaf computation and
                 // for the consistent check with the final root.
                 offset := add(offset, 0x40)
@@ -288,7 +288,7 @@ contract EscapeVerifier is IFactRegistry {
             }
 
             mstore(0, starkKey)
-            mstore(0x20,  tokenId)
+            mstore(0x20,  assetId)
             mstore(0x40,  // quantizedAmount
                    and(mload(add(proof, 0x5f)),
                        0x0fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff))
@@ -297,7 +297,7 @@ contract EscapeVerifier is IFactRegistry {
             mstore(0xa0, vaultId)
 
             // claimHash := keccak256(
-            //      starkKey, tokenId, quantizedAmount, vaultRoot, height, vaultId).
+            //      starkKey, assetId, quantizedAmount, vaultRoot, height, vaultId).
             // storage[claimHash] := 1.
             sstore(keccak256(0, 0xc0), 1)
         }
@@ -306,7 +306,7 @@ contract EscapeVerifier is IFactRegistry {
 
     /*
       Checks the validity status of the claim corresponding to:
-      keccak256(abi.encode(starkKey, tokenId, quantizedAmount, root, height, vaultId)).
+      keccak256(abi.encode(starkKey, assetId, quantizedAmount, root, height, vaultId)).
     */
     function isValid(bytes32 hash)
     external view returns(bool val)

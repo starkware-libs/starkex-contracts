@@ -3,8 +3,8 @@ pragma solidity ^0.5.2;
 import "./Fri.sol";
 import "./MemoryMap.sol";
 import "./MemoryAccessUtils.sol";
-import "../interfaces/IStarkVerifier.sol";
-import "../VerifierChannel.sol";
+import "../../interfaces/IStarkVerifier.sol";
+import "../../VerifierChannel.sol";
 
 
 contract StarkVerifier is MemoryMap, MemoryAccessUtils, VerifierChannel, IStarkVerifier, Fri {
@@ -46,7 +46,7 @@ contract StarkVerifier is MemoryMap, MemoryAccessUtils, VerifierChannel, IStarkV
     address oodsContractAddress;
 
     function airSpecificInit(uint256[] memory publicInput)
-        internal returns (uint256[] memory ctx, uint256 logTraceLength);
+        internal view returns (uint256[] memory ctx, uint256 logTraceLength);
 
     uint256 constant internal PROOF_PARAMS_N_QUERIES_OFFSET = 0;
     uint256 constant internal PROOF_PARAMS_LOG_BLOWUP_FACTOR_OFFSET = 1;
@@ -77,7 +77,7 @@ contract StarkVerifier is MemoryMap, MemoryAccessUtils, VerifierChannel, IStarkV
     }
 
     function initVerifierParams(uint256[] memory publicInput, uint256[] memory proofParams)
-        internal returns (uint256[] memory ctx) {
+        internal view returns (uint256[] memory ctx) {
         require (proofParams.length > PROOF_PARAMS_FRI_STEPS_OFFSET, "Invalid proofParams.");
         require (
             proofParams.length == (
@@ -143,7 +143,7 @@ contract StarkVerifier is MemoryMap, MemoryAccessUtils, VerifierChannel, IStarkV
 
     function getPublicInputHash(uint256[] memory publicInput) internal pure returns (bytes32);
 
-    function oodsConsistencyCheck(uint256[] memory ctx) internal;
+    function oodsConsistencyCheck(uint256[] memory ctx) internal view;
 
     function getNColumnsInTrace() internal pure returns(uint256);
 
@@ -160,6 +160,28 @@ contract StarkVerifier is MemoryMap, MemoryAccessUtils, VerifierChannel, IStarkV
     function getNOodsValues() internal pure returns(uint256);
 
     function getNOodsCoefficients() internal pure returns(uint256);
+
+    // Interaction functions.
+    // If the AIR uses interaction, the following functions should be overridden.
+    function getNColumnsInTrace0() internal pure returns(uint256) {
+        return getNColumnsInTrace();
+    }
+
+    function getNColumnsInTrace1() internal pure returns(uint256) {
+        return 0;
+    }
+
+    function getMmInteractionElements() internal pure returns(uint256) {
+        require(false, "AIR does not support interaction.");
+    }
+
+    function getNInteractionElements() internal pure returns(uint256) {
+        require(false, "AIR does not support interaction.");
+    }
+
+    function hasInteraction() internal pure returns (bool) {
+        return getNColumnsInTrace1() > 0;
+    }
 
     function hashRow(uint256[] memory ctx, uint256 offset, uint256 length)
     internal pure returns (uint256 res) {
@@ -184,7 +206,7 @@ contract StarkVerifier is MemoryMap, MemoryAccessUtils, VerifierChannel, IStarkV
           for each query index "idx" we compute the corresponding evaluation point:
               g^(bitReverse(idx, log_evalDomainSize).
     */
-    function adjustQueryIndicesAndPrepareEvalPoints(uint256[] memory ctx) internal {
+    function adjustQueryIndicesAndPrepareEvalPoints(uint256[] memory ctx) internal view {
         uint256 nUniqueQueries = ctx[MM_N_UNIQUE_QUERIES];
         uint256 friQueue = getPtr(ctx, MM_FRI_QUEUE);
         uint256 friQueueEnd = friQueue + nUniqueQueries * 0x60;
@@ -234,7 +256,7 @@ contract StarkVerifier is MemoryMap, MemoryAccessUtils, VerifierChannel, IStarkV
                 mstore(add(p, 0x80), exponent)  // Exponent.
                 mstore(add(p, 0xa0), modulus)   // Modulus.
                 // Call modexp precompile.
-                if iszero(call(not(0), 0x05, 0, p, 0xc0, p, 0x20)) {
+                if iszero(staticcall(gas, 0x05, p, 0xc0, p, 0x20)) {
                     revert(0, 0)
                 }
                 res := mload(p)
@@ -257,8 +279,27 @@ contract StarkVerifier is MemoryMap, MemoryAccessUtils, VerifierChannel, IStarkV
         }
     }
 
+    /*
+      Reads query responses for nColumns from the channel with the corresponding authentication
+      paths. Verifies the consistency of the authentication paths with respect to the given
+      merkleRoot, and stores the query values in proofDataPtr.
+
+      nTotalColumns is the total number of columns represented in proofDataPtr (which should be
+      an array of nUniqueQueries rows of size nTotalColumns). nColumns is the number of columns
+      for which data will be read by this function.
+      The change to the proofDataPtr array will be as follows:
+      * The first nColumns cells will be set,
+      * The next nTotalColumns - nColumns will be skipped,
+      * The next nColumns cells will be set,
+      * The next nTotalColumns - nColumns will be skipped,
+      * ...
+
+      To set the last columns for each query simply add an offset to proofDataPtr before calling the
+      function.
+    */
     function readQueryResponsesAndDecommit(
-        uint256[] memory ctx, uint256 nColumns, uint256 proofDataPtr, bytes32 merkleRoot)
+        uint256[] memory ctx, uint256 nTotalColumns, uint256 nColumns, uint256 proofDataPtr,
+        bytes32 merkleRoot)
          internal view {
         require(nColumns <= getNColumnsInTrace() + getNColumnsInComposition(), "Too many columns.");
 
@@ -269,6 +310,7 @@ contract StarkVerifier is MemoryMap, MemoryAccessUtils, VerifierChannel, IStarkV
         uint256 merkleQueuePtr = getPtr(ctx, MM_MERKLE_QUEUE);
         uint256 rowSize = 0x20 * nColumns;
         uint256 lhashMask = getHashMask();
+        uint256 proofDataSkipBytes = 0x20 * (nTotalColumns - nColumns);
 
         assembly {
             let proofPtr := mload(channelPtr)
@@ -294,6 +336,7 @@ contract StarkVerifier is MemoryMap, MemoryAccessUtils, VerifierChannel, IStarkV
                     mstore(proofDataPtr, mload(proofPtr))
                     proofDataPtr := add(proofDataPtr, 0x20)
                 }
+                proofDataPtr := add(proofDataPtr, proofDataSkipBytes)
             }
 
             mstore(channelPtr, proofPtr)
@@ -312,16 +355,25 @@ contract StarkVerifier is MemoryMap, MemoryAccessUtils, VerifierChannel, IStarkV
       I.e. if the prover said that f(z) = c, the first FRI layer will include
       the term (f(x) - c)/(x-z).
     */
-    function computeFirstFriLayer(uint256[] memory ctx) internal {
+    function computeFirstFriLayer(uint256[] memory ctx) internal view {
         adjustQueryIndicesAndPrepareEvalPoints(ctx);
         // emit LogGas("Prepare evaluation points", gasleft());
         readQueryResponsesAndDecommit(
-            ctx, getNColumnsInTrace(), getPtr(ctx, MM_TRACE_QUERY_RESPONSES),
+            ctx, getNColumnsInTrace(), getNColumnsInTrace0(), getPtr(ctx, MM_TRACE_QUERY_RESPONSES),
             bytes32(ctx[MM_TRACE_COMMITMENT]));
         // emit LogGas("Read and decommit trace", gasleft());
 
+        if (hasInteraction()) {
+            readQueryResponsesAndDecommit(
+                ctx, getNColumnsInTrace(), getNColumnsInTrace1(),
+                getPtr(ctx, MM_TRACE_QUERY_RESPONSES + getNColumnsInTrace0()),
+                bytes32(ctx[MM_TRACE_COMMITMENT + 1]));
+            // emit LogGas("Read and decommit second trace", gasleft());
+        }
+
         readQueryResponsesAndDecommit(
-            ctx, getNColumnsInComposition(), getPtr(ctx, MM_COMPOSITION_QUERY_RESPONSES),
+            ctx, getNColumnsInComposition(), getNColumnsInComposition(),
+            getPtr(ctx, MM_COMPOSITION_QUERY_RESPONSES),
             bytes32(ctx[MM_OODS_COMMITMENT]));
 
         // emit LogGas("Read and decommit composition", gasleft());
@@ -396,7 +448,7 @@ contract StarkVerifier is MemoryMap, MemoryAccessUtils, VerifierChannel, IStarkV
 
     function verifyProof(
         uint256[] memory proofParams, uint256[] memory proof, uint256[] memory publicInput)
-        internal {
+        internal view {
         // emit LogGas("Transmission", gasleft());
         uint256[] memory ctx = initVerifierParams(publicInput, proofParams);
         uint256 channelPtr = getChannelPtr(ctx);
@@ -406,6 +458,16 @@ contract StarkVerifier is MemoryMap, MemoryAccessUtils, VerifierChannel, IStarkV
 
         // Read trace commitment.
         ctx[MM_TRACE_COMMITMENT] = uint256(readHash(channelPtr, true));
+
+        if (hasInteraction()) {
+            // Send interaction elements.
+            VerifierChannel.sendFieldElements(
+                channelPtr, getNInteractionElements(), getPtr(ctx, getMmInteractionElements()));
+
+            // Read second trace commitment.
+            ctx[MM_TRACE_COMMITMENT + 1] = uint256(readHash(channelPtr, true));
+        }
+
         VerifierChannel.sendFieldElements(
             channelPtr, getNCoefficients(), getPtr(ctx, getMmCoefficients()));
         // emit LogGas("Generate coefficients", gasleft());

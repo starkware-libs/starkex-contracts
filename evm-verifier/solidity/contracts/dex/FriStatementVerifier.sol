@@ -1,1 +1,0 @@
-../FriStatementVerifier.sol.ref

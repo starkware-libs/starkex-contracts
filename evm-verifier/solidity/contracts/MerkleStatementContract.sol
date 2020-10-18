@@ -10,6 +10,7 @@ contract MerkleStatementContract is MerkleVerifier, FactRegistry {
       required to be able to validate the queue). In case of success it registers the Merkle fact,
       which is the hash of the queue together with the resulting root.
     */
+    // NOLINTNEXTLINE: external-function.
     function verifyMerkle(
         uint256[] memory merkleView,
         uint256[] memory initialMerkleQueue,
@@ -34,7 +35,7 @@ contract MerkleStatementContract is MerkleVerifier, FactRegistry {
             let merkleViewPtr := add(merkleView, 0x20)
             // Let channelPtr point to a free space.
             channelPtr := mload(0x40) // freePtr.
-            // channelPtr will point to the merkleViewPtr because the 'verify' function expects
+            // channelPtr will point to the merkleViewPtr since the 'verify' function expects
             // a pointer to the proofPtr.
             mstore(channelPtr, merkleViewPtr)
             // Skip 0x20 bytes length at the beginning of the initialMerkleQueue.

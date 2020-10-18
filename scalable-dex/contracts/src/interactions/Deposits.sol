@@ -1,34 +1,35 @@
 pragma solidity ^0.5.2;
 
 import "../libraries/LibConstants.sol";
-import "../interfaces/IVerifierActions.sol";
+import "../interfaces/MAcceptModifications.sol";
+import "../interfaces/MTokenQuantization.sol";
+import "../interfaces/MTokenAssetData.sol";
 import "../interfaces/MFreezable.sol";
+import "../interfaces/MKeyGetters.sol";
 import "../interfaces/MOperator.sol";
-import "../interfaces/MUsers.sol";
 import "../interfaces/MTokens.sol";
 import "../components/MainStorage.sol";
 
 /**
   For a user to perform a deposit to the contract two calls need to take place:
 
-  1. A call to an ERC20 contract, authorizing this contract to trasnfer funds on behalf of the user.
-  2. A call to :sol:func:`deposit` indicating the amount, token ID and target vault ID to which to send the deposit.
+  1. A call to an ERC20 contract, authorizing this contract to transfer funds on behalf of the user.
+  2. A call to :sol:func:`deposit` indicating the starkKey, amount, asset type and target vault ID to which to send the deposit.
 
-  The amount should be quantized, according to the specific quantization defined for the token ID.
+  The amount should be quantized, according to the specific quantization defined for the asset type.
 
   The result of the operation, assuming all requirements are met, is that an amount of ERC20 tokens
   equaling the amount specified in the :sol:func:`deposit` call times the quantization factor is
   transferred on behalf of the user to the contract. In addition, the contract adds the funds to an
-  accumulator of pending deposits for the provided user, token ID and vault ID.
+  accumulator of pending deposits for the provided user, asset ID and vault ID.
 
   Once a deposit is made, the exchange may include it in a proof which will result in addition
   of the amount(s) deposited to the off-chain vault with the specified ID. When the contract
   receives such valid proof, it deducts the transfered funds from the pending deposits for the
-  specified user, token ID and vault ID.
+  specified Stark key, asset ID and vault ID.
 
-  The exchange will not be able to move the deposited funds to the off-chain vault if the vault does
-  not belong to the StarkKey associated with the user EthKey. However, this is not enforced by the
-  contract but by the inability to create a valid STARK proof for such transfer.
+  The exchange will not be able to move the deposited funds to the off-chain vault if the Stark key
+  is not registered in the system.
 
   Until that point, the user may cancel the deposit by performing a time-locked cancel-deposit
   operation consisting of two calls:
@@ -36,170 +37,253 @@ import "../components/MainStorage.sol";
   1. A call to :sol:func:`depositCancel`, setting a timer to enable reclaiming the deposit. Until this timer expires the user cannot reclaim funds as the exchange may still be processing the deposit for inclusion in the off chain vault.
   2. A call to :sol:func:`depositReclaim`, to perform the actual transfer of funds from the contract back to the ERC20 contract. This will only succeed if the timer set in the previous call has expired. The result should be the transfer of all funds not accounted for in proofs for off-chain inclusion, back to the user account on the ERC20 contract.
 
-  Implements IVerifierActions.acceptDeposit.
-  Uses MFreezable, MVerifiers, MUsers and MTokens.
+  Calling depositCancel and depositReclaim can only be done via an ethKey that is associated with
+  that vault's starkKey. This is enforced by the contract.
+
 */
-contract Deposits is MainStorage, LibConstants, IVerifierActions, MFreezable, MOperator,
-                     MUsers, MTokens {
+contract Deposits is
+    MainStorage,
+    LibConstants,
+    MAcceptModifications,
+    MTokenQuantization,
+    MTokenAssetData,
+    MFreezable,
+    MOperator,
+    MKeyGetters,
+    MTokens
+{
     event LogDeposit(
+        address depositorEthKey,
         uint256 starkKey,
         uint256 vaultId,
-        uint256 tokenId,
+        uint256 assetType,
         uint256 nonQuantizedAmount,
         uint256 quantizedAmount
     );
 
-    event LogDepositCancel(
+    event LogNftDeposit(
+        address depositorEthKey,
         uint256 starkKey,
         uint256 vaultId,
-        uint256 tokenId
+        uint256 assetType,
+        uint256 tokenId,
+        uint256 assetId
     );
+
+    event LogDepositCancel(uint256 starkKey, uint256 vaultId, uint256 assetId);
 
     event LogDepositCancelReclaimed(
         uint256 starkKey,
         uint256 vaultId,
-        uint256 tokenId,
+        uint256 assetType,
         uint256 nonQuantizedAmount,
         uint256 quantizedAmount
     );
 
+    event LogDepositNftCancelReclaimed(
+        uint256 starkKey,
+        uint256 vaultId,
+        uint256 assetType,
+        uint256 tokenId,
+        uint256 assetId
+    );
+
     function getDepositBalance(
         uint256 starkKey,
-        uint256 tokenId,
+        uint256 assetId,
         uint256 vaultId
-    )
-        external view
-        returns (uint256 balance)
-    {
-        balance = fromQuantized(tokenId, pendingDeposits[starkKey][tokenId][vaultId]);
+    ) external view returns (uint256 balance) {
+        uint256 presumedAssetType = assetId;
+        balance = fromQuantized(presumedAssetType, pendingDeposits[starkKey][assetId][vaultId]);
     }
 
     function getQuantizedDepositBalance(
         uint256 starkKey,
-        uint256 tokenId,
+        uint256 assetId,
         uint256 vaultId
-    )
-        external view
-        returns (uint256 balance)
+    ) external view returns (uint256 balance) {
+        balance = pendingDeposits[starkKey][assetId][vaultId];
+    }
+
+    function depositNft(
+        uint256 starkKey,
+        uint256 assetType,
+        uint256 vaultId,
+        uint256 tokenId
+    ) external notFrozen()
     {
-        balance = pendingDeposits[starkKey][tokenId][vaultId];
+        require(vaultId <= MAX_VAULT_ID, "OUT_OF_RANGE_VAULT_ID");
+        // starkKey must be registered.
+        require(ethKeys[starkKey] != ZERO_ADDRESS, "INVALID_STARK_KEY");
+        require(!isMintableAssetType(assetType), "MINTABLE_ASSET_TYPE");
+        uint256 assetId = calculateNftAssetId(assetType, tokenId);
+
+        // Update the balance.
+        pendingDeposits[starkKey][assetId][vaultId] = 1;
+
+        // Disable the cancellationRequest timeout when users deposit into their own account.
+        if (isMsgSenderStarkKeyOwner(starkKey) &&
+                cancellationRequests[starkKey][assetId][vaultId] != 0) {
+            delete cancellationRequests[starkKey][assetId][vaultId];
+        }
+
+        // Transfer the tokens to the Deposit contract.
+        transferInNft(assetType, tokenId);
+
+        // Log event.
+        emit LogNftDeposit(msg.sender, starkKey, vaultId, assetType, tokenId, assetId);
     }
 
     function getCancellationRequest(
         uint256 starkKey,
-        uint256 tokenId,
+        uint256 assetId,
         uint256 vaultId
-    )
-        external view
-        returns (uint256 request)
-    {
-        request = cancellationRequests[starkKey][tokenId][vaultId];
+    ) external view returns (uint256 request) {
+        request = cancellationRequests[starkKey][assetId][vaultId];
     }
 
     function deposit(
-        uint256 tokenId,
+        uint256 starkKey,
+        uint256 assetType,
         uint256 vaultId,
         uint256 quantizedAmount
-    )
-        public
-        notFrozen()
+    ) public notFrozen()
     {
         // No need to verify amount > 0, a deposit with amount = 0 can be used to undo cancellation.
         require(vaultId <= MAX_VAULT_ID, "OUT_OF_RANGE_VAULT_ID");
-
-        // Fetch user and key.
-        address user = msg.sender;
-        uint256 starkKey = getStarkKey(user);
+        // starkKey must be registered.
+        require(ethKeys[starkKey] != ZERO_ADDRESS, "INVALID_STARK_KEY");
+        require(!isMintableAssetType(assetType), "MINTABLE_ASSET_TYPE");
+        uint256 assetId = assetType;
 
         // Update the balance.
-        pendingDeposits[starkKey][tokenId][vaultId] += quantizedAmount;
-        require(pendingDeposits[starkKey][tokenId][vaultId] >= quantizedAmount, "DEPOSIT_OVERFLOW");
+        pendingDeposits[starkKey][assetId][vaultId] += quantizedAmount;
+        require(
+            pendingDeposits[starkKey][assetId][vaultId] >= quantizedAmount,
+            "DEPOSIT_OVERFLOW"
+        );
 
-        // Disable the timeout.
-        delete cancellationRequests[starkKey][tokenId][vaultId];
+        // Disable the cancellationRequest timeout when users deposit into their own account.
+        if (isMsgSenderStarkKeyOwner(starkKey) &&
+                cancellationRequests[starkKey][assetId][vaultId] != 0) {
+            delete cancellationRequests[starkKey][assetId][vaultId];
+        }
 
         // Transfer the tokens to the Deposit contract.
-        transferIn(tokenId, quantizedAmount);
+        transferIn(assetType, quantizedAmount);
 
         // Log event.
         emit LogDeposit(
-            starkKey, vaultId, tokenId, fromQuantized(tokenId, quantizedAmount), quantizedAmount);
+            msg.sender,
+            starkKey,
+            vaultId,
+            assetType,
+            fromQuantized(assetType, quantizedAmount),
+            quantizedAmount
+        );
     }
 
-    function deposit(
-        uint256 tokenId,
+    function deposit( // NOLINT: locked-ether.
+        uint256 starkKey,
+        uint256 assetType,
+        uint256 vaultId
+    ) external payable {
+        require(isEther(assetType), "INVALID_ASSET_TYPE");
+        deposit(starkKey, assetType, vaultId, toQuantized(assetType, msg.value));
+    }
+
+    function depositCancel(
+        uint256 starkKey,
+        uint256 assetId,
         uint256 vaultId
     )
-        external payable
-    {
-        require(isEther(tokenId), "INVALID_TOKEN_ID");
-        deposit(tokenId, vaultId, toQuantized(tokenId, msg.value));
-    }
-
-
-    function depositCancel(uint256 tokenId, uint256 vaultId)
         external
-        // No modifiers: This function can always be used, even when frozen.
+        isSenderStarkKey(starkKey)
+    // No notFrozen modifier: This function can always be used, even when frozen.
     {
         require(vaultId <= MAX_VAULT_ID, "OUT_OF_RANGE_VAULT_ID");
-
-        // Fetch user and key.
-        address user = msg.sender;
-        uint256 starkKey = getStarkKey(user);
 
         // Start the timeout.
         // solium-disable-next-line security/no-block-members
-        cancellationRequests[starkKey][tokenId][vaultId] = now;
+        cancellationRequests[starkKey][assetId][vaultId] = now;
 
         // Log event.
-        emit LogDepositCancel(starkKey, vaultId, tokenId);
+        emit LogDepositCancel(starkKey, vaultId, assetId);
     }
 
-    function depositReclaim(uint256 tokenId, uint256 vaultId)
+    function depositReclaim(
+        uint256 starkKey,
+        uint256 assetId,
+        uint256 vaultId
+    )
         external
-        // No modifiers: This function can always be used, even when frozen.
+        isSenderStarkKey(starkKey)
+    // No notFrozen modifier: This function can always be used, even when frozen.
     {
         require(vaultId <= MAX_VAULT_ID, "OUT_OF_RANGE_VAULT_ID");
-
-        // Fetch user and key.
-        address user = msg.sender;
-        uint256 starkKey = getStarkKey(user);
+        uint256 assetType = assetId;
 
         // Make sure enough time has passed.
-        uint256 requestTime = cancellationRequests[starkKey][tokenId][vaultId];
+        uint256 requestTime = cancellationRequests[starkKey][assetId][vaultId];
         require(requestTime != 0, "DEPOSIT_NOT_CANCELED");
         uint256 freeTime = requestTime + DEPOSIT_CANCEL_DELAY;
         assert(freeTime >= DEPOSIT_CANCEL_DELAY);
         // solium-disable-next-line security/no-block-members
-        require(now >= freeTime, "DEPOSIT_LOCKED");
+        require(now >= freeTime, "DEPOSIT_LOCKED"); // NOLINT: timestamp.
 
         // Clear deposit.
-        uint256 quantizedAmount = pendingDeposits[starkKey][tokenId][vaultId];
-        delete pendingDeposits[starkKey][tokenId][vaultId];
-        delete cancellationRequests[starkKey][tokenId][vaultId];
+        uint256 quantizedAmount = pendingDeposits[starkKey][assetId][vaultId];
+        delete pendingDeposits[starkKey][assetId][vaultId];
+        delete cancellationRequests[starkKey][assetId][vaultId];
 
         // Refund deposit.
-        transferOut(tokenId, quantizedAmount);
+        transferOut(msg.sender, assetType, quantizedAmount);
 
         // Log event.
         emit LogDepositCancelReclaimed(
-            starkKey, vaultId, tokenId, fromQuantized(tokenId, quantizedAmount), quantizedAmount);
+            starkKey,
+            vaultId,
+            assetType,
+            fromQuantized(assetType, quantizedAmount),
+            quantizedAmount
+        );
     }
 
-    function acceptDeposit(
+    function depositNftReclaim(
         uint256 starkKey,
+        uint256 assetType,
         uint256 vaultId,
-        uint256 tokenId,
-        uint256 quantizedAmount
+        uint256 tokenId
     )
-        internal
+        external
+        isSenderStarkKey(starkKey)
+    // No notFrozen modifier: This function can always be used, even when frozen.
     {
-        // Fetch deposit.
-        require(
-            pendingDeposits[starkKey][tokenId][vaultId] >= quantizedAmount,
-            "DEPOSIT_INSUFFICIENT");
+        require(vaultId <= MAX_VAULT_ID, "OUT_OF_RANGE_VAULT_ID");
 
-        // Subtract accepted quantized amount.
-        pendingDeposits[starkKey][tokenId][vaultId] -= quantizedAmount;
+        // assetId is the id for the deposits/withdrawals.
+        // equivalent for the usage of assetType for ERC20.
+        uint256 assetId = calculateNftAssetId(assetType, tokenId);
+
+        // Make sure enough time has passed.
+        uint256 requestTime = cancellationRequests[starkKey][assetId][vaultId];
+        require(requestTime != 0, "DEPOSIT_NOT_CANCELED");
+        uint256 freeTime = requestTime + DEPOSIT_CANCEL_DELAY;
+        assert(freeTime >= DEPOSIT_CANCEL_DELAY);
+        // solium-disable-next-line security/no-block-members
+        require(now >= freeTime, "DEPOSIT_LOCKED"); // NOLINT: timestamp.
+
+        // Clear deposit.
+        uint256 amount = pendingDeposits[starkKey][assetId][vaultId];
+        delete pendingDeposits[starkKey][assetId][vaultId];
+        delete cancellationRequests[starkKey][assetId][vaultId];
+
+        if (amount > 0) {
+            // Refund deposit.
+            transferOutNft(msg.sender, assetType, tokenId);
+
+            // Log event.
+            emit LogDepositNftCancelReclaimed(starkKey, vaultId, assetType, tokenId, assetId);
+        }
     }
 }
