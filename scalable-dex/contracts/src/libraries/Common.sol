@@ -36,6 +36,20 @@ library Addresses {
             require(abi.decode(returndata, (bool)), "TOKEN_OPERATION_FAILED");
         }
     }
+
+    /*
+      Similar to safeTokenContractCall, but always ignores the return value.
+
+      Assumes some other method is used to detect the failures
+      (e.g. balance is checked before and after the call).
+    */
+    function uncheckedTokenContractCall(address tokenAddress, bytes memory callData) internal {
+        // solium-disable-next-line security/no-low-level-calls
+        // NOLINTNEXTLINE: low-level-calls.
+        (bool success, bytes memory returndata) = address(tokenAddress).call(callData);
+        require(success, string(returndata));
+    }
+
 }
 
 /*
