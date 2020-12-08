@@ -4,8 +4,7 @@ import "./components/MainStorage.sol";
 import "./interfaces/MainDispatcher.sol";
 
 contract StarkExchange is MainStorage, MainDispatcher {
-    string public constant VERSION = "2.0.1";
-    string constant INIT_TAG = "INIT_TAG_Starkware.StarkExchange.2020.2.0.1";
+    string public constant VERSION = "2.0.2";
 
     uint256 constant SUBCONTRACT_BITS = 4;
 

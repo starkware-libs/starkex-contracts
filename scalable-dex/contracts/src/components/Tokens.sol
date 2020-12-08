@@ -154,7 +154,9 @@ contract Tokens is
             address tokenAddress = extractContractAddress(assetInfo);
             IERC20 token = IERC20(tokenAddress);
             uint256 exchangeBalanceBefore = token.balanceOf(address(this));
-            token.transferFrom(msg.sender, address(this), amount); // NOLINT: unused-return.
+            bytes memory callData = abi.encodeWithSelector(
+                token.transferFrom.selector, msg.sender, address(this), amount);
+            tokenAddress.uncheckedTokenContractCall(callData);
             uint256 exchangeBalanceAfter = token.balanceOf(address(this));
             require(exchangeBalanceAfter >= exchangeBalanceBefore, "OVERFLOW");
             // NOLINTNEXTLINE(incorrect-equality): strict equality needed.
@@ -200,7 +202,9 @@ contract Tokens is
             address tokenAddress = extractContractAddress(assetInfo);
             IERC20 token = IERC20(tokenAddress);
             uint256 exchangeBalanceBefore = token.balanceOf(address(this));
-            token.transfer(recipient, amount); // NOLINT: unused-return.
+            bytes memory callData = abi.encodeWithSelector(
+                token.transfer.selector, recipient, amount);
+            tokenAddress.uncheckedTokenContractCall(callData);
             uint256 exchangeBalanceAfter = token.balanceOf(address(this));
             require(exchangeBalanceAfter <= exchangeBalanceBefore, "UNDERFLOW");
             // NOLINTNEXTLINE(incorrect-equality): strict equality needed.
