@@ -4,16 +4,15 @@ import "./components/MainStorage.sol";
 import "./interfaces/MainDispatcher.sol";
 
 contract StarkExchange is MainStorage, MainDispatcher {
-    string public constant VERSION = "2.0.1";
-    string constant INIT_TAG = "INIT_TAG_Starkware.StarkExchange.2020.2.0.1";
+    string public constant VERSION = "2.0.4";
 
     uint256 constant SUBCONTRACT_BITS = 4;
 
     // Salt for a 7 bit unique spread of all relevant selectors. Pre-calculated.
     // ---------- The following code was auto-generated. PLEASE DO NOT EDIT. ----------
-    uint256 constant MAGIC_SALT = 45733;
-    uint256 constant IDX_MAP_0 = 0x201220230201001000221220210222000000020303010211120120200003002;
-    uint256 constant IDX_MAP_1 = 0x2100003000200010003000000300100220220203000020000101022100011100;
+    uint256 constant MAGIC_SALT = 48922;
+    uint256 constant IDX_MAP_0 = 0x2000210003222202003002100001000001202222220021203022313011;
+    uint256 constant IDX_MAP_1 = 0x20312200100120112200001020000002021230210020010012000010013000;
     // ---------- End of auto-generated code. ----------
 
     function validateSubContractIndex(uint256 index, address subContract) internal pure{

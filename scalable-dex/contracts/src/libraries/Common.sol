@@ -27,15 +27,29 @@ library Addresses {
     */
     function safeTokenContractCall(address tokenAddress, bytes memory callData) internal {
         require(isContract(tokenAddress), "BAD_TOKEN_ADDRESS");
-        // solium-disable-next-line security/no-low-level-calls
         // NOLINTNEXTLINE: low-level-calls.
-        (bool success, bytes memory returndata) = address(tokenAddress).call(callData);
+        (bool success, bytes memory returndata) = tokenAddress.call(callData);
+        // solium-disable-previous-line security/no-low-level-calls
         require(success, string(returndata));
 
         if (returndata.length > 0) {
             require(abi.decode(returndata, (bool)), "TOKEN_OPERATION_FAILED");
         }
     }
+
+    /*
+      Similar to safeTokenContractCall, but always ignores the return value.
+
+      Assumes some other method is used to detect the failures
+      (e.g. balance is checked before and after the call).
+    */
+    function permissiveSafeTokenContractCall(address tokenAddress, bytes memory callData) internal {
+        // NOLINTNEXTLINE: low-level-calls.
+        (bool success, bytes memory returndata) = tokenAddress.call(callData);
+        // solium-disable-previous-line security/no-low-level-calls
+        require(success, string(returndata));
+    }
+
 }
 
 /*

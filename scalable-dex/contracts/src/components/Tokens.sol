@@ -57,6 +57,7 @@ contract Tokens is
     event LogTokenRegistered(uint256 assetType, bytes assetInfo);
     event LogTokenAdminAdded(address tokenAdmin);
     event LogTokenAdminRemoved(address tokenAdmin);
+    event LogPermissiveToken(uint256 assetType);
 
     using Addresses for address;
     using Addresses for address payable;
@@ -79,7 +80,6 @@ contract Tokens is
     function isTokenAdmin(address testedAdmin) external view returns (bool) {
         return tokenAdmins[testedAdmin];
     }
-
 
     function registerToken(uint256 assetType, bytes calldata assetInfo) external {
         registerToken(assetType, assetInfo, 1);
@@ -143,6 +143,24 @@ contract Tokens is
     }
 
     /*
+      Marks an assetType as permissive,
+      to allow more permissive processing (e.g. XAUT).
+    */
+    function registerTokenAsPermissive(uint256 assetType) external onlyTokensAdmin() {
+        require(registeredAssetType[assetType], "ASSET_TYPE_NOT_REGISTERED");
+        permissiveAssetType[assetType] = true;
+        emit LogPermissiveToken(assetType);
+    }
+
+    /*
+      Indicates whether an asset is registered as permissive.
+    */
+    function isTokenPermissive(uint256 assetType) external view returns(bool) {
+        require(registeredAssetType[assetType], "ASSET_TYPE_NOT_REGISTERED");
+        return permissiveAssetType[assetType];
+    }
+
+    /*
       Transfers funds from msg.sender to the exchange.
     */
     function transferIn(uint256 assetType, uint256 quantizedAmount) internal {
@@ -154,7 +172,13 @@ contract Tokens is
             address tokenAddress = extractContractAddress(assetInfo);
             IERC20 token = IERC20(tokenAddress);
             uint256 exchangeBalanceBefore = token.balanceOf(address(this));
-            token.transferFrom(msg.sender, address(this), amount); // NOLINT: unused-return.
+            bytes memory callData = abi.encodeWithSelector(
+                token.transferFrom.selector, msg.sender, address(this), amount);
+            if (permissiveAssetType[assetType]) {
+                tokenAddress.permissiveSafeTokenContractCall(callData);
+            } else {
+                tokenAddress.safeTokenContractCall(callData);
+            }
             uint256 exchangeBalanceAfter = token.balanceOf(address(this));
             require(exchangeBalanceAfter >= exchangeBalanceBefore, "OVERFLOW");
             // NOLINTNEXTLINE(incorrect-equality): strict equality needed.
@@ -200,7 +224,13 @@ contract Tokens is
             address tokenAddress = extractContractAddress(assetInfo);
             IERC20 token = IERC20(tokenAddress);
             uint256 exchangeBalanceBefore = token.balanceOf(address(this));
-            token.transfer(recipient, amount); // NOLINT: unused-return.
+            bytes memory callData = abi.encodeWithSelector(
+                token.transfer.selector, recipient, amount);
+            if (permissiveAssetType[assetType]) {
+                tokenAddress.permissiveSafeTokenContractCall(callData);
+            } else {
+                tokenAddress.safeTokenContractCall(callData);
+            }
             uint256 exchangeBalanceAfter = token.balanceOf(address(this));
             require(exchangeBalanceAfter <= exchangeBalanceBefore, "UNDERFLOW");
             // NOLINTNEXTLINE(incorrect-equality): strict equality needed.

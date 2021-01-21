@@ -3,8 +3,10 @@ pragma solidity ^0.5.2;
 import "./SubContractor.sol";
 import "./IDispatcher.sol";
 import "../libraries/Common.sol";
+import "../upgrade/StorageSlots.sol";
 
-contract MainDispatcher is IDispatcher {
+
+contract MainDispatcher is IDispatcher, StorageSlots {
 
     using Addresses for address;
 
@@ -108,6 +110,9 @@ contract MainDispatcher is IDispatcher {
 
         // Init data MUST include addresses for all sub-contracts.
         require(data.length >= 32 * (nSubContracts + 1), "SUB_CONTRACTS_NOT_PROVIDED");
+
+        // Ensure implementation is a valid contract.
+        require(implementation().isContract(), "INVALID_IMPLEMENTATION");
 
         // Size of passed data, excluding sub-contract addresses.
         uint256 additionalDataSize = data.length - 32 * (nSubContracts + 1);

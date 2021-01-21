@@ -82,4 +82,8 @@ contract MainStorage is ProxyStorage {
 
     // Mapping between sub-contract index to sub-contract address.
     mapping(uint256 => address) subContracts;       // NOLINT: uninitialized-state.
+
+    // Mapping of permissive tokens.
+    // AssetType of tokens that are not ERC20 compliant (e.g. XAUT) and require permissive handling.
+    mapping (uint256 => bool) permissiveAssetType;      // NOLINT: uninitialized-state.
 }
