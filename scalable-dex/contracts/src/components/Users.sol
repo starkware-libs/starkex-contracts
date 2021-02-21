@@ -1,4 +1,5 @@
-pragma solidity ^0.5.2;
+// SPDX-License-Identifier: Apache-2.0.
+pragma solidity ^0.6.11;
 
 import "./MainStorage.sol";
 import "../libraries/LibConstants.sol";
@@ -39,7 +40,7 @@ import "../interfaces/MKeyGetters.sol";
   This mapping is later used to ensure that withdrawals from accounts mapped to the Stark Keys can
   only be performed by users authenticated with the associated Ethereum public keys (see :sol:mod:`Withdrawals`).
 */
-contract Users is MainStorage, LibConstants, MGovernance, MKeyGetters {
+abstract contract Users is MainStorage, LibConstants, MGovernance, MKeyGetters {
     event LogUserRegistered(address ethKey, uint256 starkKey, address sender);
     event LogUserAdminAdded(address userAdmin);
     event LogUserAdminRemoved(address userAdmin);
@@ -79,14 +80,13 @@ contract Users is MainStorage, LibConstants, MGovernance, MKeyGetters {
         bytes32 r;
         bytes32 s;
 
-        // solium-disable-next-line security/no-inline-assembly
         assembly {
             r := mload(add(sig, 32))
             s := mload(add(sig, 64))
         }
 
         address signer = ecrecover(signedData, v, r, s);
-        require(isUserAdmin(signer), "INVALID_SIGNATURE");
+        require(signer != ZERO_ADDRESS && isUserAdmin(signer), "INVALID_SIGNATURE");
 
         // Update state.
         ethKeys[starkKey] = ethKey;
@@ -96,7 +96,6 @@ contract Users is MainStorage, LibConstants, MGovernance, MKeyGetters {
     }
 
     function fieldPow(uint256 base, uint256 exponent) internal view returns (uint256) {
-        // solium-disable-next-line security/no-low-level-calls
         // NOLINTNEXTLINE: low-level-calls reentrancy-events reentrancy-no-eth.
         (bool success, bytes memory returndata) = address(5).staticcall(
             abi.encode(0x20, 0x20, 0x20, base, exponent, K_MODULUS)

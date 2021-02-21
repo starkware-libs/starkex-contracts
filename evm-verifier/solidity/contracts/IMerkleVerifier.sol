@@ -1,13 +1,14 @@
-pragma solidity ^0.5.2;
+// SPDX-License-Identifier: Apache-2.0.
+pragma solidity ^0.6.11;
 
-contract IMerkleVerifier {
+abstract contract IMerkleVerifier {
     uint256 constant internal MAX_N_MERKLE_VERIFIER_QUERIES =  128;
 
-    function verify(
+    function verifyMerkle(
         uint256 channelPtr,
         uint256 queuePtr,
         bytes32 root,
         uint256 n)
-        internal view
+        internal view virtual
         returns (bytes32 hash);
 }

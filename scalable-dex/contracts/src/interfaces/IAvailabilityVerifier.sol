@@ -1,11 +1,9 @@
-pragma solidity ^0.5.2;
+// SPDX-License-Identifier: Apache-2.0.
+pragma solidity ^0.6.11;
 
-contract IAvailabilityVerifier {
-    function verifyAvailabilityProof(
-        uint256 newVaultRoot,
-        uint256 heightVaultTree,
-        uint256 sequenceNumber,
-        bytes calldata opaqueAvailabilityProofs
-    )
-        external view;
+interface IAvailabilityVerifier {
+    /*
+      Verifies the availability proof. Reverts if invalid.
+    */
+    function verifyAvailabilityProof(bytes32 claimHash, bytes calldata availabilityProofs) external;
 }

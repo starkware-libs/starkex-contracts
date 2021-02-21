@@ -1,19 +1,16 @@
-pragma solidity ^0.5.2;
+// SPDX-License-Identifier: Apache-2.0.
+pragma solidity ^0.6.11;
 
-contract MOperator {
+abstract contract MOperator {
 
-    modifier onlyOperator()
-    {
-        // Pure modifier declarations are not supported. Instead we provide
-        // a dummy definition.
-        revert("UNIMPLEMENTED");
-        _;
-    }
+    modifier onlyOperator() virtual; // NOLINT incorrect-modifier.
 
     function registerOperator(address newOperator)
-        external;
+        external
+        virtual;
 
     function unregisterOperator(address removedOperator)
+        virtual
         external;
 
 }

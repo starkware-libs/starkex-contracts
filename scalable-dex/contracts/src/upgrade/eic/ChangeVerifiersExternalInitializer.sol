@@ -1,10 +1,11 @@
-pragma solidity ^0.5.2;
+// SPDX-License-Identifier: Apache-2.0.
+pragma solidity ^0.6.11;
 
-import "../interfaces/ExternalInitializer.sol";
-import "../interfaces/Identity.sol";
-import "../components/MainStorage.sol";
-import "../libraries/Common.sol";
-import "../libraries/LibConstants.sol";
+import "../../interfaces/ExternalInitializer.sol";
+import "../../interfaces/Identity.sol";
+import "../../components/MainStorage.sol";
+import "../../libraries/Common.sol";
+import "../../libraries/LibConstants.sol";
 
 /*
   This contract is simple impelementation of an external initializing contract
@@ -25,7 +26,7 @@ contract ChangeVerifiersExternalInitializer is
       3. New availability verifier address,
       4. Keccak256 of the expected availability verifier id.
     */
-    function initialize(bytes calldata data) external {
+    function initialize(bytes calldata data) external override {
         require(data.length == 128, "UNEXPECTED_DATA_SIZE");
         address newVerifierAddress;
         bytes32 verifierIdHash;
@@ -69,7 +70,7 @@ contract ChangeVerifiersExternalInitializer is
         require(hashRealId == hashExpectedId, "UNEXPECTED_CONTRACT_IDENTIFIER");
         require(list.length < maxLength, "CHAIN_AT_MAX_CAPACITY");
         require(findEntry(list, entry) == ENTRY_NOT_FOUND, "ENTRY_ALREADY_EXISTS");
-        chain.list.push(entry);
+        chain.list.push(entry); // NOLINT controlled-array-length;
         chain.unlockedForRemovalTime[entry] = 0;
     }
 

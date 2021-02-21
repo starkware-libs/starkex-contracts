@@ -1,10 +1,10 @@
-pragma solidity ^0.5.2;
+// SPDX-License-Identifier: Apache-2.0.
+pragma solidity ^0.6.11;
 
 import "../interfaces/MAcceptModifications.sol";
 import "../interfaces/MTokenQuantization.sol";
 import "../interfaces/MTokenAssetData.sol";
 import "../interfaces/MFreezable.sol";
-import "../interfaces/MOperator.sol";
 import "../interfaces/MKeyGetters.sol";
 import "../interfaces/MTokens.sol";
 import "../components/MainStorage.sol";
@@ -48,8 +48,14 @@ import "../components/MainStorage.sol";
   ownership of off-chain funds. If such proof is accepted, the user may proceed as above with
   the :sol:func:`withdraw` call to the contract to complete the operation.
 */
-contract Withdrawals is MainStorage, MAcceptModifications, MTokenQuantization, MTokenAssetData,
-                        MFreezable, MOperator, MKeyGetters, MTokens  {
+abstract contract Withdrawals is
+    MainStorage,
+    MAcceptModifications,
+    MTokenQuantization,
+    MTokenAssetData,
+    MFreezable,
+    MKeyGetters,
+    MTokens  {
     event LogWithdrawalPerformed(
         uint256 starkKey,
         uint256 assetType,
@@ -90,12 +96,29 @@ contract Withdrawals is MainStorage, MAcceptModifications, MTokenQuantization, M
       Allows a user to withdraw accepted funds to a recipient's account.
       This function can be called normally while frozen.
     */
-    function withdrawTo(uint256 starkKey, uint256 assetType, address payable recipient)
-        public
+    function withdrawTo(
+        uint256 starkKey,
+        uint256 assetType,
+        address payable recipient)
+        external
         isSenderStarkKey(starkKey)
-    // No notFrozen modifier: This function can always be used, even when frozen.
+    {
+        internalWithdrawTo(starkKey, assetType, recipient);
+    }
+
+    /*
+      Underlying implementation of withdraw & withdrawTo.
+      Checking that the address of the recipient preserves self-custody is the responsibility of the
+      calling function. (i.e. that the recipient is either the owner of the assets or that the owner
+      has authorized the withdrawal).
+    */
+    function internalWithdrawTo(
+        uint256 starkKey,
+        uint256 assetType,
+        address payable recipient) internal
     {
         require(!isMintableAssetType(assetType), "MINTABLE_ASSET_TYPE");
+        require(isFungibleAssetType(assetType), "NON_FUNGIBLE_ASSET_TYPE");
         uint256 assetId = assetType;
         // Fetch and clear quantized amount.
         uint256 quantizedAmount = pendingWithdrawals[starkKey][assetId];
@@ -113,14 +136,14 @@ contract Withdrawals is MainStorage, MAcceptModifications, MTokenQuantization, M
     }
 
     /*
-      Allows a user to withdraw accepted funds to its own account.
-      This function can be called normally while frozen.
+      Moves funds from the pending withdrawal account to the owner address.
+      Note: this function can be called by anyone.
+      Can be called normally while frozen.
     */
     function withdraw(uint256 starkKey, uint256 assetType)
         external
-    // No notFrozen modifier: This function can always be used, even when frozen.
     {
-        withdrawTo(starkKey, assetType, msg.sender);
+        internalWithdrawTo(starkKey, assetType, address(uint160(getEthKey(starkKey))));
     }
 
     /*
@@ -140,6 +163,7 @@ contract Withdrawals is MainStorage, MAcceptModifications, MTokenQuantization, M
         // Calculate assetId.
         uint256 assetId = calculateNftAssetId(assetType, tokenId);
         require(!isMintableAssetType(assetType), "MINTABLE_ASSET_TYPE");
+        require(!isFungibleAssetType(assetType), "FUNGIBLE_ASSET_TYPE");
         if (pendingWithdrawals[starkKey][assetId] > 0) {
             require(pendingWithdrawals[starkKey][assetId] == 1, "ILLEGAL_NFT_BALANCE");
             pendingWithdrawals[starkKey][assetId] = 0;

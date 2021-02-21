@@ -1,13 +1,14 @@
 // ---------- The following code was auto-generated. PLEASE DO NOT EDIT. ----------
-pragma solidity ^0.5.2;
+// SPDX-License-Identifier: Apache-2.0.
+pragma solidity ^0.6.11;
 
 import "../../PrimeFieldElement0.sol";
 
 contract StarkParameters is PrimeFieldElement0 {
-    uint256 constant internal N_COEFFICIENTS = 298;
+    uint256 constant internal N_COEFFICIENTS = 348;
     uint256 constant internal N_INTERACTION_ELEMENTS = 3;
-    uint256 constant internal MASK_SIZE = 174;
-    uint256 constant internal N_ROWS_IN_MASK = 77;
+    uint256 constant internal MASK_SIZE = 206;
+    uint256 constant internal N_ROWS_IN_MASK = 86;
     uint256 constant internal N_COLUMNS_IN_MASK = 25;
     uint256 constant internal N_COLUMNS_IN_TRACE0 = 23;
     uint256 constant internal N_COLUMNS_IN_TRACE1 = 2;
@@ -24,7 +25,7 @@ contract StarkParameters is PrimeFieldElement0 {
     uint256 constant internal RC_N_PARTS = 8;
     uint256 constant internal ECDSA_BUILTIN_RATIO = 512;
     uint256 constant internal ECDSA_BUILTIN_REPETITIONS = 1;
-    uint256 constant internal LAYOUT_CODE = 8098989891770344814;
+    uint256 constant internal LAYOUT_CODE = 495756340332;
     uint256 constant internal LOG_CPU_COMPONENT_HEIGHT = 4;
 }
 // ---------- End of auto-generated code. ----------

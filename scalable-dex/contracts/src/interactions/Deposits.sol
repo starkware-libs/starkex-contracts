@@ -1,12 +1,12 @@
-pragma solidity ^0.5.2;
+// SPDX-License-Identifier: Apache-2.0.
+pragma solidity ^0.6.11;
 
 import "../libraries/LibConstants.sol";
 import "../interfaces/MAcceptModifications.sol";
 import "../interfaces/MTokenQuantization.sol";
-import "../interfaces/MTokenAssetData.sol";
+import "../interactions/TokenAssetData.sol";
 import "../interfaces/MFreezable.sol";
 import "../interfaces/MKeyGetters.sol";
-import "../interfaces/MOperator.sol";
 import "../interfaces/MTokens.sol";
 import "../components/MainStorage.sol";
 
@@ -41,14 +41,13 @@ import "../components/MainStorage.sol";
   that vault's starkKey. This is enforced by the contract.
 
 */
-contract Deposits is
+abstract contract Deposits is
     MainStorage,
     LibConstants,
     MAcceptModifications,
     MTokenQuantization,
-    MTokenAssetData,
+    TokenAssetData,
     MFreezable,
-    MOperator,
     MKeyGetters,
     MTokens
 {
@@ -112,10 +111,11 @@ contract Deposits is
         uint256 tokenId
     ) external notFrozen()
     {
-        require(vaultId <= MAX_VAULT_ID, "OUT_OF_RANGE_VAULT_ID");
+        require(vaultId <= STARKEX_MAX_VAULT_ID, "OUT_OF_RANGE_VAULT_ID");
         // starkKey must be registered.
         require(ethKeys[starkKey] != ZERO_ADDRESS, "INVALID_STARK_KEY");
         require(!isMintableAssetType(assetType), "MINTABLE_ASSET_TYPE");
+        require(!isFungibleAssetType(assetType), "FUNGIBLE_ASSET_TYPE");
         uint256 assetId = calculateNftAssetId(assetType, tokenId);
 
         // Update the balance.
@@ -149,11 +149,15 @@ contract Deposits is
         uint256 quantizedAmount
     ) public notFrozen()
     {
+        // The vaultId is not validated but should be in the allowed range supported by the
+        // exchange. If not, it will be ignored by the exchange and the starkKey owner may reclaim
+        // the funds by using depositCancel + depositReclaim.
+
         // No need to verify amount > 0, a deposit with amount = 0 can be used to undo cancellation.
-        require(vaultId <= MAX_VAULT_ID, "OUT_OF_RANGE_VAULT_ID");
         // starkKey must be registered.
         require(ethKeys[starkKey] != ZERO_ADDRESS, "INVALID_STARK_KEY");
         require(!isMintableAssetType(assetType), "MINTABLE_ASSET_TYPE");
+        require(isFungibleAssetType(assetType), "NON_FUNGIBLE_ASSET_TYPE");
         uint256 assetId = assetType;
 
         // Update the balance.
@@ -201,11 +205,9 @@ contract Deposits is
         isSenderStarkKey(starkKey)
     // No notFrozen modifier: This function can always be used, even when frozen.
     {
-        require(vaultId <= MAX_VAULT_ID, "OUT_OF_RANGE_VAULT_ID");
 
         // Start the timeout.
-        // solium-disable-next-line security/no-block-members
-        cancellationRequests[starkKey][assetId][vaultId] = now;
+        cancellationRequests[starkKey][assetId][vaultId] = block.timestamp;
 
         // Log event.
         emit LogDepositCancel(starkKey, vaultId, assetId);
@@ -220,7 +222,6 @@ contract Deposits is
         isSenderStarkKey(starkKey)
     // No notFrozen modifier: This function can always be used, even when frozen.
     {
-        require(vaultId <= MAX_VAULT_ID, "OUT_OF_RANGE_VAULT_ID");
         uint256 assetType = assetId;
 
         // Make sure enough time has passed.
@@ -228,8 +229,7 @@ contract Deposits is
         require(requestTime != 0, "DEPOSIT_NOT_CANCELED");
         uint256 freeTime = requestTime + DEPOSIT_CANCEL_DELAY;
         assert(freeTime >= DEPOSIT_CANCEL_DELAY);
-        // solium-disable-next-line security/no-block-members
-        require(now >= freeTime, "DEPOSIT_LOCKED"); // NOLINT: timestamp.
+        require(block.timestamp >= freeTime, "DEPOSIT_LOCKED"); // NOLINT: timestamp.
 
         // Clear deposit.
         uint256 quantizedAmount = pendingDeposits[starkKey][assetId][vaultId];
@@ -259,7 +259,7 @@ contract Deposits is
         isSenderStarkKey(starkKey)
     // No notFrozen modifier: This function can always be used, even when frozen.
     {
-        require(vaultId <= MAX_VAULT_ID, "OUT_OF_RANGE_VAULT_ID");
+        require(vaultId <= STARKEX_MAX_VAULT_ID, "OUT_OF_RANGE_VAULT_ID");
 
         // assetId is the id for the deposits/withdrawals.
         // equivalent for the usage of assetType for ERC20.
@@ -270,8 +270,7 @@ contract Deposits is
         require(requestTime != 0, "DEPOSIT_NOT_CANCELED");
         uint256 freeTime = requestTime + DEPOSIT_CANCEL_DELAY;
         assert(freeTime >= DEPOSIT_CANCEL_DELAY);
-        // solium-disable-next-line security/no-block-members
-        require(now >= freeTime, "DEPOSIT_LOCKED"); // NOLINT: timestamp.
+        require(block.timestamp >= freeTime, "DEPOSIT_LOCKED");
 
         // Clear deposit.
         uint256 amount = pendingDeposits[starkKey][assetId][vaultId];

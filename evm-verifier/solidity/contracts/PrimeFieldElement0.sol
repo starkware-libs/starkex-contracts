@@ -1,4 +1,6 @@
-pragma solidity ^0.5.2;
+// SPDX-License-Identifier: Apache-2.0.
+pragma solidity ^0.6.11;
+
 
 contract PrimeFieldElement0 {
     uint256 constant internal K_MODULUS =
@@ -86,7 +88,7 @@ contract PrimeFieldElement0 {
             mstore(add(p, 0x80), exponent)   // Exponent.
             mstore(add(p, 0xa0), modulus)    // Modulus.
             // Call modexp precompile.
-            if iszero(staticcall(gas, 0x05, p, 0xc0, p, 0x20)) {
+            if iszero(staticcall(gas(), 0x05, p, 0xc0, p, 0x20)) {
                 revert(0, 0)
             }
             res := mload(p)

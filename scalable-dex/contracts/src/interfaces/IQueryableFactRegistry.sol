@@ -1,4 +1,5 @@
-pragma solidity ^0.5.2;
+// SPDX-License-Identifier: Apache-2.0.
+pragma solidity ^0.6.11;
 
 import "./IFactRegistry.sol";
 
@@ -6,7 +7,7 @@ import "./IFactRegistry.sol";
   Extends the IFactRegistry interface with a query method that indicates
   whether the fact registry has successfully registered any fact or is still empty of such facts.
 */
-contract IQueryableFactRegistry is IFactRegistry {
+interface IQueryableFactRegistry is IFactRegistry {
 
     /*
       Returns true if at least one fact has been registered.

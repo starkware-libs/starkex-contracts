@@ -1,8 +1,10 @@
-pragma solidity ^0.5.2;
+// SPDX-License-Identifier: Apache-2.0.
+pragma solidity ^0.6.11;
 
 import "../libraries/LibConstants.sol";
 import "../interfaces/MFreezable.sol";
 import "../interfaces/MKeyGetters.sol";
+import "../interfaces/MStarkExForcedActionState.sol";
 import "../components/MainStorage.sol";
 
 /**
@@ -33,51 +35,34 @@ import "../components/MainStorage.sol";
   cost of the request exceed 1M gas.
 
 */
-contract FullWithdrawals is MainStorage, LibConstants, MFreezable, MKeyGetters {
+abstract contract FullWithdrawals is
+    MainStorage,
+    LibConstants,
+    MStarkExForcedActionState,
+    MFreezable,
+    MKeyGetters {
     event LogFullWithdrawalRequest(uint256 starkKey, uint256 vaultId);
 
     function fullWithdrawalRequest(uint256 starkKey, uint256 vaultId) external notFrozen()
         isSenderStarkKey(starkKey) {
         // Verify vault ID in range.
-        require(vaultId <= MAX_VAULT_ID, "OUT_OF_RANGE_VAULT_ID");
+        require(vaultId <= STARKEX_MAX_VAULT_ID, "OUT_OF_RANGE_VAULT_ID");
 
         // Start timer on escape request.
-        // solium-disable-next-line security/no-block-members
-        fullWithdrawalRequests[starkKey][vaultId] = now;
+        setFullWithdrawalRequest(starkKey, vaultId);
 
         // Log request.
         emit LogFullWithdrawalRequest(starkKey, vaultId);
-
-        // Burn gas to prevent denial of service (too many requests per block).
-        for (uint256 i = 0; i < 22231; i++) {}
-        // solium-disable-previous-line no-empty-blocks
-    }
-
-    function getFullWithdrawalRequest(uint256 starkKey, uint256 vaultId)
-        external
-        view
-        returns (uint256 res)
-    {
-        // Return request value. Expect zero if the request doesn't exist or has been serviced, and
-        // a non-zero value otherwise.
-        res = fullWithdrawalRequests[starkKey][vaultId];
     }
 
     function freezeRequest(uint256 starkKey, uint256 vaultId) external notFrozen() {
         // Verify vaultId in range.
-        require(vaultId <= MAX_VAULT_ID, "OUT_OF_RANGE_VAULT_ID");
+        require(vaultId <= STARKEX_MAX_VAULT_ID, "OUT_OF_RANGE_VAULT_ID");
 
         // Load request time.
-        uint256 requestTime = fullWithdrawalRequests[starkKey][vaultId];
-        require(requestTime != 0, "FULL_WITHDRAWAL_UNREQUESTED");
+        uint256 requestTime = getFullWithdrawalRequest(starkKey, vaultId);
 
-        // Verify timer on escape request.
-        uint256 freezeTime = requestTime + FREEZE_GRACE_PERIOD;
-        assert(freezeTime >= FREEZE_GRACE_PERIOD);
-        // solium-disable-next-line security/no-block-members
-        require(now >= freezeTime, "FULL_WITHDRAWAL_PENDING"); // NOLINT: timestamp.
-
-        // The only place this function is called.
+        validateFreezeRequest(requestTime);
         freeze();
     }
 }

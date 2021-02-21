@@ -1,4 +1,5 @@
-pragma solidity ^0.5.2;
+// SPDX-License-Identifier: Apache-2.0.
+pragma solidity ^0.6.11;
 
 import "../libraries/LibConstants.sol";
 import "../interfaces/MFreezable.sol";
@@ -8,34 +9,33 @@ import "./MainStorage.sol";
 /*
   Implements MFreezable.
 */
-contract Freezable is MainStorage, LibConstants, MGovernance, MFreezable {
+abstract contract Freezable is MainStorage, LibConstants, MGovernance, MFreezable {
     event LogFrozen();
     event LogUnFrozen();
 
-    modifier notFrozen()
-    {
-        require(!stateFrozen, "STATE_IS_FROZEN");
-        _;
+    function isFrozen() public view override returns (bool) {
+        return stateFrozen;
     }
 
-    modifier onlyFrozen()
-    {
-        require(stateFrozen, "STATE_NOT_FROZEN");
-        _;
-    }
+    function validateFreezeRequest(uint256 requestTime) internal override {
+        require(requestTime != 0, "FORCED_ACTION_UNREQUESTED");
+        // Verify timer on escape request.
+        uint256 freezeTime = requestTime + FREEZE_GRACE_PERIOD;
 
-    function isFrozen()
-        external view
-        returns (bool frozen) {
-        frozen = stateFrozen;
+        // Prevent wraparound.
+        assert(freezeTime >= FREEZE_GRACE_PERIOD);
+        require(block.timestamp >= freezeTime, "FORCED_ACTION_PENDING"); // NOLINT: timestamp.
+
+        // Forced action requests placed before freeze, are no longer valid after the un-freeze.
+        require(freezeTime > unFreezeTime, "REFREEZE_ATTEMPT");
     }
 
     function freeze()
         internal
+        override
         notFrozen()
     {
-        // solium-disable-next-line security/no-block-members
-        unFreezeTime = now + UNFREEZE_DELAY;
+        unFreezeTime = block.timestamp + UNFREEZE_DELAY;
 
         // Update state.
         stateFrozen = true;
@@ -49,8 +49,7 @@ contract Freezable is MainStorage, LibConstants, MGovernance, MFreezable {
         onlyFrozen()
         onlyGovernance()
     {
-        // solium-disable-next-line security/no-block-members
-        require(now >= unFreezeTime, "UNFREEZE_NOT_ALLOWED_YET");  // NOLINT: timestamp.
+        require(block.timestamp >= unFreezeTime, "UNFREEZE_NOT_ALLOWED_YET");
 
         // Update state.
         stateFrozen = false;

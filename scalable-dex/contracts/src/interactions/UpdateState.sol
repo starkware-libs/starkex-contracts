@@ -1,13 +1,15 @@
-pragma solidity ^0.5.2;
+// SPDX-License-Identifier: Apache-2.0.
+pragma solidity ^0.6.11;
 
-import "../interfaces/MAcceptModifications.sol";
+import "../components/OnchainDataFactTreeEncoder.sol";
 import "../components/VerifyFactChain.sol";
 import "../interfaces/IFactRegistry.sol";
+import "../interfaces/MAcceptModifications.sol";
 import "../interfaces/MFreezable.sol";
 import "../interfaces/MOperator.sol";
+import "../interfaces/MStarkExForcedActionState.sol";
 import "../libraries/LibConstants.sol";
 import "../public/PublicInputOffsets.sol";
-import "../AllVerifiers.sol";
 
 /**
   The StarkEx contract tracks the state of the off-chain exchange service by storing Merkle roots
@@ -45,7 +47,7 @@ import "../AllVerifiers.sol";
   `applicationData`, described below, masked to 250 bits.
 
   The `applicationData` holds the following information:
-  | 1. The ID of the current batch for which the operator is submitting the update. 
+  | 1. The ID of the current batch for which the operator is submitting the update.
   | 2. The expected ID of the last batch accepted on chain. This allows the operator submitting
   |    state updates to ensure the same batch order is accepted on-chain as was intended by the
   |    operator in the event that more than one valid update may have been generated based on
@@ -65,14 +67,16 @@ import "../AllVerifiers.sol";
   availability verifier contracts have indeed received such proof of soundness and data
   availability.
 */
-contract UpdateState is
+abstract contract UpdateState is
     MainStorage,
     LibConstants,
+    MStarkExForcedActionState,
     VerifyFactChain,
     MAcceptModifications,
     MFreezable,
     MOperator,
-    PublicInputOffsets
+    PublicInputOffsets,
+    OnchainDataFactTreeEncoder
 {
 
     event LogRootUpdate(
@@ -82,6 +86,10 @@ contract UpdateState is
         uint256 orderRoot
     );
 
+    event LogStateTransitionFact(
+        bytes32 stateTransitionFact
+    );
+
     function updateState(
         uint256[] calldata publicInput,
         uint256[] calldata applicationData
@@ -89,6 +97,7 @@ contract UpdateState is
         external
         notFrozen()
         onlyOperator()
+        virtual
     {
         require(
             publicInput.length >= PUB_IN_TRANSACTIONS_DATA_OFFSET,
@@ -100,25 +109,30 @@ contract UpdateState is
             publicInput[PUB_IN_FINAL_ORDER_ROOT_OFFSET] < K_MODULUS,
             "New order root >= PRIME.");
         require(
+            publicInput[PUB_IN_ONCHAIN_DATA_VERSION] == onchainDataVersion,
+            "Unsupported onchain-data version.");
+        require(
             lastBatchId == 0 ||
             applicationData[APP_DATA_PREVIOUS_BATCH_ID_OFFSET] == lastBatchId,
             "WRONG_PREVIOUS_BATCH_ID");
 
         // Ensure global timestamp has not expired.
         require(
-            publicInput[PUB_IN_GLOBAL_EXPIRATION_TIMESTAMP_OFFSET] < 2**EXPIRATION_TIMESTAMP_BITS,
+            publicInput[PUB_IN_GLOBAL_EXPIRATION_TIMESTAMP_OFFSET] <
+            2**STARKEX_EXPIRATION_TIMESTAMP_BITS,
             "Global expiration timestamp is out of range.");
 
         require( // NOLINT: block-timestamp.
-            // solium-disable-next-line security/no-block-members
-            publicInput[PUB_IN_GLOBAL_EXPIRATION_TIMESTAMP_OFFSET] > now / 3600,
+            publicInput[PUB_IN_GLOBAL_EXPIRATION_TIMESTAMP_OFFSET] > block.timestamp / 3600,
             "Timestamp of the current block passed the threshold for the transaction batch.");
 
-        bytes32 publicInputFact = keccak256(abi.encodePacked(publicInput));
+        bytes32 stateTransitionFact = getStateTransitionFact(publicInput);
+
+        emit LogStateTransitionFact(stateTransitionFact);
 
         verifyFact(
             verifiersChain,
-            publicInputFact,
+            stateTransitionFact,
             "NO_STATE_TRANSITION_VERIFIERS",
             "NO_STATE_TRANSITION_PROOF");
 
@@ -137,6 +151,24 @@ contract UpdateState is
             "NO_AVAILABILITY_PROOF");
 
         performUpdateState(publicInput, applicationData);
+    }
+
+    function getStateTransitionFact(
+        uint256[] memory publicInput
+    )
+        internal pure
+        returns (bytes32)
+    {
+        uint256 onchainDataVersionField = publicInput[PUB_IN_ONCHAIN_DATA_VERSION];
+        if (onchainDataVersionField == ONCHAIN_DATA_NONE) {
+            return keccak256(abi.encodePacked(publicInput));
+        } else if (onchainDataVersionField == ONCHAIN_DATA_VAULTS) {
+            // Use a simple fact tree.
+            return encodeFactWithOnchainData(
+                publicInput, PUB_IN_TRANSACTIONS_DATA_OFFSET);
+        } else {
+            revert("Unsupported onchain-data version.");
+        }
     }
 
     function performUpdateState(
@@ -167,7 +199,7 @@ contract UpdateState is
         uint256 batchId
     )
         internal
-        notFrozen()
+        virtual
     {
         // Assert that the old state is correct.
         require(oldVaultRoot == vaultRoot, "VAULT_ROOT_INCORRECT");
@@ -193,14 +225,17 @@ contract UpdateState is
     ) private {
         uint256 nModifications = publicInput[PUB_IN_N_MODIFICATIONS_OFFSET];
         uint256 nCondTransfers = publicInput[PUB_IN_N_CONDITIONAL_TRANSFERS_OFFSET];
+        uint256 onchainDataVersionField = publicInput[PUB_IN_ONCHAIN_DATA_VERSION];
 
         // Sanity value that also protects from theoretical overflow in multiplication.
         require(nModifications < 2**64, "Invalid number of modifications.");
         require(nCondTransfers < 2**64, "Invalid number of conditional transfers.");
+        uint256 expectedSize = PUB_IN_TRANSACTIONS_DATA_OFFSET +
+            PUB_IN_N_WORDS_PER_MODIFICATION * nModifications +
+            PUB_IN_N_WORDS_PER_CONDITIONAL_TRANSFER * nCondTransfers +
+            (onchainDataVersionField == 1 ? ONCHAIN_DATA_FACT_ADDITIONAL_WORDS : 0);
         require(
-            publicInput.length == PUB_IN_TRANSACTIONS_DATA_OFFSET +
-                                  PUB_IN_N_WORDS_PER_MODIFICATION * nModifications +
-                                  PUB_IN_N_WORDS_PER_CONDITIONAL_TRANSFER * nCondTransfers,
+            publicInput.length == expectedSize,
             "publicInput size is inconsistent with expected transactions.");
         require(
             applicationData.length == APP_DATA_TRANSACTIONS_DATA_OFFSET +

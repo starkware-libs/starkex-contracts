@@ -1,4 +1,5 @@
-pragma solidity ^0.5.2;
+// SPDX-License-Identifier: Apache-2.0.
+pragma solidity ^0.6.11;
 
 import "../components/MainStorage.sol";
 import "../interfaces/MTokenAssetData.sol";
@@ -26,9 +27,8 @@ contract TokenAssetData is MainStorage, LibConstants, MTokenAssetData {
       Works like bytes4 tokenSelector = abi.decode(assetInfo, (bytes4))
       but does not revert when assetInfo.length < SELECTOR_OFFSET.
     */
-    function extractTokenSelector(bytes memory assetInfo) internal pure
+    function extractTokenSelector(bytes memory assetInfo) internal pure override
         returns (bytes4 selector) {
-        // solium-disable-next-line security/no-inline-assembly
         assembly {
             selector := and(
                 0xffffffff00000000000000000000000000000000000000000000000000000000,
@@ -37,7 +37,8 @@ contract TokenAssetData is MainStorage, LibConstants, MTokenAssetData {
         }
     }
 
-    function getAssetInfo(uint256 assetType) public view returns (bytes memory assetInfo) {
+    function getAssetInfo(uint256 assetType) public view override
+        returns (bytes memory assetInfo) {
         // Verify that the registration is set and valid.
         require(registeredAssetType[assetType], "ASSET_TYPE_NOT_REGISTERED");
 
@@ -45,11 +46,19 @@ contract TokenAssetData is MainStorage, LibConstants, MTokenAssetData {
         assetInfo = assetTypeToAssetInfo[assetType];
     }
 
-    function isEther(uint256 assetType) internal view returns (bool) {
+    function isEther(uint256 assetType) internal view override returns (bool) {
         return extractTokenSelector(getAssetInfo(assetType)) == ETH_SELECTOR;
     }
 
-    function isMintableAssetType(uint256 assetType) internal view returns (bool) {
+    function isFungibleAssetType(uint256 assetType) internal view override returns (bool) {
+        bytes4 tokenSelector = extractTokenSelector(getAssetInfo(assetType));
+        return
+            tokenSelector == ETH_SELECTOR ||
+            tokenSelector == ERC20_SELECTOR ||
+            tokenSelector == MINTABLE_ERC20_SELECTOR;
+    }
+
+    function isMintableAssetType(uint256 assetType) internal view override returns (bool) {
         bytes4 tokenSelector = extractTokenSelector(getAssetInfo(assetType));
         return
             tokenSelector == MINTABLE_ERC20_SELECTOR ||
@@ -57,10 +66,9 @@ contract TokenAssetData is MainStorage, LibConstants, MTokenAssetData {
     }
 
     function extractContractAddress(bytes memory assetInfo)
-        internal pure returns (address _contract) {
+        internal pure override returns (address _contract) {
         uint256 offset = TOKEN_CONTRACT_ADDRESS_OFFSET;
         uint256 res;
-        // solium-disable-next-line security/no-inline-assembly
         assembly {
             res := mload(add(assetInfo, offset))
         }
@@ -70,6 +78,7 @@ contract TokenAssetData is MainStorage, LibConstants, MTokenAssetData {
     function calculateNftAssetId(uint256 assetType, uint256 tokenId)
         internal
         pure
+        override
         returns(uint256 assetId) {
         assetId = uint256(keccak256(abi.encodePacked(NFT_ASSET_ID_PREFIX, assetType, tokenId))) &
             MASK_250;
@@ -78,10 +87,11 @@ contract TokenAssetData is MainStorage, LibConstants, MTokenAssetData {
     function calculateMintableAssetId(uint256 assetType, bytes memory mintingBlob)
         internal
         pure
+        override
         returns(uint256 assetId) {
         uint256 blobHash = uint256(keccak256(mintingBlob));
-        assetId = (uint256(keccak256(abi.encodePacked(MINTABLE_PREFIX ,assetType, blobHash)))
-            & MASK_240) | MINTABLE_ASSET_ID_FLAG;
+        assetId = (uint256(keccak256(abi.encodePacked(MINTABLE_PREFIX ,assetType, blobHash))) &
+            MASK_240) | STARKEX_MINTABLE_ASSET_ID_FLAG;
     }
 
 }

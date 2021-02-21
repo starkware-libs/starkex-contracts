@@ -1,7 +1,8 @@
-pragma solidity ^0.5.2;
+// SPDX-License-Identifier: Apache-2.0.
+pragma solidity ^0.6.11;
 
-import "./interfaces/Identity.sol";
-import "./interfaces/IQueryableFactRegistry.sol";
+import "../interfaces/Identity.sol";
+import "../interfaces/IQueryableFactRegistry.sol";
 
 /*
   The GpsFactRegistryAdapter contract is used as an adapter between a Dapp contract and a GPS fact
@@ -14,18 +15,19 @@ import "./interfaces/IQueryableFactRegistry.sol";
 */
 contract GpsFactRegistryAdapter is IQueryableFactRegistry, Identity {
 
-    IQueryableFactRegistry gpsContract;
-    uint256 programHash;
+    IQueryableFactRegistry public gpsContract;
+    uint256 public programHash;
 
     constructor(
         IQueryableFactRegistry gpsStatementContract, uint256 programHash_)
-    public {
+        public
+    {
         gpsContract = gpsStatementContract;
         programHash = programHash_;
     }
 
     function identify()
-        external pure
+        external pure override
         returns(string memory)
     {
         return "StarkWare_GpsFactRegistryAdapter_2020_1";
@@ -35,7 +37,7 @@ contract GpsFactRegistryAdapter is IQueryableFactRegistry, Identity {
       Checks if a fact has been verified.
     */
     function isValid(bytes32 fact)
-        external view
+        external view override
         returns(bool)
     {
         return gpsContract.isValid(keccak256(abi.encode(programHash, fact)));
@@ -46,7 +48,7 @@ contract GpsFactRegistryAdapter is IQueryableFactRegistry, Identity {
       Indicates whether at least one fact was registered.
     */
     function hasRegisteredFact()
-        external view
+        external view override
         returns(bool)
     {
         return gpsContract.hasRegisteredFact();

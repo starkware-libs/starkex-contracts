@@ -1,4 +1,5 @@
-pragma solidity ^0.5.2;
+// SPDX-License-Identifier: Apache-2.0.
+pragma solidity ^0.6.11;
 
 import "../components/Governance.sol";
 
@@ -39,7 +40,8 @@ contract ProxyGovernance is Governance {
 
     function getGovernanceTag()
         internal
-        view
+        pure
+        override
         returns (string memory tag) {
         tag = PROXY_GOVERNANCE_TAG;
     }

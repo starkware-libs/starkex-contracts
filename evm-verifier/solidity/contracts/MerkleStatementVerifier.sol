@@ -1,18 +1,20 @@
-pragma solidity ^0.5.2;
+// SPDX-License-Identifier: Apache-2.0.
+pragma solidity ^0.6.11;
 
 import "./MerkleStatementContract.sol";
 
-contract MerkleStatementVerifier is IMerkleVerifier {
+abstract contract MerkleStatementVerifier is IMerkleVerifier {
     MerkleStatementContract merkleStatementContract;
 
-    constructor(address merkleStatementContractAddress) internal {
+    constructor(address merkleStatementContractAddress) public {
         merkleStatementContract = MerkleStatementContract(merkleStatementContractAddress);
     }
 
     // Computes the hash of the Merkle statement, and verifies that it is registered in the
     // Merkle Fact Registry. Receives as input the queuePtr (as address), its length
     // the numbers of queries n, and the root. The channelPtr is is ignored.
-    function verify(uint256 /*channelPtr*/, uint256 queuePtr, bytes32 root, uint256 n) internal view
+    function verifyMerkle(uint256 /*channelPtr*/, uint256 queuePtr, bytes32 root, uint256 n)
+        internal view virtual override
         returns(bytes32) {
         bytes32 statement;
         require(n <= MAX_N_MERKLE_VERIFIER_QUERIES, "TOO_MANY_MERKLE_QUERIES");

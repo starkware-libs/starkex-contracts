@@ -1,4 +1,5 @@
-pragma solidity ^0.5.2;
+// SPDX-License-Identifier: Apache-2.0.
+pragma solidity ^0.6.11;
 
 import "./MainStorage.sol";
 import "../interfaces/IFactRegistry.sol";
@@ -13,9 +14,13 @@ import "../libraries/Common.sol";
   Implements a data structure that supports instant registration
   and slow time-locked removal of entries.
 */
-contract ApprovalChain is MainStorage, MApprovalChain, MGovernance, MFreezable {
+abstract contract ApprovalChain is MainStorage, MApprovalChain, MGovernance, MFreezable {
 
     using Addresses for address;
+
+    event LogRemovalIntent(address entry, string entryId);
+    event LogRegistered(address entry, string entryId);
+    event LogRemoved(address entry, string entryId);
 
     function addEntry(
         StarkExTypes.ApprovalChainData storage chain,
@@ -23,6 +28,7 @@ contract ApprovalChain is MainStorage, MApprovalChain, MGovernance, MFreezable {
         internal
         onlyGovernance()
         notFrozen()
+        override
     {
         address[] storage list = chain.list;
         require(entry.isContract(), "ADDRESS_NOT_CONTRACT");
@@ -38,11 +44,14 @@ contract ApprovalChain is MainStorage, MApprovalChain, MGovernance, MFreezable {
             list.length == 0 || IQueryableFactRegistry(entry).hasRegisteredFact(),
             "ENTRY_NOT_ENABLED");
         chain.list.push(entry);
-        chain.unlockedForRemovalTime[entry] = 0;
+        emit LogRegistered(entry, identifier);
     }
 
     function findEntry(address[] storage list, address entry)
-        internal view returns (uint256)
+        internal
+        view
+        override
+        returns (uint256)
     {
         uint256 n_entries = list.length;
         for (uint256 i = 0; i < n_entries; i++) {
@@ -55,7 +64,11 @@ contract ApprovalChain is MainStorage, MApprovalChain, MGovernance, MFreezable {
     }
 
     function safeFindEntry(address[] storage list, address entry)
-        internal view returns (uint256 idx)
+        internal
+        view
+        override
+        returns
+        (uint256 idx)
     {
         idx = findEntry(list, entry);
 
@@ -67,27 +80,29 @@ contract ApprovalChain is MainStorage, MApprovalChain, MGovernance, MFreezable {
         internal
         onlyGovernance()
         notFrozen()
+        override
     {
         safeFindEntry(chain.list, entry);
-        require(now + removalDelay > now, "INVALID_REMOVAL_DELAY"); // NOLINT: timestamp.
-        // solium-disable-next-line security/no-block-members
-        chain.unlockedForRemovalTime[entry] = now + removalDelay;
+        require(block.timestamp + removalDelay > block.timestamp, "INVALID_REMOVAL_DELAY");
+        require(chain.unlockedForRemovalTime[entry] == 0, "ALREADY_ANNOUNCED");
+
+        chain.unlockedForRemovalTime[entry] = block.timestamp + removalDelay;
+        emit LogRemovalIntent(entry, Identity(entry).identify());
     }
 
     function removeEntry(StarkExTypes.ApprovalChainData storage chain, address entry)
         internal
         onlyGovernance()
         notFrozen()
+        override
     {
         address[] storage list = chain.list;
         // Make sure entry exists.
         uint256 idx = safeFindEntry(list, entry);
         uint256 unlockedForRemovalTime = chain.unlockedForRemovalTime[entry];
 
-        // solium-disable-next-line security/no-block-members
         require(unlockedForRemovalTime > 0, "REMOVAL_NOT_ANNOUNCED");
-        // solium-disable-next-line security/no-block-members
-        require(now >= unlockedForRemovalTime, "REMOVAL_NOT_ENABLED_YET"); // NOLINT: timestamp.
+        require(block.timestamp >= unlockedForRemovalTime, "REMOVAL_NOT_ENABLED_YET");
 
         uint256 n_entries = list.length;
 
@@ -99,5 +114,6 @@ contract ApprovalChain is MainStorage, MApprovalChain, MGovernance, MFreezable {
         }
         list.pop();
         delete chain.unlockedForRemovalTime[entry];
+        emit LogRemoved(entry, Identity(entry).identify());
     }
 }

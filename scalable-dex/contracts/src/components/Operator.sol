@@ -1,4 +1,5 @@
-pragma solidity ^0.5.2;
+// SPDX-License-Identifier: Apache-2.0.
+pragma solidity ^0.6.11;
 
 import "../interfaces/MOperator.sol";
 import "../interfaces/MGovernance.sol";
@@ -12,7 +13,7 @@ import "./MainStorage.sol";
   (see :sol:mod:`MainGovernance`). Typically, the Operator is the hot wallet of the StarkEx service
   submitting proofs for state updates.
 */
-contract Operator is MainStorage, MGovernance, MOperator {
+abstract contract Operator is MainStorage, MGovernance, MOperator {
     event LogOperatorAdded(address operator);
     event LogOperatorRemoved(address operator);
 
@@ -23,7 +24,7 @@ contract Operator is MainStorage, MGovernance, MOperator {
         emit LogOperatorAdded(msg.sender);
     }
 
-    modifier onlyOperator()
+    modifier onlyOperator() override
     {
         require(operators[msg.sender], "ONLY_OPERATOR");
         _;
@@ -31,6 +32,7 @@ contract Operator is MainStorage, MGovernance, MOperator {
 
     function registerOperator(address newOperator)
         external
+        override
         onlyGovernance
     {
         operators[newOperator] = true;
@@ -39,6 +41,7 @@ contract Operator is MainStorage, MGovernance, MOperator {
 
     function unregisterOperator(address removedOperator)
         external
+        override
         onlyGovernance
     {
         operators[removedOperator] = false;

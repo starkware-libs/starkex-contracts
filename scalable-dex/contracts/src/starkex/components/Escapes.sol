@@ -1,11 +1,12 @@
-pragma solidity ^0.5.2;
+// SPDX-License-Identifier: Apache-2.0.
+pragma solidity ^0.6.11;
 
-import "../libraries/LibConstants.sol";
-import "../interfaces/MAcceptModifications.sol";
-import "../interfaces/MFreezable.sol";
-import "../interfaces/IFactRegistry.sol";
-import "../interfaces/MStateRoot.sol";
-import "../components/MainStorage.sol";
+import "../../libraries/LibConstants.sol";
+import "../../interfaces/MAcceptModifications.sol";
+import "../../interfaces/MFreezable.sol";
+import "../../interfaces/IFactRegistry.sol";
+import "../../interfaces/MStateRoot.sol";
+import "../../components/MainStorage.sol";
 
 /**
   Escaping the exchange is the last resort for users that wish to withdraw their funds without
@@ -23,7 +24,7 @@ import "../components/MainStorage.sol";
   exchange operator, for example), only the owner of the vault may perform the final step of
   transferring the funds.
 */
-contract Escapes is MainStorage, MAcceptModifications, MFreezable, MStateRoot {
+abstract contract Escapes is MainStorage, MAcceptModifications, MFreezable, MStateRoot {
     function initialize (
         IFactRegistry escapeVerifier
     ) internal

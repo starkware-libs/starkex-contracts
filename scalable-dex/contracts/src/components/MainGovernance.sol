@@ -1,4 +1,5 @@
-pragma solidity ^0.5.2;
+// SPDX-License-Identifier: Apache-2.0.
+pragma solidity ^0.6.11;
 
 import "./Governance.sol";
 
@@ -39,7 +40,8 @@ contract MainGovernance is Governance {
 
     function getGovernanceTag()
         internal
-        view
+        pure
+        override
         returns (string memory tag) {
         tag = MAIN_GOVERNANCE_INFO_TAG;
     }

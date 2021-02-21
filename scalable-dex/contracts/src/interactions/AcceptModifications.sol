@@ -1,4 +1,5 @@
-pragma solidity ^0.5.2;
+// SPDX-License-Identifier: Apache-2.0.
+pragma solidity ^0.6.11;
 
 import "../libraries/LibConstants.sol";
 import "../interfaces/MAcceptModifications.sol";
@@ -9,7 +10,7 @@ import "../components/MainStorage.sol";
   Interface containing actions a verifier can invoke on the state.
   The contract containing the state should implement these and verify correctness.
 */
-contract AcceptModifications is
+abstract contract AcceptModifications is
     MainStorage,
     LibConstants,
     MAcceptModifications,
@@ -39,7 +40,7 @@ contract AcceptModifications is
         uint256 vaultId,
         uint256 assetId,
         uint256 quantizedAmount
-    ) internal {
+    ) internal virtual override {
         // Fetch deposit.
         require(
             pendingDeposits[starkKey][assetId][vaultId] >= quantizedAmount,
@@ -59,6 +60,7 @@ contract AcceptModifications is
         uint256 quantizedAmount
     )
         internal
+        override
     {
         // Fetch withdrawal.
         uint256 withdrawal = pendingWithdrawals[starkKey][assetId];
@@ -79,7 +81,7 @@ contract AcceptModifications is
                 fromQuantized(presumedAssetType, quantizedAmount),
                 quantizedAmount
             );
-        } else if(assetId == ((assetId & MASK_240) | MINTABLE_ASSET_ID_FLAG)) {
+        } else if(assetId == ((assetId & MASK_240) | STARKEX_MINTABLE_ASSET_ID_FLAG)) {
             emit LogMintableWithdrawalAllowed(
                 starkKey,
                 assetId,
@@ -93,26 +95,12 @@ contract AcceptModifications is
         }
     }
 
-
     // Verifier authorizes withdrawal.
     function acceptWithdrawal(
         uint256 starkKey,
         uint256 assetId,
         uint256 quantizedAmount
-    ) internal {
+    ) internal virtual override {
         allowWithdrawal(starkKey, assetId, quantizedAmount);
-    }
-
-    /*
-      Implemented in the FullWithdrawal contracts.
-    */
-    function clearFullWithdrawalRequest(
-        uint256 starkKey,
-        uint256 vaultId
-    )
-        internal
-    {
-        // Reset escape request.
-        fullWithdrawalRequests[starkKey][vaultId] = 0;  // NOLINT: reentrancy-benign.
     }
 }

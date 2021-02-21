@@ -1,4 +1,5 @@
-pragma solidity ^0.5.2;
+// SPDX-License-Identifier: Apache-2.0.
+pragma solidity ^0.6.11;
 
 contract EcTableContract {
     /*
@@ -10,10 +11,9 @@ contract EcTableContract {
       This function assumes that the deployment script appends an 0x4000 bytes lookup table to the
       end of the code in the contract.
     */
-    function() external {
-        // solium-disable-next-line security/no-inline-assembly
+    fallback() external {
         assembly {
-            let tableOffset := sub(codesize, /* table size */ 0x4000)
+            let tableOffset := sub(codesize(), /* table size */ 0x4000)
 
             // The lookup loop is unrolled 33 times as it saves ~90k gas in the expected use case.
             // The first lookup index is at byte offset shl(6, shr(0xf8, calldataload(0x0))
@@ -54,11 +54,11 @@ contract EcTableContract {
             codecopy(0x800, add(tableOffset, shl(6, shr(0xf8, calldataload(0x800)))), 0x40)
 
             // If the calldatasize > 0x40 * 33, do the remaining lookups using a loop.
-            for { let offset := 0x840 } lt(offset, calldatasize) { offset := add(offset, 0x40) } {
+            for { let offset := 0x840 } lt(offset, calldatasize()) { offset := add(offset, 0x40) } {
                 codecopy(offset, add(tableOffset, shl(6, shr(0xf8, calldataload(offset)))), 0x40)
             }
 
-            return (0, calldatasize)
+            return (0, calldatasize())
         }
     }
 }

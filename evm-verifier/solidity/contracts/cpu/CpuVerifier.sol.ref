@@ -1,4 +1,5 @@
-pragma solidity ^0.5.2;
+// SPDX-License-Identifier: Apache-2.0.
+pragma solidity ^0.6.11;
 
 import "../CairoVerifierContract.sol";
 import "../CpuPublicInputOffsets.sol";
@@ -7,7 +8,7 @@ import "./CpuConstraintPoly.sol";
 import "./StarkParameters.sol";
 import "./StarkVerifier.sol";
 
-contract PeriodicColumnContract {
+interface PeriodicColumnContract {
     function compute(uint256 x) external pure returns(uint256 result);
 }
 
@@ -17,7 +18,7 @@ contract PeriodicColumnContract {
   it runs successfully and ends with pc=2.
 
   This contract verifies that:
-  * Initial pc is 0 and final pc is 2.
+  * Initial pc is INITIAL_PC and final pc is FINAL_PC.
   * The memory assignment satisfies the given public memory requirements.
   * The 16-bit range-checks are properly configured (0 <= rc_min <= rc_max < 2^16).
   * The segments for the Pedersen and range-check builtins do not exceed their maximum length (thus
@@ -25,7 +26,7 @@ contract PeriodicColumnContract {
   * The layout is valid.
 
   This contract DOES NOT (those should be verified outside of this contract):
-  * verify that the requested program is loaded, starting from address 0.
+  * verify that the requested program is loaded, starting from INITIAL_PC.
   * verify that the arguments and return values for main() are properly set (e.g., the segment
     pointers).
   * check anything on the program output.
@@ -49,7 +50,8 @@ contract CpuVerifier is StarkParameters, StarkVerifier, CpuPublicInputOffsets,
             numSecurityBits_,
             minProofOfWorkBits_
         )
-        public {
+        public
+    {
         constraintPoly = CpuConstraintPoly(auxPolynomials[0]);
         pedersenPointsX = PeriodicColumnContract(auxPolynomials[1]);
         pedersenPointsY = PeriodicColumnContract(auxPolynomials[2]);
@@ -61,61 +63,61 @@ contract CpuVerifier is StarkParameters, StarkVerifier, CpuPublicInputOffsets,
 
     function verifyProofExternal(
         uint256[] calldata proofParams, uint256[] calldata proof, uint256[] calldata publicInput)
-        external {
+        external override {
         verifyProof(proofParams, proof, publicInput);
     }
 
-    function getNColumnsInTrace() internal pure returns (uint256) {
+    function getNColumnsInTrace() internal pure override returns (uint256) {
         return N_COLUMNS_IN_MASK;
     }
 
-    function getNColumnsInTrace0() internal pure returns (uint256) {
+    function getNColumnsInTrace0() internal pure override returns (uint256) {
         return N_COLUMNS_IN_TRACE0;
     }
 
-    function getNColumnsInTrace1() internal pure returns (uint256) {
+    function getNColumnsInTrace1() internal pure override returns (uint256) {
         return N_COLUMNS_IN_TRACE1;
     }
 
-    function getNColumnsInComposition() internal pure returns (uint256) {
+    function getNColumnsInComposition() internal pure override returns (uint256) {
         return CONSTRAINTS_DEGREE_BOUND;
     }
 
-    function getMmInteractionElements() internal pure returns (uint256) {
+    function getMmInteractionElements() internal pure override returns (uint256) {
         return MM_INTERACTION_ELEMENTS;
     }
 
-    function getMmCoefficients() internal pure returns (uint256) {
+    function getMmCoefficients() internal pure override returns (uint256) {
         return MM_COEFFICIENTS;
     }
 
-    function getMmOodsValues() internal pure returns (uint256) {
+    function getMmOodsValues() internal pure override returns (uint256) {
         return MM_OODS_VALUES;
     }
 
-    function getMmOodsCoefficients() internal pure returns (uint256) {
+    function getMmOodsCoefficients() internal pure override returns (uint256) {
         return MM_OODS_COEFFICIENTS;
     }
 
-    function getNInteractionElements() internal pure returns (uint256) {
+    function getNInteractionElements() internal pure override returns (uint256) {
         return N_INTERACTION_ELEMENTS;
     }
 
-    function getNCoefficients() internal pure returns (uint256) {
+    function getNCoefficients() internal pure override returns (uint256) {
         return N_COEFFICIENTS;
     }
 
-    function getNOodsValues() internal pure returns (uint256) {
+    function getNOodsValues() internal pure override returns (uint256) {
         return N_OODS_VALUES;
     }
 
-    function getNOodsCoefficients() internal pure returns (uint256) {
+    function getNOodsCoefficients() internal pure override returns (uint256) {
         return N_OODS_COEFFICIENTS;
     }
 
     function airSpecificInit(
         uint256[] memory publicInput
-    ) internal view returns (uint256[] memory ctx, uint256 logTraceLength) {
+    ) internal view override returns (uint256[] memory ctx, uint256 logTraceLength) {
         require(
             publicInput.length >= OFFSET_PUBLIC_MEMORY,
             "publicInput is too short.");
@@ -145,8 +147,8 @@ contract CpuVerifier is StarkParameters, StarkVerifier, CpuPublicInputOffsets,
         ctx[MM_FINAL_PC] = publicInput[OFFSET_PROGRAM_STOP_PTR];
         // Invalid final pc may indicate that the program end was moved, or the program didn't
         // complete.
-        require(ctx[MM_INITIAL_PC] == 0, "Invalid initial pc");
-        require(ctx[MM_FINAL_PC] == 2, "Invalid final pc");
+        require(ctx[MM_INITIAL_PC] == INITIAL_PC, "Invalid initial pc");
+        require(ctx[MM_FINAL_PC] == FINAL_PC, "Invalid final pc");
 
         // Initial and final ap ("execution" memory segment).
         ctx[MM_INITIAL_AP] = publicInput[OFFSET_EXECUTION_BEGIN_ADDR];
@@ -252,14 +254,14 @@ contract CpuVerifier is StarkParameters, StarkVerifier, CpuPublicInputOffsets,
     }
 
     function getPublicInputHash(uint256[] memory publicInput)
-        internal pure
+        internal pure override
         returns (bytes32 publicInputHash) {
 
         // The initial seed consists of the first part of publicInput. Specifically, it does not
         // include the page products (which are only known later in the process, as they depend on
         // the values of z and alpha).
         uint256 nPages = publicInput[OFFSET_N_PUBLIC_MEMORY_PAGES];
-        uint256 publicInputSizeForHash = 0x20 * (getOffsetPaddingCell(nPages) + 2);
+        uint256 publicInputSizeForHash = 0x20 * getOffsetPageProd(0, nPages);
 
         assembly {
             publicInputHash := keccak256(add(publicInput, 0x20), publicInputSizeForHash)
@@ -306,14 +308,13 @@ contract CpuVerifier is StarkParameters, StarkVerifier, CpuPublicInputOffsets,
 
         // Compute address + alpha * value for the first address-value pair for padding.
         uint256 publicInputPtr = ctx[MM_PUBLIC_INPUT_PTR];
-        uint256 paddingOffset = getOffsetPaddingCell(nPublicMemoryPages);
         uint256 paddingAddr;
         uint256 paddingValue;
         assembly {
             paddingAddr := mload(
-                add(publicInputPtr, mul(0x20, paddingOffset)))
+                add(publicInputPtr, mul(0x20, OFFSET_PUBLIC_MEMORY_PADDING_ADDR)))
             paddingValue := mload(
-                add(publicInputPtr, mul(0x20, add(paddingOffset, 1))))
+                add(publicInputPtr, mul(0x20, add(OFFSET_PUBLIC_MEMORY_PADDING_ADDR, 1))))
         }
         uint256 hash_first_address_value = fadd(paddingAddr, fmul(paddingValue, alpha));
 
@@ -410,7 +411,7 @@ contract CpuVerifier is StarkParameters, StarkVerifier, CpuPublicInputOffsets,
       Later, we will use boundery constraints to check that those evaluations are actully consistent
       with the commited trace and composition ploynomials.
     */
-    function oodsConsistencyCheck(uint256[] memory ctx) internal view {
+    function oodsConsistencyCheck(uint256[] memory ctx) internal view override {
         verifyMemoryPageFacts(ctx);
 
         uint256 oodsPoint = ctx[MM_OODS_POINT];
@@ -461,8 +462,8 @@ contract CpuVerifier is StarkParameters, StarkVerifier, CpuPublicInputOffsets,
                     0x20
                 )
             ) {
-                returndatacopy(0, 0, returndatasize)
-                revert(0, returndatasize)
+                returndatacopy(0, 0, returndatasize())
+                revert(0, returndatasize())
             }
             compositionFromTraceValue := mload(p)
         }

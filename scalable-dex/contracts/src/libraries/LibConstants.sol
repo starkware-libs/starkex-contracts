@@ -1,4 +1,5 @@
-pragma solidity ^0.5.2;
+// SPDX-License-Identifier: Apache-2.0.
+pragma solidity ^0.6.11;
 
 contract LibConstants {
     // Durations for time locked mechanisms (in seconds).
@@ -8,7 +9,7 @@ contract LibConstants {
 
     // The time required to cancel a deposit, in the case the operator does not move the funds
     // to the off-chain storage.
-    uint256 public constant DEPOSIT_CANCEL_DELAY = 1 days;
+    uint256 public constant DEPOSIT_CANCEL_DELAY = 2 days;
 
     // The time required to freeze the exchange, in the case the operator does not execute a
     // requested full withdrawal.
@@ -24,21 +25,37 @@ contract LibConstants {
     // The time required to remove a verifier in case of a verifier upgrade.
     uint256 public constant VERIFIER_REMOVAL_DELAY = FREEZE_GRACE_PERIOD + (21 days);
 
-    uint256 constant MAX_VAULT_ID = 2**31 - 1;
-    uint256 constant MAX_QUANTUM = 2**128 - 1;
-
     address constant ZERO_ADDRESS = address(0x0);
 
     uint256 constant K_MODULUS =
     0x800000000000011000000000000000000000000000000000000000000000001;
+
     uint256 constant K_BETA =
     0x6f21413efbe40de150e596d72f7a8c5609ad26c15c915c1f4cdfcb99cee9e89;
-
-    uint256 constant EXPIRATION_TIMESTAMP_BITS = 22;
 
     uint256 internal constant MASK_250 =
     0x03FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF;
     uint256 internal constant MASK_240 =
     0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF;
-    uint256 internal constant MINTABLE_ASSET_ID_FLAG = 1<<250;
+
+    uint256 public constant MAX_FORCED_ACTIONS_REQS_PER_BLOCK = 10;
+
+    // ======================================================
+    //            StarkEx specific constants
+    // ======================================================
+    uint256 constant STARKEX_MAX_VAULT_ID = 2**31 - 1;
+    uint256 constant STARKEX_MAX_QUANTUM = 2**128 - 1;
+    uint256 constant STARKEX_EXPIRATION_TIMESTAMP_BITS = 22;
+    uint256 internal constant STARKEX_MINTABLE_ASSET_ID_FLAG = 1<<250;
+
+    // ======================================================
+    //            StarkEx specific constants
+    // ======================================================
+    uint256 constant PERPETUAL_POSITION_ID_UPPER_BOUND = 2**64;
+    uint256 constant PERPETUAL_AMOUNT_UPPER_BOUND = 2**64;
+    uint256 constant PERPETUAL_TIMESTAMP_BITS = 32;
+    uint256 constant PERPETUAL_ASSET_ID_UPPER_BOUND = 2**120;
+    uint256 constant PERPETUAL_SYSTEM_TIME_LAG_BOUND = 7 days;
+    uint256 constant PERPETUAL_SYSTEM_TIME_ADVANCE_BOUND = 4 hours;
+    uint256 constant PERPETUAL_CONFIGURATION_DELAY = 0;
 }

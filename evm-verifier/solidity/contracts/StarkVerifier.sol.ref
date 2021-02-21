@@ -1,4 +1,5 @@
-pragma solidity ^0.5.2;
+// SPDX-License-Identifier: Apache-2.0.
+pragma solidity ^0.6.11;
 
 import "./Fri.sol";
 import "./MemoryMap.sol";
@@ -7,7 +8,12 @@ import "../../interfaces/IStarkVerifier.sol";
 import "../../VerifierChannel.sol";
 
 
-contract StarkVerifier is MemoryMap, MemoryAccessUtils, VerifierChannel, IStarkVerifier, Fri {
+abstract contract StarkVerifier is
+    MemoryMap,
+    MemoryAccessUtils,
+    VerifierChannel,
+    IStarkVerifier,
+    Fri {
     /*
       The work required to generate an invalid proof is 2^numSecurityBits.
       Typical values: 80-128.
@@ -46,7 +52,7 @@ contract StarkVerifier is MemoryMap, MemoryAccessUtils, VerifierChannel, IStarkV
     address oodsContractAddress;
 
     function airSpecificInit(uint256[] memory publicInput)
-        internal view returns (uint256[] memory ctx, uint256 logTraceLength);
+        internal view virtual returns (uint256[] memory ctx, uint256 logTraceLength);
 
     uint256 constant internal PROOF_PARAMS_N_QUERIES_OFFSET = 0;
     uint256 constant internal PROOF_PARAMS_LOG_BLOWUP_FACTOR_OFFSET = 1;
@@ -141,42 +147,42 @@ contract StarkVerifier is MemoryMap, MemoryAccessUtils, VerifierChannel, IStarkV
         ctx[MM_TRACE_GENERATOR] = genTraceDomain;
     }
 
-    function getPublicInputHash(uint256[] memory publicInput) internal pure returns (bytes32);
+    function getPublicInputHash(uint256[] memory publicInput) internal pure virtual returns (bytes32);
 
-    function oodsConsistencyCheck(uint256[] memory ctx) internal view;
+    function oodsConsistencyCheck(uint256[] memory ctx) internal view virtual;
 
-    function getNColumnsInTrace() internal pure returns(uint256);
+    function getNColumnsInTrace() internal pure virtual returns(uint256);
 
-    function getNColumnsInComposition() internal pure returns(uint256);
+    function getNColumnsInComposition() internal pure virtual returns(uint256);
 
-    function getMmCoefficients() internal pure returns(uint256);
+    function getMmCoefficients() internal pure virtual returns(uint256);
 
-    function getMmOodsValues() internal pure returns(uint256);
+    function getMmOodsValues() internal pure virtual returns(uint256);
 
-    function getMmOodsCoefficients() internal pure returns(uint256);
+    function getMmOodsCoefficients() internal pure virtual returns(uint256);
 
-    function getNCoefficients() internal pure returns(uint256);
+    function getNCoefficients() internal pure virtual returns(uint256);
 
-    function getNOodsValues() internal pure returns(uint256);
+    function getNOodsValues() internal pure virtual returns(uint256);
 
-    function getNOodsCoefficients() internal pure returns(uint256);
+    function getNOodsCoefficients() internal pure virtual returns(uint256);
 
     // Interaction functions.
     // If the AIR uses interaction, the following functions should be overridden.
-    function getNColumnsInTrace0() internal pure returns(uint256) {
+    function getNColumnsInTrace0() internal pure virtual returns(uint256) {
         return getNColumnsInTrace();
     }
 
-    function getNColumnsInTrace1() internal pure returns(uint256) {
+    function getNColumnsInTrace1() internal pure virtual returns(uint256) {
         return 0;
     }
 
-    function getMmInteractionElements() internal pure returns(uint256) {
-        require(false, "AIR does not support interaction.");
+    function getMmInteractionElements() internal pure virtual returns(uint256) {
+        revert("AIR does not support interaction.");
     }
 
-    function getNInteractionElements() internal pure returns(uint256) {
-        require(false, "AIR does not support interaction.");
+    function getNInteractionElements() internal pure virtual returns(uint256) {
+        revert("AIR does not support interaction.");
     }
 
     function hasInteraction() internal pure returns (bool) {
@@ -256,7 +262,7 @@ contract StarkVerifier is MemoryMap, MemoryAccessUtils, VerifierChannel, IStarkV
                 mstore(add(p, 0x80), exponent)  // Exponent.
                 mstore(add(p, 0xa0), modulus)   // Modulus.
                 // Call modexp precompile.
-                if iszero(staticcall(gas, 0x05, p, 0xc0, p, 0x20)) {
+                if iszero(staticcall(gas(), 0x05, p, 0xc0, p, 0x20)) {
                     revert(0, 0)
                 }
                 res := mload(p)
@@ -342,7 +348,7 @@ contract StarkVerifier is MemoryMap, MemoryAccessUtils, VerifierChannel, IStarkV
             mstore(channelPtr, proofPtr)
         }
 
-        verify(channelPtr, merkleQueuePtr, merkleRoot, nUniqueQueries);
+        verifyMerkle(channelPtr, merkleQueuePtr, merkleRoot, nUniqueQueries);
     }
 
     /*
@@ -386,8 +392,8 @@ contract StarkVerifier is MemoryMap, MemoryAccessUtils, VerifierChannel, IStarkV
             if iszero(staticcall(not(0), oodsAddress, ctx,
                                  /*sizeof(ctx)*/ mul(add(mload(ctx), 1), 0x20),
                                  friQueue, returnDataSize)) {
-              returndatacopy(0, 0, returndatasize)
-              revert(0, returndatasize)
+              returndatacopy(0, 0, returndatasize())
+              revert(0, returndatasize())
             }
         }
         // emit LogGas("OODS virtual oracle", gasleft());
@@ -448,7 +454,7 @@ contract StarkVerifier is MemoryMap, MemoryAccessUtils, VerifierChannel, IStarkV
 
     function verifyProof(
         uint256[] memory proofParams, uint256[] memory proof, uint256[] memory publicInput)
-        internal view {
+        internal view override {
         // emit LogGas("Transmission", gasleft());
         uint256[] memory ctx = initVerifierParams(publicInput, proofParams);
         uint256 channelPtr = getChannelPtr(ctx);

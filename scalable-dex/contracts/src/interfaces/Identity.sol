@@ -1,6 +1,7 @@
-pragma solidity ^0.5.2;
+// SPDX-License-Identifier: Apache-2.0.
+pragma solidity ^0.6.11;
 
-contract Identity {
+interface Identity {
 
     /*
       Allows a caller, typically another contract,

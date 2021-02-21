@@ -1,4 +1,5 @@
-pragma solidity ^0.5.2;
+// SPDX-License-Identifier: Apache-2.0.
+pragma solidity ^0.6.11;
 
 import "./GovernanceStorage.sol";
 import "../interfaces/MGovernance.sol";
@@ -12,20 +13,19 @@ import "../interfaces/MGovernance.sol";
      of the Proxy. For this reason, for example, the implementation of MainContract (MainGovernance)
      exposes mainIsGovernor, which calls the internal isGovernor method.
 */
-contract Governance is GovernanceStorage, MGovernance {
+abstract contract Governance is GovernanceStorage, MGovernance {
     event LogNominatedGovernor(address nominatedGovernor);
     event LogNewGovernorAccepted(address acceptedGovernor);
     event LogRemovedGovernor(address removedGovernor);
     event LogNominationCancelled();
 
-    address internal constant ZERO_ADDRESS = address(0x0);
-
     /*
       Returns a string which uniquely identifies the type of the governance mechanism.
     */
     function getGovernanceTag()
+        virtual
         internal
-        view
+        pure
         returns (string memory);
 
     /*
@@ -63,7 +63,7 @@ contract Governance is GovernanceStorage, MGovernance {
         addGovernor(msg.sender);
     }
 
-    modifier onlyGovernance()
+    modifier onlyGovernance () override
     {
         require(isGovernor(msg.sender), "ONLY_GOVERNANCE");
         _;
@@ -81,7 +81,7 @@ contract Governance is GovernanceStorage, MGovernance {
     */
     function cancelNomination() internal onlyGovernance() {
         GovernanceInfoStruct storage gub = contractGovernanceInfo();
-        gub.candidateGovernor = ZERO_ADDRESS;
+        gub.candidateGovernor = address(0x0);
         emit LogNominationCancelled();
     }
 
@@ -114,7 +114,7 @@ contract Governance is GovernanceStorage, MGovernance {
 
         // Update state.
         addGovernor(gub.candidateGovernor);
-        gub.candidateGovernor = ZERO_ADDRESS;
+        gub.candidateGovernor = address(0x0);
 
         // Send a notification about the change of governor.
         emit LogNewGovernorAccepted(msg.sender);

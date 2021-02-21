@@ -1,11 +1,12 @@
-pragma solidity ^0.5.2;
+// SPDX-License-Identifier: Apache-2.0.
+pragma solidity ^0.6.11;
 
-contract IStarkVerifier {
+abstract contract IStarkVerifier {
 
     function verifyProof(
         uint256[] memory proofParams,
         uint256[] memory proof,
         uint256[] memory publicInput
     )
-        internal view;
+        internal view virtual;
 }

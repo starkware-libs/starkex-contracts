@@ -1,16 +1,16 @@
-pragma solidity ^0.5.2;
+// SPDX-License-Identifier: Apache-2.0.
+pragma solidity ^0.6.11;
 
 import "../cpu/CairoBootloaderProgram.sol";
 import "../cpu/CairoVerifierContract.sol";
 import "../cpu/CpuPublicInputOffsets.sol";
 import "../cpu/MemoryPageFactRegistry.sol";
-import "../FactRegistry.sol";
 import "../interfaces/Identity.sol";
 import "../PrimeFieldElement0.sol";
 import "./GpsOutputParser.sol";
 
 contract GpsStatementVerifier is
-        GpsOutputParser, FactRegistry, Identity, CairoBootloaderProgramSize, PrimeFieldElement0 {
+        GpsOutputParser, Identity, CairoBootloaderProgramSize, PrimeFieldElement0 {
     CairoBootloaderProgram bootloaderProgramContractAddress;
     MemoryPageFactRegistry memoryPageFactRegistry;
     CairoVerifierContract[] cairoVerifierContractAddresses;
@@ -27,8 +27,9 @@ contract GpsStatementVerifier is
     constructor(
         address bootloaderProgramContract,
         address memoryPageFactRegistry_,
-        address[] memory cairoVerifierContracts) public {
-        // solium-disable-previous-line no-empty-blocks
+        address[] memory cairoVerifierContracts)
+        public
+    {
         bootloaderProgramContractAddress = CairoBootloaderProgram(bootloaderProgramContract);
         memoryPageFactRegistry = MemoryPageFactRegistry(memoryPageFactRegistry_);
         cairoVerifierContractAddresses = new CairoVerifierContract[](cairoVerifierContracts.length);
@@ -38,7 +39,7 @@ contract GpsStatementVerifier is
     }
 
     function identify()
-        external pure
+        external pure override
         returns(string memory)
     {
         return "StarkWare_GpsStatementVerifier_2020_1";
@@ -142,8 +143,8 @@ contract GpsStatementVerifier is
         uint256[PROGRAM_SIZE] memory bootloaderProgram =
             bootloaderProgramContractAddress.getCompiledProgram();
         for (uint256 i = 0; i < bootloaderProgram.length; i++) {
-            // Force that memory[i] = bootloaderProgram[i].
-            publicMemory[offset] = i;
+            // Force that memory[i + INITIAL_PC] = bootloaderProgram[i].
+            publicMemory[offset] = i + INITIAL_PC;
             publicMemory[offset + 1] = bootloaderProgram[i];
             offset += 2;
         }

@@ -1,4 +1,5 @@
-pragma solidity ^0.5.2;
+// SPDX-License-Identifier: Apache-2.0.
+pragma solidity ^0.6.11;
 
 import "./MemoryMap.sol";
 import "./MemoryAccessUtils.sol";
@@ -11,9 +12,11 @@ import "../../VerifierChannel.sol";
   The first layer is computed from decommitments, the last layer is computed by evaluating the
   fully committed polynomial, and the mid-layers are provided in the proof only as hashed data.
 */
-contract FriStatementVerifier is MemoryMap, MemoryAccessUtils, VerifierChannel, HornerEvaluator {
-    event LogGas(string name, uint256 val);
-
+abstract contract FriStatementVerifier is
+        MemoryMap,
+        MemoryAccessUtils,
+        VerifierChannel,
+        HornerEvaluator {
     FriStatementContract friStatementContract;
 
     constructor(address friStatementContractAddress) internal {
@@ -65,7 +68,7 @@ contract FriStatementVerifier is MemoryMap, MemoryAccessUtils, VerifierChannel, 
     */
     function friVerifyLayers(
         uint256[] memory ctx)
-        internal view
+        internal view virtual
     {
         uint256 channelPtr = getChannelPtr(ctx);
         uint256 nQueries = ctx[MM_N_UNIQUE_QUERIES];

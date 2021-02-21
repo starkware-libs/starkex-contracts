@@ -1,4 +1,5 @@
-pragma solidity ^0.5.2;
+// SPDX-License-Identifier: Apache-2.0.
+pragma solidity ^0.6.11;
 
 import "../libraries/Common.sol";
 import "../libraries/LibConstants.sol";
@@ -46,7 +47,7 @@ import "./MainStorage.sol";
   appointed or removed by the contract Governor (see :sol:mod:`MainGovernance`). Typically, the
   Token Administrator's private key should be kept in a cold wallet.
 */
-contract Tokens is
+abstract contract Tokens is
     MainStorage,
     LibConstants,
     MGovernance,
@@ -57,7 +58,6 @@ contract Tokens is
     event LogTokenRegistered(uint256 assetType, bytes assetInfo);
     event LogTokenAdminAdded(address tokenAdmin);
     event LogTokenAdminRemoved(address tokenAdmin);
-    event LogPermissiveToken(uint256 assetType);
 
     using Addresses for address;
     using Addresses for address payable;
@@ -81,7 +81,8 @@ contract Tokens is
         return tokenAdmins[testedAdmin];
     }
 
-    function registerToken(uint256 assetType, bytes calldata assetInfo) external {
+
+    function registerToken(uint256 assetType, bytes calldata assetInfo) external virtual {
         registerToken(assetType, assetInfo, 1);
     }
 
@@ -94,12 +95,12 @@ contract Tokens is
         uint256 assetType,
         bytes memory assetInfo,
         uint256 quantum
-    ) public onlyTokensAdmin() {
+    ) public onlyTokensAdmin() virtual {
         // Make sure it is not invalid or already registered.
         require(!registeredAssetType[assetType], "ASSET_ALREADY_REGISTERED");
         require(assetType < K_MODULUS, "INVALID_ASSET_TYPE");
         require(quantum > 0, "INVALID_QUANTUM");
-        require(quantum <= MAX_QUANTUM, "INVALID_QUANTUM");
+        require(quantum <= STARKEX_MAX_QUANTUM, "INVALID_QUANTUM");
         require(assetInfo.length >= SELECTOR_SIZE, "INVALID_ASSET_STRING");
 
         // Require that the assetType is the hash of the assetInfo and quantum truncated to 250 bits.
@@ -143,27 +144,9 @@ contract Tokens is
     }
 
     /*
-      Marks an assetType as permissive,
-      to allow more permissive processing (e.g. XAUT).
-    */
-    function registerTokenAsPermissive(uint256 assetType) external onlyTokensAdmin() {
-        require(registeredAssetType[assetType], "ASSET_TYPE_NOT_REGISTERED");
-        permissiveAssetType[assetType] = true;
-        emit LogPermissiveToken(assetType);
-    }
-
-    /*
-      Indicates whether an asset is registered as permissive.
-    */
-    function isTokenPermissive(uint256 assetType) external view returns(bool) {
-        require(registeredAssetType[assetType], "ASSET_TYPE_NOT_REGISTERED");
-        return permissiveAssetType[assetType];
-    }
-
-    /*
       Transfers funds from msg.sender to the exchange.
     */
-    function transferIn(uint256 assetType, uint256 quantizedAmount) internal {
+    function transferIn(uint256 assetType, uint256 quantizedAmount) internal override {
         bytes memory assetInfo = getAssetInfo(assetType);
         uint256 amount = fromQuantized(assetType, quantizedAmount);
 
@@ -174,11 +157,7 @@ contract Tokens is
             uint256 exchangeBalanceBefore = token.balanceOf(address(this));
             bytes memory callData = abi.encodeWithSelector(
                 token.transferFrom.selector, msg.sender, address(this), amount);
-            if (permissiveAssetType[assetType]) {
-                tokenAddress.permissiveSafeTokenContractCall(callData);
-            } else {
-                tokenAddress.safeTokenContractCall(callData);
-            }
+            tokenAddress.safeTokenContractCall(callData);
             uint256 exchangeBalanceAfter = token.balanceOf(address(this));
             require(exchangeBalanceAfter >= exchangeBalanceBefore, "OVERFLOW");
             // NOLINTNEXTLINE(incorrect-equality): strict equality needed.
@@ -192,7 +171,7 @@ contract Tokens is
         }
     }
 
-    function transferInNft(uint256 assetType, uint256 tokenId) internal {
+    function transferInNft(uint256 assetType, uint256 tokenId) internal override {
         bytes memory assetInfo = getAssetInfo(assetType);
 
         bytes4 tokenSelector = extractTokenSelector(assetInfo);
@@ -215,7 +194,7 @@ contract Tokens is
         address payable recipient,
         uint256 assetType,
         uint256 quantizedAmount
-    ) internal {
+    ) internal override {
         bytes memory assetInfo = getAssetInfo(assetType);
         uint256 amount = fromQuantized(assetType, quantizedAmount);
 
@@ -226,11 +205,7 @@ contract Tokens is
             uint256 exchangeBalanceBefore = token.balanceOf(address(this));
             bytes memory callData = abi.encodeWithSelector(
                 token.transfer.selector, recipient, amount);
-            if (permissiveAssetType[assetType]) {
-                tokenAddress.permissiveSafeTokenContractCall(callData);
-            } else {
-                tokenAddress.safeTokenContractCall(callData);
-            }
+            tokenAddress.safeTokenContractCall(callData);
             uint256 exchangeBalanceAfter = token.balanceOf(address(this));
             require(exchangeBalanceAfter <= exchangeBalanceBefore, "UNDERFLOW");
             // NOLINTNEXTLINE(incorrect-equality): strict equality needed.
@@ -247,7 +222,8 @@ contract Tokens is
     /*
       Transfers NFT from the exchange to recipient.
     */
-    function transferOutNft(address recipient, uint256 assetType, uint256 tokenId) internal {
+    function transferOutNft(address recipient, uint256 assetType, uint256 tokenId)
+        internal override {
         bytes memory assetInfo = getAssetInfo(assetType);
         bytes4 tokenSelector = extractTokenSelector(assetInfo);
         require(tokenSelector == ERC721_SELECTOR, "NOT_ERC721_TOKEN");
@@ -265,7 +241,8 @@ contract Tokens is
     function transferOutMint(
         uint256 assetType,
         uint256 quantizedAmount,
-        bytes memory mintingBlob) internal {
+        bytes memory mintingBlob) internal override {
+        require(isMintableAssetType(assetType), "NON_MINTABLE_ASSET_TYPE");
         uint256 amount = fromQuantized(assetType, quantizedAmount);
         address tokenAddress = extractContractAddress(getAssetInfo(assetType));
         tokenAddress.safeTokenContractCall(

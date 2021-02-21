@@ -1,4 +1,5 @@
-pragma solidity ^0.5.2;
+// SPDX-License-Identifier: Apache-2.0.
+pragma solidity ^0.6.11;
 
 import "./IMerkleVerifier.sol";
 
@@ -19,12 +20,12 @@ contract MerkleVerifier is IMerkleVerifier {
 
       The input data is destroyed during verification.
     */
-    function verify(
+    function verifyMerkle(
         uint256 channelPtr,
         uint256 queuePtr,
         bytes32 root,
         uint256 n)
-        internal view
+        internal view virtual override
         returns (bytes32 hash)
     {
         uint256 lhashMask = getHashMask();

@@ -1,4 +1,5 @@
-pragma solidity ^0.5.2;
+// SPDX-License-Identifier: Apache-2.0.
+pragma solidity ^0.6.11;
 
 /*
   Common Utility librarries.
@@ -7,7 +8,6 @@ pragma solidity ^0.5.2;
 library Addresses {
     function isContract(address account) internal view returns (bool) {
         uint256 size;
-        // solium-disable-next-line security/no-inline-assembly
         assembly {
             size := extcodesize(account)
         }
@@ -15,8 +15,7 @@ library Addresses {
     }
 
     function performEthTransfer(address recipient, uint256 amount) internal {
-        // solium-disable-next-line security/no-call-value
-        (bool success, ) = recipient.call.value(amount)(""); // NOLINT: low-level-calls.
+        (bool success, ) = recipient.call{value: amount}(""); // NOLINT: low-level-calls.
         require(success, "ETH_TRANSFER_FAILED");
     }
 
@@ -29,7 +28,6 @@ library Addresses {
         require(isContract(tokenAddress), "BAD_TOKEN_ADDRESS");
         // NOLINTNEXTLINE: low-level-calls.
         (bool success, bytes memory returndata) = tokenAddress.call(callData);
-        // solium-disable-previous-line security/no-low-level-calls
         require(success, string(returndata));
 
         if (returndata.length > 0) {
@@ -43,11 +41,40 @@ library Addresses {
       Assumes some other method is used to detect the failures
       (e.g. balance is checked before and after the call).
     */
-    function permissiveSafeTokenContractCall(address tokenAddress, bytes memory callData) internal {
+    function uncheckedTokenContractCall(address tokenAddress, bytes memory callData) internal {
         // NOLINTNEXTLINE: low-level-calls.
         (bool success, bytes memory returndata) = tokenAddress.call(callData);
-        // solium-disable-previous-line security/no-low-level-calls
         require(success, string(returndata));
+    }
+
+}
+
+library UintArray {
+    function hashSubArray(uint256[] memory array, uint256 subArrayStart, uint256 subArraySize)
+        internal pure
+        returns(bytes32 subArrayHash)
+    {
+        require(array.length >= subArrayStart + subArraySize, "ILLEGAL_SUBARRAY_DIMENSIONS");
+        uint256 startOffsetBytes = 0x20 * (1 + subArrayStart);
+        uint256 dataSizeBytes = 0x20 * subArraySize;
+        assembly {
+            subArrayHash := keccak256(add(array, startOffsetBytes), dataSizeBytes)
+        }
+    }
+
+    /*
+      Returns the address of a cell in offset within a uint256[] array.
+      This allows assigning new variable of dynamic unit256[] pointing to a sub_array
+      with a layout of serialied uint256[] (i.e. length+content).
+    */
+    function extractSerializedUintArray(uint256[] memory programOutput, uint256 offset)
+        internal pure
+        returns (uint256[] memory addr)
+    {
+        uint256 memOffset = 0x20 * (offset + 1);
+        assembly {
+            addr := add(programOutput, memOffset)
+        }
     }
 
 }
@@ -71,5 +98,4 @@ library StarkExTypes {
         // of unlockedForRemovalTime[A] != 0 and unlockedForRemovalTime[A] < (current time).
         mapping (address => uint256) unlockedForRemovalTime;
     }
-
 }

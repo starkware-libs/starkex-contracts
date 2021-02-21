@@ -1,4 +1,5 @@
-pragma solidity ^0.5.2;
+// SPDX-License-Identifier: Apache-2.0.
+pragma solidity ^0.6.11;
 
 import "./Prng.sol";
 
@@ -10,7 +11,7 @@ contract VerifierChannel is Prng {
         [1] prng digest.
         [2] prng counter.
     */
-    uint256 constant internal CHANNEL_STATE_SIZE = 3;
+    uint256 constant private CHANNEL_STATE_SIZE = 3;
 
     event LogValue(bytes32 val);
 

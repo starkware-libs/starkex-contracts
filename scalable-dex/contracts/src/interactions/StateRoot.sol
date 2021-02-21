@@ -1,4 +1,5 @@
-pragma solidity ^0.5.2;
+// SPDX-License-Identifier: Apache-2.0.
+pragma solidity ^0.6.11;
 
 import "../interfaces/MStateRoot.sol";
 import "../components/MainStorage.sol";
@@ -24,6 +25,7 @@ contract StateRoot is MainStorage, MStateRoot
 
     function getVaultRoot()
         public view
+        override
         returns (uint256 root)
     {
         root = vaultRoot;
@@ -31,6 +33,7 @@ contract StateRoot is MainStorage, MStateRoot
 
     function getVaultTreeHeight()
         public view
+        override
         returns (uint256 height) {
         height = vaultTreeHeight;
     }

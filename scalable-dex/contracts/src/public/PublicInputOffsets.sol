@@ -1,4 +1,5 @@
-pragma solidity ^0.5.2;
+// SPDX-License-Identifier: Apache-2.0.
+pragma solidity ^0.6.11;
 
 contract PublicInputOffsets {
     // The following constants are offsets of data expected in the public input.
@@ -9,12 +10,17 @@ contract PublicInputOffsets {
     uint256 internal constant PUB_IN_GLOBAL_EXPIRATION_TIMESTAMP_OFFSET = 4;
     uint256 internal constant PUB_IN_VAULT_TREE_HEIGHT_OFFSET = 5;
     uint256 internal constant PUB_IN_ORDER_TREE_HEIGHT_OFFSET = 6;
-    uint256 internal constant PUB_IN_N_MODIFICATIONS_OFFSET = 7;
-    uint256 internal constant PUB_IN_N_CONDITIONAL_TRANSFERS_OFFSET = 8;
-    uint256 internal constant PUB_IN_TRANSACTIONS_DATA_OFFSET = 9;
+    uint256 internal constant PUB_IN_ONCHAIN_DATA_VERSION = 7;
+    uint256 internal constant PUB_IN_N_MODIFICATIONS_OFFSET = 8;
+    uint256 internal constant PUB_IN_N_CONDITIONAL_TRANSFERS_OFFSET = 9;
+    uint256 internal constant PUB_IN_TRANSACTIONS_DATA_OFFSET = 10;
 
     uint256 internal constant PUB_IN_N_WORDS_PER_MODIFICATION = 3;
     uint256 internal constant PUB_IN_N_WORDS_PER_CONDITIONAL_TRANSFER = 1;
+
+    // Onchain-data version.
+    uint256 internal constant ONCHAIN_DATA_NONE = 0;
+    uint256 internal constant ONCHAIN_DATA_VAULTS = 1;
 
     // The following constants are offsets of data expected in the application data.
     uint256 internal constant APP_DATA_BATCH_ID_OFFSET = 0;

@@ -1,6 +1,7 @@
-pragma solidity ^0.5.2;
+// SPDX-License-Identifier: Apache-2.0.
+pragma solidity ^0.6.11;
 
-import "./interfaces/IQueryableFactRegistry.sol";
+import "./IQueryableFactRegistry.sol";
 
 contract FactRegistry is IQueryableFactRegistry {
     // Mapping: fact hash -> true.
@@ -13,7 +14,7 @@ contract FactRegistry is IQueryableFactRegistry {
       Checks if a fact has been verified.
     */
     function isValid(bytes32 fact)
-        external view
+        external view override
         returns(bool)
     {
         return _factCheck(fact);
@@ -51,7 +52,7 @@ contract FactRegistry is IQueryableFactRegistry {
       Indicates whether at least one fact was registered.
     */
     function hasRegisteredFact()
-        external view
+        external view override
         returns(bool)
     {
         return anyFactRegistered;

@@ -1,4 +1,5 @@
-pragma solidity ^0.5.2;
+// SPDX-License-Identifier: Apache-2.0.
+pragma solidity ^0.6.11;
 
 import "../tokens/ERC721/IERC721Receiver.sol";
 
@@ -24,7 +25,7 @@ contract ERC721Receiver is IERC721Receiver {
         address /*from*/,  // The address which previously owned the token.
         uint256 /*tokenId*/,  // The NFT identifier which is being transferred.
         bytes memory /*data*/)  // Additional data with no specified format.
-        public returns (bytes4)
+        external override returns (bytes4)
     {
         return this.onERC721Received.selector;
     }

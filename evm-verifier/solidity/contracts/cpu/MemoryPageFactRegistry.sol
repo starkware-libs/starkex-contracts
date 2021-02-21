@@ -1,6 +1,7 @@
-pragma solidity ^0.5.2;
+// SPDX-License-Identifier: Apache-2.0.
+pragma solidity ^0.6.11;
 
-import "../FactRegistry.sol";
+import "../interfaces/FactRegistry.sol";
 
 contract MemoryPageFactRegistryConstants {
     // A page based on a list of pairs (address, value).
@@ -21,7 +22,8 @@ contract MemoryPageFactRegistryConstants {
   Note that address is only available for CONTINUOUS_PAGE, and otherwise it is 0.
 */
 contract MemoryPageFactRegistry is FactRegistry, MemoryPageFactRegistryConstants {
-    event LogMemoryPageFact(bytes32 factHash, uint256 memoryHash, uint256 prod);
+    event LogMemoryPageFactRegular(bytes32 factHash, uint256 memoryHash, uint256 prod);
+    event LogMemoryPageFactContinuous(bytes32 factHash, uint256 memoryHash, uint256 prod);
 
     /*
       Registers a fact based of the given memory (address, value) pairs (REGULAR_PAGE).
@@ -35,7 +37,7 @@ contract MemoryPageFactRegistry is FactRegistry, MemoryPageFactRegistryConstants
         require(z < prime, "Invalid value of z.");
         require(alpha < prime, "Invalid value of alpha.");
         (factHash, memoryHash, prod) = computeFactHash(memoryPairs, z, alpha, prime);
-        emit LogMemoryPageFact(factHash, memoryHash, prod);
+        emit LogMemoryPageFactRegular(factHash, memoryHash, prod);
 
         registerFact(factHash);
     }
@@ -154,7 +156,7 @@ contract MemoryPageFactRegistry is FactRegistry, MemoryPageFactRegistryConstants
                 CONTINUOUS_PAGE, prime, nValues, z, alpha, prod, memoryHash, startAddr)
         );
 
-        emit LogMemoryPageFact(factHash, memoryHash, prod);
+        emit LogMemoryPageFactContinuous(factHash, memoryHash, prod);
 
         registerFact(factHash);
     }

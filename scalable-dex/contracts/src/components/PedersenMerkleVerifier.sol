@@ -1,23 +1,15 @@
-pragma solidity ^0.5.2;
+// SPDX-License-Identifier: Apache-2.0.
+pragma solidity ^0.6.11;
 
-import "../interfaces/IFactRegistry.sol";
-
-/*
-  An escapeVerifier is a fact registry contract for claims of the form:
-  (starkKey, assetId, quantizedAmount) is the leaf in index vaultId of a Merkle tree with
-  specific height and root.
-*/
-contract EscapeVerifier is IFactRegistry {
+contract PedersenMerkleVerifier {
 
     // Note that those values are hardcoded in the assembly.
     uint256 constant internal N_TABLES = 63;
 
     address[N_TABLES] lookupTables;
-    constructor(address[N_TABLES] memory tables)
-        public {
+    constructor(address[N_TABLES] memory tables) public {
         lookupTables = tables;
 
-        // solium-disable-next-line security/no-inline-assembly
         assembly {
             if gt(lookupTables_slot, 0) {
                 // The address of the lookupTables must be 0.
@@ -31,7 +23,7 @@ contract EscapeVerifier is IFactRegistry {
     }
 
     /**
-      Verifies that the contents of a vault belong to a certain Merkle commitment (root).
+      Verifies a merkle proof for a Merkle commitment.
 
       The Merkle commitment uses the Pedersen hash variation described next:
 
@@ -39,15 +31,11 @@ contract EscapeVerifier is IFactRegistry {
       - **Input:** A vector of 504 bits :math:`b_i`
       - **Output:** The 252 bits x coordinate of :math:`(ec_{shift} + \sum_i b_i*p_i)`
 
-      The following table describes the expected `escapeProof` format. Note that unlike a standard
-      Merkle proof, the `escapeProof` contains both the nodes along the Merkle path and their
+      The following table describes the expected `merkleProof` format. Note that unlike a standard
+      Merkle proof, the `merkleProof` contains both the nodes along the Merkle path and their
       siblings. The proof ends with the expected root and the ID of the vault for which the proof is
       submitted (which implies the location of the nodes within the Merkle tree).
 
-          +-------------------------------+---------------------------+-----------+
-          | starkKey (252)                | assetId (252)             | zeros (8) |
-          +-------------------------------+---------------------------+-----------+
-          | hash(starkKey, assetId) (252) | quantizedAmount (252)     | zeros (8) |
           +-------------------------------+---------------------------+-----------+
           | left_node_0 (252)             | right_node_0 (252)        | zeros (8) |
           +-------------------------------+---------------------------+-----------+
@@ -55,15 +43,20 @@ contract EscapeVerifier is IFactRegistry {
           +-------------------------------+---------------------------+-----------+
           | left_node_n (252)             | right_node_n (252)        | zeros (8) |
           +-------------------------------+-----------+---------------+-----------+
-          | root (252)                    | zeros (4) | vaultId (248) | zeros (8) |
+          | root (252)                    | zeros (4) | nodeIdx (248) | zeros (8) |
           +-------------------------------+-----------+---------------+-----------+
 
-      If the proof is accepted, this is registered under the following claim hash that may later
-      be queried for validity:
 
-        `claimHash = keccak256(starkKey, assetId, quantizedAmount, vaultRoot, treeHeight, vaultId)`
+      Note that if the merkle leafs are computed using a hashchain as follows:
+        hashchain_state = init_state
+        for value in leaf_values:
+            hashchain_state = pedersen_hash(hashchain_state, value)
+        leaf_value = hashchain_state
 
-      For information about when this module is to be used, see :sol:mod:`Escapes`.
+      Then we may use this function to verify the leaf value by setting:
+      nodeIdx = merkle_idx << hashchain_lengh and for every 0 <= i < hashchain_lengh.
+      left_node_0 = hashchain_state_i
+      right_node_i = leaf_values_i.
 
     */
     /*
@@ -95,44 +88,41 @@ contract EscapeVerifier is IFactRegistry {
               |            |
               --------------
 
-      The batched lookup is facilitated by the fact that the escapeProof includes nodes along the
+      The batched lookup is facilitated by the fact that the merkleProof includes nodes along the
       Merkle path.
       However having this redundant information requires us to do consistency checks
       to ensure we indeed verify a coherent authentication path:
 
           hash((left_node_{i-1}, right_node_{i-1})) ==
-            (vaultId & (1<<i)) == 0 ? left_node_i : right_node_i.
+            (nodeIdx & (1<<i)) == 0 ? left_node_i : right_node_i.
     */
-    function verifyEscape(uint256[] calldata escapeProof) external {
-        uint256 proofLength = escapeProof.length;
+    function verifyMerkle(uint256[] memory merkleProof) internal view {
+        uint256 proofLength = merkleProof.length;
 
-        // The minimal supported proof length is for a tree height of 31 in a 68 word representation as follows:
-        // 1. 2 word pairs representing the vault contents + one hash of the 1st pair.
-        // 2. 31  word pairs representing the authentication path.
-        // 3. 1 word pair representing the root and the leaf index.
-        require(proofLength >= 68, "Proof too short.");
+        // The minimal supported proof length is for a tree height of 1 in a 4 word representation as follows:
+        // 1 word pairs representing the authentication path.
+        // 1 word pair representing the root and the nodeIdx.
+        require(proofLength >= 4, "Proof too short.");
 
-        // The contract supports verification paths of lengths up to 97 in a 200 word representation as described above.
+        // The contract supports verification paths of lengths up to 200 in a 402 word representation as described above.
         // This limitation is imposed in order to avoid potential attacks.
-        require(proofLength < 200, "Proof too long.");
+        require(proofLength <= 402, "Proof too long.");
 
         // Ensure proofs are always a series of word pairs.
         require((proofLength & 1) == 0, "Proof length must be even.");
 
-        // Each hash takes 2 256bit words and the last two words are the root and vaultId.
-        uint256 nHashes = (proofLength - 2) / 2; // NOLINT: divide-before-multiply.
-
-        // We use 2 hashes to compute the leaf.
-        uint256 height = nHashes - 2;
+        // Each hash takes 2 256bit words and the last two words are the root and nodeIdx.
+        uint256 height = (proofLength - 2) / 2; // NOLINT: divide-before-multiply.
 
         // Note that it is important to limit the range of vault id, to make sure
-        // we use the node = Merkle_root in the last iteration of the loop below.
-        uint256 vaultId = escapeProof[proofLength - 1] >> 8;
-        require(vaultId < 2**height, "vaultId not in tree.");
+        // we use the left node (== merkle_root) in the last iteration of the loop below.
 
-        uint256 rowSize = (2 * nHashes) * 0x20;
-        uint256[] memory proof = escapeProof;
-        // solium-disable-next-line security/no-inline-assembly
+        uint256 nodeIdx = merkleProof[proofLength - 1] >> 8;
+        require(nodeIdx < 2**height, "nodeIdx not in tree.");
+        require((nodeIdx & 1) == 0, "nodeIdx must be even.");
+
+        uint256 rowSize = (2 * height) * 0x20;
+        uint256[] memory proof = merkleProof;
         assembly {
             // Skip the length of the proof array.
             proof := add(proof, 0x20)
@@ -151,17 +141,16 @@ contract EscapeVerifier is IFactRegistry {
                 revert(0, add(0x44, msg_len))
             }
 
-            let starkKey := shr(4, mload(proof))
-            let assetId := and(mload(add(proof, 0x1f)),
+            let left_node := shr(4, mload(proof))
+            let right_node := and(mload(add(proof, 0x1f)),
                                0x0fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff)
 
             let primeMinusOne := 0x800000000000011000000000000000000000000000000000000000000000000
-            if or(gt(starkKey, primeMinusOne), gt(assetId, primeMinusOne)) {
+            if or(gt(left_node, primeMinusOne), gt(right_node, primeMinusOne)) {
                 raise_error("Bad starkKey or assetId.", 24)
             }
 
-            // hash(starkKey, assetId) is on the left of the second hash.
-            let nodeSelectors := shl(1, vaultId)
+            let nodeSelectors := nodeIdx
 
             // Allocate EC points table with dimensions N_TABLES by N_HASHES.
             let table := mload(0x40)
@@ -169,10 +158,10 @@ contract EscapeVerifier is IFactRegistry {
 
             // for i = 0..N_TABLES-1, fill the i'th row in the table.
             for { let i := 0 } lt(i, 63) { i := add(i, 1)} {
-                if iszero(staticcall(gas, sload(i), add(proof, i), rowSize,
+                if iszero(staticcall(gas(), sload(i), add(proof, i), rowSize,
                                      add(table, mul(i, rowSize)), rowSize)) {
-                   returndatacopy(0, 0, returndatasize)
-                   revert(0, returndatasize)
+                   returndatacopy(0, 0, returndatasize())
+                   revert(0, returndatasize())
                 }
             }
 
@@ -265,6 +254,7 @@ contract EscapeVerifier is IFactRegistry {
                     raise_error("Value out of range.", 19)
                 }
 
+                nodeSelectors := shr(1, nodeSelectors)
                 if and(nodeSelectors, 1) {
                     expected_hash := other_node
                 }
@@ -284,36 +274,7 @@ contract EscapeVerifier is IFactRegistry {
                 if sub(aX, mulmod(expected_hash, aZ, PRIME))/*!=0*/ {
                    raise_error("Bad Merkle path.", 16)
                 }
-                nodeSelectors := shr(1, nodeSelectors)
             }
-
-            mstore(0, starkKey)
-            mstore(0x20,  assetId)
-            mstore(0x40,  // quantizedAmount
-                   and(mload(add(proof, 0x5f)),
-                       0x0fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff))
-            mstore(0x60, shr(4, mload(add(proof, rowSize)))) // vaultRoot
-            mstore(0x80, height)
-            mstore(0xa0, vaultId)
-
-            // claimHash := keccak256(
-            //      starkKey, assetId, quantizedAmount, vaultRoot, height, vaultId).
-            // storage[claimHash] := 1.
-            sstore(keccak256(0, 0xc0), 1)
-        }
-    }
-
-
-    /*
-      Checks the validity status of the claim corresponding to:
-      keccak256(abi.encode(starkKey, assetId, quantizedAmount, root, height, vaultId)).
-    */
-    function isValid(bytes32 hash)
-    external view returns(bool val)
-    {
-        // solium-disable-next-line security/no-inline-assembly
-        assembly {
-            val := sload(hash)
         }
     }
 }

@@ -1,4 +1,5 @@
-pragma solidity ^0.5.2;
+// SPDX-License-Identifier: Apache-2.0.
+pragma solidity ^0.6.11;
 
 import "../interfaces/IFactRegistry.sol";
 import "../upgrade/ProxyStorage.sol";
@@ -7,6 +8,8 @@ import "../libraries/Common.sol";
   Holds ALL the main contract state (storage) variables.
 */
 contract MainStorage is ProxyStorage {
+
+    uint256 constant internal LAYOUT_LENGTH = 2**64;
 
     IFactRegistry escapeVerifier_;
 
@@ -34,9 +37,9 @@ contract MainStorage is ProxyStorage {
     // Number of escapes that were performed when frozen.
     uint256 escapesUsedCount;                       // NOLINT: constable-states.
 
-    // Full withdrawal requests: stark key => vaultId => requestTime.
-    // stark key => vaultId => requestTime.
-    mapping (uint256 => mapping (uint256 => uint256)) fullWithdrawalRequests;
+    // NOTE: fullWithdrawalRequests is deprecated, and replaced by forcedActionRequests.
+    // NOLINTNEXTLINE naming-convention.
+    mapping (uint256 => mapping (uint256 => uint256)) fullWithdrawalRequests_DEPRECATED;
 
     // State sequence number.
     uint256 sequenceNumber;                         // NOLINT: constable-states uninitialized-state.
@@ -83,7 +86,25 @@ contract MainStorage is ProxyStorage {
     // Mapping between sub-contract index to sub-contract address.
     mapping(uint256 => address) subContracts;       // NOLINT: uninitialized-state.
 
-    // Mapping of permissive tokens.
-    // AssetType of tokens that are not ERC20 compliant (e.g. XAUT) and require permissive handling.
-    mapping (uint256 => bool) permissiveAssetType;      // NOLINT: uninitialized-state.
+    mapping (uint256 => bool) permissiveAssetType_DEPRECATED; // NOLINT: naming-convention.
+    // ---- END OF MAIN STORAGE AS DEPLOYED IN STARKEX2.0 ----
+
+    // Onchain-data version configured for the system.
+    uint256 onchainDataVersion;                     // NOLINT: constable-states uninitialized-state.
+
+    // Counter of forced action request in block. The key is the block number.
+    mapping(uint256 => uint256) forcedRequestsInBlock;
+
+    // ForcedAction requests: actionHash => requestTime.
+    mapping(bytes32 => uint256) forcedActionRequests;
+
+    // Mapping for timelocked actions.
+    // A actionKey => activation time.
+    mapping (bytes32 => uint256) actionsTimeLock;
+
+    // Reserved storage space for Extensibility.
+    // Every added MUST be added above the end gap, and the __endGap size must be reduced
+    // accordingly.
+    // NOLINTNEXTLINE: naming-convention.
+    uint256[LAYOUT_LENGTH - 36] private __endGap;  // __endGap complements layout to LAYOUT_LENGTH.
 }

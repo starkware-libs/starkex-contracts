@@ -1,11 +1,11 @@
-// Solidity 0.5.4 has this bug: https://github.com/ethereum/solidity/issues/5997
-// It's already fixed: https://github.com/ethereum/solidity/pull/6000 and will be released in 0.5.5.
-pragma solidity ^0.5.2;
+// SPDX-License-Identifier: Apache-2.0.
+pragma solidity ^0.6.11;
 
-import "../FactRegistry.sol";
+import "../interfaces/FactRegistry.sol";
+import "../interfaces/IAvailabilityVerifier.sol";
 import "../interfaces/Identity.sol";
 
-contract Committee is FactRegistry, Identity {
+contract Committee is FactRegistry, IAvailabilityVerifier, Identity {
 
     uint256 constant SIGNATURE_LENGTH = 32 * 2 + 1; // r(32) + s(32) +  v(1).
     uint256 public signaturesRequired;
@@ -26,7 +26,7 @@ contract Committee is FactRegistry, Identity {
     }
 
     function identify()
-        external pure
+        external pure override
         returns(string memory)
     {
         return "StarkWare_Committee_2019_1";
@@ -49,7 +49,7 @@ contract Committee is FactRegistry, Identity {
         bytes32 claimHash,
         bytes calldata availabilityProofs
     )
-        external
+        external override
     {
         require(
             availabilityProofs.length >= signaturesRequired * SIGNATURE_LENGTH,
@@ -84,7 +84,6 @@ contract Committee is FactRegistry, Identity {
         uint256 actualOffset = offset + 32;
 
         // Read the bytes32 from array memory.
-        // solium-disable-next-line security/no-inline-assembly
         assembly {
             result := mload(add(array, actualOffset))
         }

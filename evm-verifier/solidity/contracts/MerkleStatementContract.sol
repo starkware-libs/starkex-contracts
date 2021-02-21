@@ -1,6 +1,7 @@
-pragma solidity ^0.5.2;
+// SPDX-License-Identifier: Apache-2.0.
+pragma solidity ^0.6.11;
 
-import "./FactRegistry.sol";
+import "./interfaces/FactRegistry.sol";
 import "./MerkleVerifier.sol";
 
 contract MerkleStatementContract is MerkleVerifier, FactRegistry {
@@ -82,7 +83,7 @@ contract MerkleStatementContract is MerkleVerifier, FactRegistry {
             mstore(0x40, add(dataToHashPtr, 0x20))
         }
         require(badInput == 0, "INVALID_MERKLE_INDICES");
-        bytes32 resRoot = verify(channelPtr, merkleQueuePtr, bytes32(expectedRoot), nQueries);
+        bytes32 resRoot = verifyMerkle(channelPtr, merkleQueuePtr, bytes32(expectedRoot), nQueries);
         bytes32 factHash;
         assembly {
             // Append the resulted root (should be the return value of verify) to dataToHashPtr.

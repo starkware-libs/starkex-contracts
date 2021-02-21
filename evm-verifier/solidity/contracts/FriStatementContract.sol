@@ -1,6 +1,7 @@
-pragma solidity ^0.5.2;
+// SPDX-License-Identifier: Apache-2.0.
+pragma solidity ^0.6.11;
 
-import "./FactRegistry.sol";
+import "./interfaces/FactRegistry.sol";
 import "./FriLayer.sol";
 
 contract FriStatementContract is FriLayer, FactRegistry {
@@ -93,7 +94,7 @@ contract FriStatementContract is FriLayer, FactRegistry {
             2**friStepSize, /* friCosetSize = 2**friStepSize */
             friCtx);
 
-        verify(channelPtr, merkleQueuePtr, bytes32(expectedRoot), nQueries);
+        verifyMerkle(channelPtr, merkleQueuePtr, bytes32(expectedRoot), nQueries);
 
         bytes32 factHash;
         assembly {
