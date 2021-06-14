@@ -2,16 +2,14 @@
 pragma solidity ^0.6.11;
 
 import "../components/Escapes.sol";
+import "../interactions/StarkExForcedActionState.sol";
+import "../interactions/UpdateState.sol";
 import "../../components/Freezable.sol";
-import "../../components/KeyGetters.sol";
 import "../../components/MainGovernance.sol";
 import "../../components/Operator.sol";
 import "../../interactions/AcceptModifications.sol";
-import "../../interactions/StarkExForcedActionState.sol";
 import "../../interactions/StateRoot.sol";
 import "../../interactions/TokenQuantization.sol";
-import "../../interactions/UpdateState.sol";
-import "../../interfaces/IFactRegistry.sol";
 import "../../interfaces/SubContractor.sol";
 
 contract StarkExState is
@@ -24,10 +22,21 @@ contract StarkExState is
     StarkExForcedActionState,
     StateRoot,
     Escapes,
-    UpdateState,
-    KeyGetters
+    UpdateState
 {
-    uint256 constant INITIALIZER_SIZE = 7 * 32;  // 1 x address + 6 * uint256 = 224 bytes.
+    uint256 constant INITIALIZER_SIZE = 9 * 32; // 2 * address + 6 * uint256 + 1 * bool = 288 bytes.
+
+    struct InitializationArgStruct {
+        address escapeVerifierAddress;
+        uint256 sequenceNumber;
+        uint256 vaultRoot;
+        uint256 orderRoot;
+        uint256 vaultTreeHeight;
+        uint256 orderTreeHeight;
+        uint256 onchainDataVersionValue;
+        bool strictVaultBalancePolicy;
+        address orderRegistryAddress;
+    }
 
     /*
       Initialization flow:
@@ -42,35 +51,26 @@ contract StarkExState is
         require(orderRoot == 0, "STATE_ALREADY_INITIALIZED");
         require(orderTreeHeight == 0, "STATE_ALREADY_INITIALIZED");
 
-        require(data.length == INITIALIZER_SIZE, "INCORRECT_INIT_DATA_SIZE_224");
-        IFactRegistry escapeVerifier;
-        uint256 initialSequenceNumber;
-        uint256 initialVaultRoot;
-        uint256 initialOrderRoot;
-        uint256 initialVaultTreeHeight;
-        uint256 initialOrderTreeHeight;
-        uint256 onchainDataVersionValue;
-        (
-            escapeVerifier,
-            initialSequenceNumber,
-            initialVaultRoot,
-            initialOrderRoot,
-            initialVaultTreeHeight,
-            initialOrderTreeHeight,
-            onchainDataVersionValue
-        ) = abi.decode(data, (IFactRegistry, uint256, uint256, uint256, uint256, uint256, uint256));
+        require(data.length == INITIALIZER_SIZE, "INCORRECT_INIT_DATA_SIZE_256");
+
+        // Copies initializer values into initValues.
+        InitializationArgStruct memory initValues;
+        bytes memory _data = data;
+        assembly {initValues := add(32, _data)}
 
         initGovernance();
         Operator.initialize();
         StateRoot.initialize(
-            initialSequenceNumber,
-            initialVaultRoot,
-            initialOrderRoot,
-            initialVaultTreeHeight,
-            initialOrderTreeHeight
+            initValues.sequenceNumber,
+            initValues.vaultRoot,
+            initValues.orderRoot,
+            initValues.vaultTreeHeight,
+            initValues.orderTreeHeight
         );
-        Escapes.initialize(escapeVerifier);
-        onchainDataVersion = onchainDataVersionValue;
+        Escapes.initialize(initValues.escapeVerifierAddress);
+        onchainDataVersion = initValues.onchainDataVersionValue;
+        strictVaultBalancePolicy = initValues.strictVaultBalancePolicy;
+        orderRegistryAddress = initValues.orderRegistryAddress;
     }
 
     /*

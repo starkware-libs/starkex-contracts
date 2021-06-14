@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0.
 pragma solidity ^0.6.11;
 
-import "../interfaces/FactRegistry.sol";
+import "../components/FactRegistry.sol";
 import "../interfaces/IAvailabilityVerifier.sol";
 import "../interfaces/Identity.sol";
 
@@ -19,7 +19,9 @@ contract Committee is FactRegistry, IAvailabilityVerifier, Identity {
     {
         require(numSignaturesRequired <= committeeMembers.length, "TOO_MANY_REQUIRED_SIGNATURES");
         for (uint256 idx = 0; idx < committeeMembers.length; idx++) {
-            require(!isMember[committeeMembers[idx]], "NON_UNIQUE_COMMITTEE_MEMBERS");
+            require(
+                !isMember[committeeMembers[idx]] && (committeeMembers[idx] != address(0)),
+                "NON_UNIQUE_COMMITTEE_MEMBERS");
             isMember[committeeMembers[idx]] = true;
         }
         signaturesRequired = numSignaturesRequired;

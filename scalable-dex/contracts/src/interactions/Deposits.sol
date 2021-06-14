@@ -3,11 +3,12 @@ pragma solidity ^0.6.11;
 
 import "../libraries/LibConstants.sol";
 import "../interfaces/MAcceptModifications.sol";
+import "../interfaces/MDeposits.sol";
 import "../interfaces/MTokenQuantization.sol";
-import "../interactions/TokenAssetData.sol";
+import "../interfaces/MTokenAssetData.sol";
 import "../interfaces/MFreezable.sol";
 import "../interfaces/MKeyGetters.sol";
-import "../interfaces/MTokens.sol";
+import "../interfaces/MTokenTransfers.sol";
 import "../components/MainStorage.sol";
 
 /**
@@ -45,11 +46,12 @@ abstract contract Deposits is
     MainStorage,
     LibConstants,
     MAcceptModifications,
+    MDeposits,
     MTokenQuantization,
-    TokenAssetData,
+    MTokenAssetData,
     MFreezable,
     MKeyGetters,
-    MTokens
+    MTokenTransfers
 {
     event LogDeposit(
         address depositorEthKey,
@@ -111,7 +113,10 @@ abstract contract Deposits is
         uint256 tokenId
     ) external notFrozen()
     {
-        require(vaultId <= STARKEX_MAX_VAULT_ID, "OUT_OF_RANGE_VAULT_ID");
+        // The vaultId is not validated but should be in the allowed range supported by the
+        // exchange. If not, it will be ignored by the exchange and the starkKey owner may reclaim
+        // the funds by using depositCancel + depositReclaim.
+
         // starkKey must be registered.
         require(ethKeys[starkKey] != ZERO_ADDRESS, "INVALID_STARK_KEY");
         require(!isMintableAssetType(assetType), "MINTABLE_ASSET_TYPE");
@@ -140,6 +145,25 @@ abstract contract Deposits is
         uint256 vaultId
     ) external view returns (uint256 request) {
         request = cancellationRequests[starkKey][assetId][vaultId];
+    }
+
+    function depositERC20(
+        uint256 starkKey,
+        uint256 assetType,
+        uint256 vaultId,
+        uint256 quantizedAmount
+    ) public override
+    {
+        deposit(starkKey, assetType, vaultId, quantizedAmount);
+    }
+
+    function depositEth( // NOLINT: locked-ether.
+        uint256 starkKey,
+        uint256 assetType,
+        uint256 vaultId
+    ) public payable override {
+        require(isEther(assetType), "INVALID_ASSET_TYPE");
+        deposit(starkKey, assetType, vaultId, toQuantized(assetType, msg.value));
     }
 
     function deposit(
@@ -202,10 +226,9 @@ abstract contract Deposits is
         uint256 vaultId
     )
         external
-        isSenderStarkKey(starkKey)
+        onlyStarkKeyOwner(starkKey)
     // No notFrozen modifier: This function can always be used, even when frozen.
     {
-
         // Start the timeout.
         cancellationRequests[starkKey][assetId][vaultId] = block.timestamp;
 
@@ -219,7 +242,7 @@ abstract contract Deposits is
         uint256 vaultId
     )
         external
-        isSenderStarkKey(starkKey)
+        onlyStarkKeyOwner(starkKey)
     // No notFrozen modifier: This function can always be used, even when frozen.
     {
         uint256 assetType = assetId;
@@ -256,11 +279,9 @@ abstract contract Deposits is
         uint256 tokenId
     )
         external
-        isSenderStarkKey(starkKey)
+        onlyStarkKeyOwner(starkKey)
     // No notFrozen modifier: This function can always be used, even when frozen.
     {
-        require(vaultId <= STARKEX_MAX_VAULT_ID, "OUT_OF_RANGE_VAULT_ID");
-
         // assetId is the id for the deposits/withdrawals.
         // equivalent for the usage of assetType for ERC20.
         uint256 assetId = calculateNftAssetId(assetType, tokenId);

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0.
 pragma solidity ^0.6.11;
 
-import "./interfaces/FactRegistry.sol";
+import "./components/FactRegistry.sol";
 import "./MerkleVerifier.sol";
 
 contract MerkleStatementContract is MerkleVerifier, FactRegistry {

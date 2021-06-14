@@ -21,16 +21,9 @@ import "./PerpetualStorage.sol";
   exchange operator, for example), only the owner of the vault may perform the final step of
   transferring the funds.
 */
-abstract contract PerpetualEscapes is
-    PerpetualStorage,
-    MAcceptModifications,
-    MFreezable
-{
-    function initialize (
-        IFactRegistry escapeVerifier
-    ) internal
-    {
-        escapeVerifier_ = escapeVerifier;
+abstract contract PerpetualEscapes is PerpetualStorage, MAcceptModifications, MFreezable {
+    function initialize(address escapeVerifier) internal {
+        escapeVerifierAddress = escapeVerifier;
     }
     /*
       Escape when the contract is frozen.
@@ -50,9 +43,9 @@ abstract contract PerpetualEscapes is
         escapesUsedCount += 1;
 
         bytes32 claimHash = keccak256(
-            abi.encode(
-        starkKey, quantizedAmount, sharedStateHash, vaultId));
-        require(escapeVerifier_.isValid(claimHash), "ESCAPE_LACKS_PROOF");
+            abi.encode(starkKey, quantizedAmount, sharedStateHash, vaultId));
+        IFactRegistry escapeVerifier = IFactRegistry(escapeVerifierAddress);
+        require(escapeVerifier.isValid(claimHash), "ESCAPE_LACKS_PROOF");
 
         allowWithdrawal(starkKey, systemAssetType, quantizedAmount);
     }

@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: Apache-2.0.
 pragma solidity ^0.6.11;
 
-import "../libraries/LibConstants.sol";
-import "../interfaces/MFreezable.sol";
-import "../interfaces/MKeyGetters.sol";
+import "../components/StarkExStorage.sol";
 import "../interfaces/MStarkExForcedActionState.sol";
-import "../components/MainStorage.sol";
+import "../StarkExConstants.sol";
+import "../../interfaces/MFreezable.sol";
+import "../../interfaces/MKeyGetters.sol";
 
 /**
   At any point in time, a user may opt to perform a full withdrawal request for a given off-chain
@@ -36,17 +36,17 @@ import "../components/MainStorage.sol";
 
 */
 abstract contract FullWithdrawals is
-    MainStorage,
-    LibConstants,
+    StarkExStorage,
+    StarkExConstants,
     MStarkExForcedActionState,
     MFreezable,
     MKeyGetters {
     event LogFullWithdrawalRequest(uint256 starkKey, uint256 vaultId);
 
     function fullWithdrawalRequest(uint256 starkKey, uint256 vaultId) external notFrozen()
-        isSenderStarkKey(starkKey) {
+        onlyStarkKeyOwner(starkKey) {
         // Verify vault ID in range.
-        require(vaultId <= STARKEX_MAX_VAULT_ID, "OUT_OF_RANGE_VAULT_ID");
+        require(vaultId < STARKEX_VAULT_ID_UPPER_BOUND, "OUT_OF_RANGE_VAULT_ID");
 
         // Start timer on escape request.
         setFullWithdrawalRequest(starkKey, vaultId);
@@ -57,7 +57,7 @@ abstract contract FullWithdrawals is
 
     function freezeRequest(uint256 starkKey, uint256 vaultId) external notFrozen() {
         // Verify vaultId in range.
-        require(vaultId <= STARKEX_MAX_VAULT_ID, "OUT_OF_RANGE_VAULT_ID");
+        require(vaultId < STARKEX_VAULT_ID_UPPER_BOUND, "OUT_OF_RANGE_VAULT_ID");
 
         // Load request time.
         uint256 requestTime = getFullWithdrawalRequest(starkKey, vaultId);

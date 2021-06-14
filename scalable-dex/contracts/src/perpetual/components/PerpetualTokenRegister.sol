@@ -1,16 +1,16 @@
 // SPDX-License-Identifier: Apache-2.0.
 pragma solidity ^0.6.11;
 
-import "../../components/Tokens.sol";
+import "../../components/TokenRegister.sol";
 import "./PerpetualStorage.sol";
 
 /**
-  Extensin of the Tokens contract for StarkPerpetual.
+  Extension of the TokenRegister contract for StarkPerpetual.
 
   The change is that asset registration defines the system asset,
   and permitted only once.
 */
-abstract contract PerpetualTokens is PerpetualStorage, Tokens {
+abstract contract PerpetualTokenRegister is PerpetualStorage, TokenRegister {
     event LogSystemAssetType(uint256 assetType);
 
     function registerToken(

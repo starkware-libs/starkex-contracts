@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0.
 pragma solidity ^0.6.11;
 
-import "../interfaces/IFactRegistry.sol";
 import "../upgrade/ProxyStorage.sol";
 import "../libraries/Common.sol";
 /*
@@ -11,7 +10,7 @@ contract MainStorage is ProxyStorage {
 
     uint256 constant internal LAYOUT_LENGTH = 2**64;
 
-    IFactRegistry escapeVerifier_;
+    address escapeVerifierAddress;                  // NOLINT: constable-states.
 
     // Global dex-frozen flag.
     bool stateFrozen;                               // NOLINT: constable-states.
@@ -102,9 +101,12 @@ contract MainStorage is ProxyStorage {
     // A actionKey => activation time.
     mapping (bytes32 => uint256) actionsTimeLock;
 
+    // Append only list of requested forced action hashes.
+    bytes32[] actionHashList;
+
     // Reserved storage space for Extensibility.
     // Every added MUST be added above the end gap, and the __endGap size must be reduced
     // accordingly.
     // NOLINTNEXTLINE: naming-convention.
-    uint256[LAYOUT_LENGTH - 36] private __endGap;  // __endGap complements layout to LAYOUT_LENGTH.
+    uint256[LAYOUT_LENGTH - 37] private __endGap;  // __endGap complements layout to LAYOUT_LENGTH.
 }

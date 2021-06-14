@@ -19,10 +19,4 @@ contract KeyGetters is MainStorage, MKeyGetters {
         override returns (bool) {
         return msg.sender == getEthKey(starkKey);
     }
-
-    modifier isSenderStarkKey(uint256 starkKey) override {
-        // Require the calling user to own the stark key.
-        require(isMsgSenderStarkKeyOwner(starkKey), "MISMATCHING_STARK_ETH_KEYS");
-        _;
-    }
 }

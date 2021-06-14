@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: Apache-2.0.
 pragma solidity ^0.6.11;
 
-import "../components/ActionHash.sol";
-import "../components/MainStorage.sol";
+import "../components/PerpetualStorage.sol";
 import "../interfaces/MForcedTradeActionState.sol";
+import "../../components/ActionHash.sol";
 
 /*
   ForcedTrade specific action hashses.
 */
-contract ForcedTradeActionState is MainStorage, ActionHash, MForcedTradeActionState {
+contract ForcedTradeActionState is PerpetualStorage, ActionHash, MForcedTradeActionState {
     function forcedTradeActionHash(
         uint256 starkKeyA,
         uint256 starkKeyB,

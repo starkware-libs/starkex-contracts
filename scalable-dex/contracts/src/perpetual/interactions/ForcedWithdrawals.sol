@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: Apache-2.0.
 pragma solidity ^0.6.11;
 
-import "../libraries/LibConstants.sol";
-import "../interfaces/MFreezable.sol";
-import "../interfaces/MKeyGetters.sol";
 import "../interfaces/MForcedWithdrawalActionState.sol";
+import "../PerpetualConstants.sol";
+import "../../interfaces/MFreezable.sol";
+import "../../interfaces/MKeyGetters.sol";
 
 abstract contract ForcedWithdrawals is
-    LibConstants,
+    PerpetualConstants,
     MForcedWithdrawalActionState,
     MFreezable,
     MKeyGetters
@@ -19,7 +19,7 @@ abstract contract ForcedWithdrawals is
         uint256 vaultId,
         uint256 quantizedAmount,
         bool premiumCost)
-        external notFrozen() isSenderStarkKey(starkKey) {
+        external notFrozen() onlyStarkKeyOwner(starkKey) {
         // Verify vault ID in range.
         require(vaultId < PERPETUAL_POSITION_ID_UPPER_BOUND, "OUT_OF_RANGE_POSITION_ID");
         require(quantizedAmount < PERPETUAL_AMOUNT_UPPER_BOUND, "ILLEGAL_AMOUNT");

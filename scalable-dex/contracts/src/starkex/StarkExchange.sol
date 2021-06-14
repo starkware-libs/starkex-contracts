@@ -4,19 +4,19 @@ pragma solidity ^0.6.11;
 import "../interfaces/MainDispatcher.sol";
 
 contract StarkExchange is MainDispatcher {
-    string public constant VERSION = "3.0.0";
+    string public constant VERSION = "3.0.1";
 
     // Salt for a 8 bit unique spread of all relevant selectors. Pre-caclulated.
     // ---------- The following code was auto-generated. PLEASE DO NOT EDIT. ----------
-    uint256 constant MAGIC_SALT = 120;
-    uint256 constant IDX_MAP_0 = 0x2000000000000000002010000001000000000000200010300010002002000330;
-    uint256 constant IDX_MAP_1 = 0x4300000202002011010000101200100030000000022030010000000121000000;
-    uint256 constant IDX_MAP_2 = 0x2000000100300230002000400000000001013000201010100001011000;
-    uint256 constant IDX_MAP_3 = 0x2020000003002002000002020000000002000000000001200320000000002000;
+    uint256 constant MAGIC_SALT = 20188;
+    uint256 constant IDX_MAP_0 = 0x110200000021000030000005000020015200500020500200002020220000;
+    uint256 constant IDX_MAP_1 = 0x200200032001330010000101000203000003120201405000200010000;
+    uint256 constant IDX_MAP_2 = 0x100230002000000020032200201550025010000100102002003020010000030;
+    uint256 constant IDX_MAP_3 = 0x2001022000000001031050500102200001020200300004010100002002;
     // ---------- End of auto-generated code. ----------
 
     function getNumSubcontracts() internal pure override returns (uint256) {
-        return 4;
+        return 5;
     }
 
     function magicSalt() internal pure override returns(uint256) {
@@ -49,6 +49,8 @@ contract StarkExchange is MainDispatcher {
             id = "StarkWare_StarkExState_2020_1";
         } else if (index == 4) {
             id = "StarkWare_ForcedActions_2020_1";
+        } else if (index == 5) {
+            id = "StarkWare_OnchainVaults_2021_1";
         } else {
             revert("UNEXPECTED_INDEX");
         }

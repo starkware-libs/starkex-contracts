@@ -2,7 +2,7 @@
 pragma solidity ^0.6.11;
 
 import "../../interfaces/ExternalInitializer.sol";
-import "../../libraries/LibConstants.sol";
+import "../../perpetual/PerpetualConstants.sol";
 import "../../perpetual/components/PerpetualStorage.sol";
 
 /*
@@ -12,7 +12,7 @@ import "../../perpetual/components/PerpetualStorage.sol";
 contract UpdatePerpetualConfigExternalInitializer is
     ExternalInitializer,
     PerpetualStorage,
-    LibConstants
+    PerpetualConstants
 {
 
     function initialize(bytes calldata data) external override {

@@ -25,7 +25,7 @@ contract ActionHash is MainStorage , LibConstants{
         // in this case, the gas cost is high (~1M) but no "technical" limit is set.
         // However, the high gas cost creates an obvious limitation due to the block gas limit.
         if (premiumCost) {
-            for (uint256 i = 0; i < 22231; i++) {}
+            for (uint256 i = 0; i < 21129; i++) {}
         } else {
             require(
                 forcedRequestsInBlock[block.number] < MAX_FORCED_ACTIONS_REQS_PER_BLOCK,
@@ -33,5 +33,17 @@ contract ActionHash is MainStorage , LibConstants{
             forcedRequestsInBlock[block.number] += 1;
         }
         forcedActionRequests[actionHash] = block.timestamp;
+        actionHashList.push(actionHash);
+    }
+
+    function getActionCount() external view returns(uint256)
+    {
+        return actionHashList.length;
+    }
+
+    function getActionHashByIndex(uint256 actionIndex) external view returns(bytes32)
+    {
+        require(actionIndex < actionHashList.length, "ACTION_INDEX_TOO_HIGH");
+        return actionHashList[actionIndex];
     }
 }

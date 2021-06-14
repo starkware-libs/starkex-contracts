@@ -13,7 +13,7 @@ import "./Governance.sol";
   2. Remove other governors (:sol:func:`mainRemoveGovernor`)
   3. Add new :sol:mod:`Verifiers` and :sol:mod:`AvailabilityVerifiers`
   4. Remove :sol:mod:`Verifiers` and :sol:mod:`AvailabilityVerifiers` after a timelock allows it
-  5. Nominate Operators (see :sol:mod:`Operator`) and Token Administrators (see :sol:mod:`Tokens`)
+  5. Nominate Operators (see :sol:mod:`Operator`) and Token Administrators (see :sol:mod:`TokenRegister`)
 
   Adding governors is performed in a two step procedure:
 

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0.
 pragma solidity ^0.6.11;
 
-import "./IQueryableFactRegistry.sol";
+import "../interfaces/IQueryableFactRegistry.sol";
 
 contract FactRegistry is IQueryableFactRegistry {
     // Mapping: fact hash -> true.

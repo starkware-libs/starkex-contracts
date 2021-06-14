@@ -13,10 +13,14 @@ contract PublicInputOffsets {
     uint256 internal constant PUB_IN_ONCHAIN_DATA_VERSION = 7;
     uint256 internal constant PUB_IN_N_MODIFICATIONS_OFFSET = 8;
     uint256 internal constant PUB_IN_N_CONDITIONAL_TRANSFERS_OFFSET = 9;
-    uint256 internal constant PUB_IN_TRANSACTIONS_DATA_OFFSET = 10;
+    uint256 internal constant PUB_IN_N_ONCHAIN_VAULT_UPDATES_OFFSET = 10;
+    uint256 internal constant PUB_IN_N_ONCHAIN_ORDERS_OFFSET = 11;
+    uint256 internal constant PUB_IN_TRANSACTIONS_DATA_OFFSET = 12;
 
     uint256 internal constant PUB_IN_N_WORDS_PER_MODIFICATION = 3;
     uint256 internal constant PUB_IN_N_WORDS_PER_CONDITIONAL_TRANSFER = 1;
+    uint256 internal constant PUB_IN_N_WORDS_PER_ONCHAIN_VAULT_UPDATE = 3;
+    uint256 internal constant PUB_IN_N_MIN_WORDS_PER_ONCHAIN_ORDER = 3;
 
     // Onchain-data version.
     uint256 internal constant ONCHAIN_DATA_NONE = 0;

@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: Apache-2.0.
 pragma solidity ^0.6.11;
 
-import "../libraries/LibConstants.sol";
-import "../interfaces/MFreezable.sol";
-import "../interfaces/MKeyGetters.sol";
+import "../components/PerpetualStorage.sol";
 import "../interfaces/MForcedTradeActionState.sol";
-import "../perpetual/components/PerpetualStorage.sol";
+import "../PerpetualConstants.sol";
+import "../../interfaces/MFreezable.sol";
+import "../../interfaces/MKeyGetters.sol";
 
 abstract contract ForcedTrades is
     PerpetualStorage,
-    LibConstants,
+    PerpetualConstants,
     MForcedTradeActionState,
     MFreezable,
     MKeyGetters
@@ -42,7 +42,7 @@ abstract contract ForcedTrades is
         uint256 nonce,
         bytes calldata signature,
         bool premiumCost
-    ) external notFrozen() isSenderStarkKey(starkKeyA) {
+    ) external notFrozen() onlyStarkKeyOwner(starkKeyA) {
         require(vaultIdA < PERPETUAL_POSITION_ID_UPPER_BOUND, "OUT_OF_RANGE_POSITION_ID");
         require(vaultIdB < PERPETUAL_POSITION_ID_UPPER_BOUND, "OUT_OF_RANGE_POSITION_ID");
 

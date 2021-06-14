@@ -3,33 +3,22 @@ pragma solidity ^0.6.11;
 
 import "./SubContractor.sol";
 import "./IDispatcherBase.sol";
+import "../interfaces/BlockDirectCall.sol";
 import "../libraries/Common.sol";
-import "../upgrade/StorageSlots.sol";
 
-abstract contract MainDispatcherBase is IDispatcherBase, StorageSlots {
+abstract contract MainDispatcherBase is IDispatcherBase, BlockDirectCall {
 
     using Addresses for address;
 
-    constructor( ) internal {
-        bytes32 slot = MAIN_DISPATCHER_SAFEGUARD_SLOT;
-        assembly {
-            sstore(slot, 42)
-        }
+    /*
+      This entry point serves only transactions with empty calldata. (i.e. pure value transfer tx).
+      We don't expect to receive such, thus block them.
+    */
+    receive() external payable {
+        revert("CONTRACT_NOT_EXPECTED_TO_RECEIVE");
     }
 
-    modifier notCalledDirectly() {
-        { // Prevent too many local variables in stack.
-            uint256 safeGuardValue;
-            bytes32 slot = MAIN_DISPATCHER_SAFEGUARD_SLOT;
-            assembly {
-                safeGuardValue := sload(slot)
-            }
-            require(safeGuardValue == 0, "DIRECT_CALL_DISALLOWED");
-        }
-        _;
-    }
-
-    fallback() external payable { //NOLINT locked-ether.
+    fallback() external payable {
         address subContractAddress = getSubContract(msg.sig);
         require(subContractAddress != address(0x0), "NO_CONTRACT_FOR_FUNCTION");
 
@@ -120,7 +109,7 @@ abstract contract MainDispatcherBase is IDispatcherBase, StorageSlots {
     */
     // NOLINTNEXTLINE: external-function.
     function initialize(bytes memory data) public virtual
-        notCalledDirectly()
+        notCalledDirectly
     {
         // Number of sub-contracts.
         uint256 nSubContracts = getNumSubcontracts();
@@ -130,9 +119,6 @@ abstract contract MainDispatcherBase is IDispatcherBase, StorageSlots {
 
         // Init data MUST include addresses for all sub-contracts + EIC.
         require(data.length >= 32 * (nSubContracts + 1), "SUB_CONTRACTS_NOT_PROVIDED");
-
-        // Ensure implementation is a valid contract.
-        require(implementation().isContract(), "INVALID_IMPLEMENTATION");
 
         // Size of passed data, excluding sub-contract addresses.
         uint256 additionalDataSize = data.length - 32 * (nSubContracts + 1);

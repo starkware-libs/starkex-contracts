@@ -1,15 +1,17 @@
 // SPDX-License-Identifier: Apache-2.0.
 pragma solidity ^0.6.11;
 
-import "../components/OnchainDataFactTreeEncoder.sol";
-import "../components/VerifyFactChain.sol";
-import "../interfaces/IFactRegistry.sol";
-import "../interfaces/MAcceptModifications.sol";
-import "../interfaces/MFreezable.sol";
-import "../interfaces/MOperator.sol";
+import "../components/StarkExStorage.sol";
 import "../interfaces/MStarkExForcedActionState.sol";
-import "../libraries/LibConstants.sol";
-import "../public/PublicInputOffsets.sol";
+import "../PublicInputOffsets.sol";
+import "../StarkExConstants.sol";
+import "../../components/MessageRegistry.sol";
+import "../../components/OnchainDataFactTreeEncoder.sol";
+import "../../components/VerifyFactChain.sol";
+import "../../interfaces/MAcceptModifications.sol";
+import "../../interfaces/MFreezable.sol";
+import "../../interfaces/MOperator.sol";
+import "../../libraries/Common.sol";
 
 /**
   The StarkEx contract tracks the state of the off-chain exchange service by storing Merkle roots
@@ -57,6 +59,16 @@ import "../public/PublicInputOffsets.sol";
   |    b. Word 1: A fact to be verified on the above contract attesting that the
   |       condition has been met on-chain.
 
+
+  The following section in the publicInput is a list of orders to be verified onchain, corresponding
+  to the onchain orders in the batch. An onchain order is of a variable length (at least 3 words)
+  and is structured as follows:
+  | 1. The Eth address of the user who submitted the order.
+  | 2. The size (number of words) of the order blob that follows. Denoted 'n' below.
+  | 3. First word of the order blob.
+  | ...
+  | n + 2. Last word of the order blob.
+
   The STARK proof attesting to the validity of the state update is submitted separately by the
   exchange service to (one or more) STARK integrity verifier contract(s).
   Likewise, the signatures of committee members attesting to
@@ -68,15 +80,14 @@ import "../public/PublicInputOffsets.sol";
   availability.
 */
 abstract contract UpdateState is
-    MainStorage,
-    LibConstants,
+    StarkExStorage,
+    StarkExConstants,
     MStarkExForcedActionState,
     VerifyFactChain,
     MAcceptModifications,
     MFreezable,
     MOperator,
-    PublicInputOffsets,
-    OnchainDataFactTreeEncoder
+    PublicInputOffsets
 {
 
     event LogRootUpdate(
@@ -89,6 +100,15 @@ abstract contract UpdateState is
     event LogStateTransitionFact(
         bytes32 stateTransitionFact
     );
+
+    event LogVaultBalanceChangeApplied(
+        address ethKey,
+        uint256 assetId,
+        uint256 vaultId,
+        int256 quantizedAmountChange
+    );
+
+    using UintArray for uint256[];
 
     function updateState(
         uint256[] calldata publicInput,
@@ -154,7 +174,7 @@ abstract contract UpdateState is
     }
 
     function getStateTransitionFact(
-        uint256[] memory publicInput
+        uint256[] calldata publicInput
     )
         internal pure
         returns (bytes32)
@@ -164,16 +184,26 @@ abstract contract UpdateState is
             return keccak256(abi.encodePacked(publicInput));
         } else if (onchainDataVersionField == ONCHAIN_DATA_VAULTS) {
             // Use a simple fact tree.
-            return encodeFactWithOnchainData(
-                publicInput, PUB_IN_TRANSACTIONS_DATA_OFFSET);
+            require(
+                publicInput.length >= PUB_IN_TRANSACTIONS_DATA_OFFSET +
+                OnchainDataFactTreeEncoder.ONCHAIN_DATA_FACT_ADDITIONAL_WORDS,
+                "programOutput does not contain all required fields.");
+            return OnchainDataFactTreeEncoder.encodeFactWithOnchainData(
+                publicInput[
+                    :publicInput.length -
+                    OnchainDataFactTreeEncoder.ONCHAIN_DATA_FACT_ADDITIONAL_WORDS],
+                OnchainDataFactTreeEncoder.DataAvailabilityFact({
+                    onchainDataHash: publicInput[publicInput.length - 2],
+                    onchainDataSize: publicInput[publicInput.length - 1]
+                }));
         } else {
             revert("Unsupported onchain-data version.");
         }
     }
 
     function performUpdateState(
-        uint256[] memory publicInput,
-        uint256[] memory applicationData
+        uint256[] calldata publicInput,
+        uint256[] calldata applicationData
     )
         internal
     {
@@ -186,7 +216,7 @@ abstract contract UpdateState is
             publicInput[PUB_IN_ORDER_TREE_HEIGHT_OFFSET],
             applicationData[APP_DATA_BATCH_ID_OFFSET]
         );
-        sendModifications(publicInput, applicationData);
+        performOnchainOperations(publicInput, applicationData);
     }
 
     function rootUpdate(
@@ -219,23 +249,27 @@ abstract contract UpdateState is
         emit LogRootUpdate(sequenceNumber, batchId, vaultRoot, orderRoot);
     }
 
-    function sendModifications(
-        uint256[] memory publicInput,
-        uint256[] memory applicationData
+    function performOnchainOperations(
+        uint256[] calldata publicInput,
+        uint256[] calldata applicationData
     ) private {
         uint256 nModifications = publicInput[PUB_IN_N_MODIFICATIONS_OFFSET];
         uint256 nCondTransfers = publicInput[PUB_IN_N_CONDITIONAL_TRANSFERS_OFFSET];
         uint256 onchainDataVersionField = publicInput[PUB_IN_ONCHAIN_DATA_VERSION];
+        uint256 nOnchainVaultUpdates = publicInput[PUB_IN_N_ONCHAIN_VAULT_UPDATES_OFFSET];
+        uint256 nOnchainOrders = publicInput[PUB_IN_N_ONCHAIN_ORDERS_OFFSET];
 
         // Sanity value that also protects from theoretical overflow in multiplication.
         require(nModifications < 2**64, "Invalid number of modifications.");
         require(nCondTransfers < 2**64, "Invalid number of conditional transfers.");
-        uint256 expectedSize = PUB_IN_TRANSACTIONS_DATA_OFFSET +
-            PUB_IN_N_WORDS_PER_MODIFICATION * nModifications +
-            PUB_IN_N_WORDS_PER_CONDITIONAL_TRANSFER * nCondTransfers +
-            (onchainDataVersionField == 1 ? ONCHAIN_DATA_FACT_ADDITIONAL_WORDS : 0);
+        require(nOnchainVaultUpdates < 2**64, "Invalid number of onchain vault updates.");
+        require(nOnchainOrders < 2**64, "Invalid number of onchain orders.");
         require(
-            publicInput.length == expectedSize,
+            publicInput.length >= PUB_IN_TRANSACTIONS_DATA_OFFSET +
+                                PUB_IN_N_WORDS_PER_MODIFICATION * nModifications +
+                                PUB_IN_N_WORDS_PER_CONDITIONAL_TRANSFER * nCondTransfers +
+                                PUB_IN_N_WORDS_PER_ONCHAIN_VAULT_UPDATE * nOnchainVaultUpdates +
+                                PUB_IN_N_MIN_WORDS_PER_ONCHAIN_ORDER * nOnchainOrders,
             "publicInput size is inconsistent with expected transactions.");
         require(
             applicationData.length == APP_DATA_TRANSACTIONS_DATA_OFFSET +
@@ -245,26 +279,71 @@ abstract contract UpdateState is
         uint256 offsetPubInput = PUB_IN_TRANSACTIONS_DATA_OFFSET;
         uint256 offsetAppData = APP_DATA_TRANSACTIONS_DATA_OFFSET;
 
+        // When reaching this line, offsetPubInput is initialized to the beginning of modifications
+        // data in publicInput. Following this line's execution, offsetPubInput is incremented by
+        // the number of words consumed by sendModifications.
+        offsetPubInput += sendModifications(publicInput[offsetPubInput:], nModifications);
+
+        // When reaching this line, offsetPubInput and offsetAppData are pointing to the beginning
+        // of conditional transfers data in publicInput and applicationData.
+        // Following the execution of this block, offsetPubInput and offsetAppData are incremented
+        // by the number of words consumed by verifyConditionalTransfers.
+        {
+        uint256 consumedPubInputWords;
+        uint256 consumedAppDataWords;
+        (consumedPubInputWords, consumedAppDataWords) = verifyConditionalTransfers(
+            publicInput[offsetPubInput:], applicationData[offsetAppData:], nCondTransfers);
+
+        offsetPubInput += consumedPubInputWords;
+        offsetAppData += consumedAppDataWords;
+        }
+
+        // offsetPubInput is incremented by the number of words consumed by updateOnchainVaults.
+        offsetPubInput += updateOnchainVaults(publicInput[offsetPubInput:], nOnchainVaultUpdates);
+
+        // offsetPubInput is incremented by the number of words consumed by verifyOnchainOrders.
+        offsetPubInput += verifyOnchainOrders(publicInput[offsetPubInput:], nOnchainOrders);
+
+        // The Onchain Data info appears at the end of publicInput.
+        if (onchainDataVersionField == 1) {
+            offsetPubInput += OnchainDataFactTreeEncoder.ONCHAIN_DATA_FACT_ADDITIONAL_WORDS;
+        }
+
+        require(offsetPubInput == publicInput.length, "Incorrect Size");
+    }
+
+    /*
+      Deposits and withdrawals. Moves funds off and on chain.
+        slidingPublicInput - a pointer to the beginning of modifications data in publicInput.
+        nModifications - the number of modifications.
+      Returns the number of publicInput words consumed by this function.
+    */
+    function sendModifications(
+        uint256[] calldata slidingPublicInput,
+        uint256 nModifications
+    ) private returns (uint256 consumedPubInputItems) {
+        uint256 offsetPubInput = 0;
+
         for (uint256 i = 0; i < nModifications; i++) {
-            uint256 starkKey = publicInput[offsetPubInput];
-            uint256 assetId = publicInput[offsetPubInput + 1];
+            uint256 starkKey = slidingPublicInput[offsetPubInput];
+            uint256 assetId = slidingPublicInput[offsetPubInput + 1];
 
             require(starkKey < K_MODULUS, "Stark key >= PRIME");
             require(assetId < K_MODULUS, "Asset id >= PRIME");
 
-            uint256 actionParams = publicInput[offsetPubInput + 2];
+            uint256 actionParams = slidingPublicInput[offsetPubInput + 2];
             require ((actionParams >> 96) == 0, "Unsupported modification action field.");
 
-            // Extract and unbias the balance_diff.
-            int256 balance_diff = int256((actionParams & ((1 << 64) - 1)) - (1 << 63));
+            // Extract and unbias the balanceDiff.
+            int256 balanceDiff = int256((actionParams & ((1 << 64) - 1)) - (1 << 63));
             uint256 vaultId = (actionParams >> 64) & ((1 << 31) - 1);
 
-            if (balance_diff > 0) {
+            if (balanceDiff > 0) {
                 // This is a deposit.
-                acceptDeposit(starkKey, vaultId, assetId, uint256(balance_diff));
-            } else if (balance_diff < 0) {
+                acceptDeposit(starkKey, vaultId, assetId, uint256(balanceDiff));
+            } else if (balanceDiff < 0) {
                 // This is a withdrawal.
-                acceptWithdrawal(starkKey, assetId, uint256(-balance_diff));
+                acceptWithdrawal(starkKey, assetId, uint256(-balanceDiff));
             }
 
             if ((actionParams & (1 << 95)) != 0) {
@@ -273,12 +352,28 @@ abstract contract UpdateState is
 
             offsetPubInput += PUB_IN_N_WORDS_PER_MODIFICATION;
         }
+        return offsetPubInput;
+    }
 
-        // Conditional Transfers appear after all other modifications.
+    /*
+      Verifies that each conditional transfer's condition was met.
+        slidingPublicInput - a pointer to the beginning of condTransfers data in publicInput.
+        slidingAppData - a pointer to the beginning of condTransfers data in applicationData.
+        nCondTransfers - the number of conditional transfers.
+      Returns the number of publicInput and applicationData words consumed by this function.
+    */
+    function verifyConditionalTransfers(
+        uint256[] calldata slidingPublicInput,
+        uint256[] calldata slidingAppData,
+        uint256 nCondTransfers
+    ) private view returns (uint256 consumedPubInputItems, uint256 consumedAppDataItems) {
+        uint256 offsetPubInput = 0;
+        uint256 offsetAppData = 0;
+
         for (uint256 i = 0; i < nCondTransfers; i++) {
-            address factRegistryAddress = address(applicationData[offsetAppData]);
-            bytes32 condTransferFact = bytes32(applicationData[offsetAppData + 1]);
-            uint256 condition = publicInput[offsetPubInput];
+            address factRegistryAddress = address(slidingAppData[offsetAppData]);
+            bytes32 condTransferFact = bytes32(slidingAppData[offsetAppData + 1]);
+            uint256 condition = slidingPublicInput[offsetPubInput];
 
             // The condition is the 250 LS bits of keccak256 of the fact registry & fact.
             require(
@@ -297,5 +392,93 @@ abstract contract UpdateState is
             offsetPubInput += PUB_IN_N_WORDS_PER_CONDITIONAL_TRANSFER;
             offsetAppData += APP_DATA_N_WORDS_PER_CONDITIONAL_TRANSFER;
         }
+        return (offsetPubInput, offsetAppData);
+    }
+
+    /*
+      Moves funds into and out of onchain vaults.
+        slidingPublicInput - a pointer to the beginning of onchain vaults update data in publicInput.
+        nOnchainVaultUpdates - the number of onchain vaults updates.
+      Returns the number of publicInput words consumed by this function.
+    */
+    function updateOnchainVaults(
+        uint256[] calldata slidingPublicInput,
+        uint256 nOnchainVaultUpdates
+    ) private returns (uint256 consumedPubInputItems) {
+        uint256 offsetPubInput = 0;
+
+        for (uint256 i = 0; i < nOnchainVaultUpdates; i++) {
+            address ethAddress = address(slidingPublicInput[offsetPubInput]);
+            uint256 assetId = slidingPublicInput[offsetPubInput + 1];
+
+            require(assetId < K_MODULUS, "assetId >= PRIME");
+
+            uint256 additionalParams = slidingPublicInput[offsetPubInput + 2];
+            require((additionalParams >> 160) == 0, "Unsupported vault update field.");
+
+            // Extract and unbias the balanceDiff.
+            int256 balanceDiff = int256((additionalParams & ((1 << 64) - 1)) - (1 << 63));
+
+            int256 minBalance = int256((additionalParams >> 64) & ((1 << 64) - 1));
+            uint256 vaultId = (additionalParams >> 128) & ((1 << 31) - 1);
+
+            int256 balanceBefore = int256(vaultsBalances[ethAddress][assetId][vaultId]);
+            int256 newBalance = balanceBefore + balanceDiff;
+
+            if (balanceDiff > 0) {
+                require(newBalance > balanceBefore, "VAULT_OVERFLOW");
+            } else {
+                require(balanceBefore >= balanceDiff, "INSUFFICIENT_VAULT_BALANCE");
+            }
+
+            if (strictVaultBalancePolicy) {
+                require(minBalance >= 0, "ILLEGAL_BALANCE_REQUIREMENT");
+                require(balanceBefore >= minBalance, "UNMET_BALANCE_REQUIREMENT");
+            }
+
+            require(newBalance >= 0, "NEGATIVE_BALANCE");
+            vaultsBalances[ethAddress][assetId][vaultId] = uint256(newBalance);
+            emit LogVaultBalanceChangeApplied(ethAddress, assetId, vaultId, balanceDiff);
+
+            offsetPubInput += PUB_IN_N_WORDS_PER_ONCHAIN_VAULT_UPDATE;
+        }
+        return offsetPubInput;
+    }
+
+    /*
+      Verifies that each order was registered by its sender.
+        slidingPublicInput - a pointer to the beginning of onchain orders data in publicInput.
+        nOnchainOrders - the number of onchain orders.
+      Returns the number of publicInput words consumed by this function.
+    */
+    function verifyOnchainOrders(
+        uint256[] calldata slidingPublicInput,
+        uint256 nOnchainOrders
+    ) private view returns (uint256 consumedPubInputItems) {
+        MessageRegistry orderRegistry = MessageRegistry(orderRegistryAddress);
+        uint256 offsetPubInput = 0;
+
+        for (uint256 i = 0; i < nOnchainOrders; i++) {
+            // Make sure we remain within slidingPublicInput's bounds.
+            require(offsetPubInput + 2 <= slidingPublicInput.length, "Input out of bounds.");
+            // First word is the order sender.
+            address orderSender = address(slidingPublicInput[offsetPubInput]);
+            // Second word is the order blob size (number of blob words) that follow.
+            uint256 blobSize = uint256(slidingPublicInput[offsetPubInput + 1]);
+            require(offsetPubInput + blobSize + 2 >= offsetPubInput, "Blob size overflow.");
+
+            offsetPubInput += 2;
+            require(offsetPubInput + blobSize <= slidingPublicInput.length, "Input out of bounds.");
+            // Calculate the hash of the order blob.
+            bytes32 orderHash = slidingPublicInput.hashSubArray(offsetPubInput, blobSize);
+
+            // Verify this order has been registered.
+            require(
+                orderRegistry.isMessageRegistered(orderSender, address(this), orderHash),
+                "Order not registered.");
+
+            offsetPubInput += blobSize;
+        }
+        return offsetPubInput;
     }
 }

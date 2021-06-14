@@ -7,17 +7,6 @@ pragma solidity ^0.6.11;
   overlapped by the logical contracts.
 */
 contract StorageSlots {
-    /*
-      Returns the address of the current implementation.
-    */
-    // NOLINTNEXTLINE external-function.
-    function implementation() public view returns(address _implementation) {
-        bytes32 slot = IMPLEMENTATION_SLOT;
-        assembly {
-            _implementation := sload(slot)
-        }
-    }
-
     // Storage slot with the address of the current implementation.
     // The address of the slot is keccak256("StarkWare2019.implemntation-slot").
     // We need to keep this variable stored outside of the commonly used space,
@@ -45,9 +34,4 @@ contract StorageSlots {
     // Web3.solidityKeccak(['string'], ['StarkWare.Upgradibility.Delay.Slot']).
     bytes32 public constant UPGRADE_DELAY_SLOT =
     0xc21dbb3089fcb2c4f4c6a67854ab4db2b0f233ea4b21b21f912d52d18fc5db1f;
-
-    // Storage slot to hold the MainDispatcher init safeguard.
-    // Web3.solidityKeccak(['string'], ['StarkWare.MainDispatcher.Init.Safeguard.Slot']).
-    bytes32 public constant MAIN_DISPATCHER_SAFEGUARD_SLOT =
-    0xf3afa5472f846c7817e22b15110d7b184f2d3d6417baee645a1e963b8fac7e24;
 }

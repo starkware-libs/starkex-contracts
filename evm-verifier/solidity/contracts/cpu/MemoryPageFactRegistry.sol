@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0.
 pragma solidity ^0.6.11;
 
-import "../interfaces/FactRegistry.sol";
+import "../components/FactRegistry.sol";
 
 contract MemoryPageFactRegistryConstants {
     // A page based on a list of pairs (address, value).

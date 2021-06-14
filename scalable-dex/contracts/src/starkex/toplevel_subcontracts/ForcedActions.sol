@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: Apache-2.0.
 pragma solidity ^0.6.11;
 
+import "../interactions/FullWithdrawals.sol";
+import "../interactions/StarkExForcedActionState.sol";
 import "../../components/Freezable.sol";
 import "../../components/KeyGetters.sol";
 import "../../components/MainGovernance.sol";
-import "../../interactions/FullWithdrawals.sol";
-import "../../interactions/StarkExForcedActionState.sol";
 import "../../interfaces/SubContractor.sol";
 
 contract ForcedActions is

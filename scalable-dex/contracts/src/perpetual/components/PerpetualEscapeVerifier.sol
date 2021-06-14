@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0.
 pragma solidity ^0.6.11;
 
+import "../../components/FactRegistry.sol";
 import "../../components/PedersenMerkleVerifier.sol";
-import "../../interfaces/FactRegistry.sol";
+import "../../interfaces/Identity.sol";
 import "../ProgramOutputOffsets.sol";
 
 /*
@@ -14,7 +15,16 @@ import "../ProgramOutputOffsets.sol";
     keccak256(abi.encodePacked(
         publicKey, withdrawalAmount, sharedStateHash, positionId).
 */
-contract PerpetualEscapeVerifier is PedersenMerkleVerifier, FactRegistry, ProgramOutputOffsets {
+contract PerpetualEscapeVerifier is
+    PedersenMerkleVerifier, FactRegistry,
+    Identity, ProgramOutputOffsets {
+    event LogEscapeVerified(
+        uint256 publicKey,
+        int256 withdrawalAmount,
+        bytes32 sharedStateHash,
+        uint256 positionId
+    );
+
     uint256 internal constant N_ASSETS_BITS = 16;
     uint256 internal constant BALANCE_BITS = 64;
     uint256 internal constant FUNDING_BITS = 64;
@@ -28,6 +38,13 @@ contract PerpetualEscapeVerifier is PedersenMerkleVerifier, FactRegistry, Progra
         PedersenMerkleVerifier(tables)
         public
     {
+    }
+
+    function identify()
+        external pure override virtual
+        returns(string memory)
+    {
+        return "StarkWare_PerpetualEscapeVerifier_2021_2";
     }
 
     /*
@@ -97,7 +114,7 @@ contract PerpetualEscapeVerifier is PedersenMerkleVerifier, FactRegistry, Progra
             // Note that the funding_indices in both the position and the shared state
             // are biased by the same amount.
             uint256 cachedFunding = (positionAsset >> BALANCE_BITS) & (2**FUNDING_BITS - 1);
-            uint256 assetBalance = positionAsset & (2**BALANCE_BITS - 1) - BALANCE_BIAS;
+            uint256 assetBalance = (positionAsset & (2**BALANCE_BITS - 1)) - BALANCE_BIAS;
 
             fundingIndicesOffset = findAssetId(
                 assedId, sharedStateCopy, fundingIndicesOffset, fundingEnd);
@@ -189,6 +206,7 @@ contract PerpetualEscapeVerifier is PedersenMerkleVerifier, FactRegistry, Progra
         bytes32 sharedStateHash = keccak256(abi.encodePacked(sharedState));
 
         uint256 publicKey = position[nAssets];
+        emit LogEscapeVerified(publicKey, withdrawalAmount, sharedStateHash, positionId);
         bytes32 fact = keccak256(
             abi.encodePacked(
             publicKey, withdrawalAmount, sharedStateHash, positionId));

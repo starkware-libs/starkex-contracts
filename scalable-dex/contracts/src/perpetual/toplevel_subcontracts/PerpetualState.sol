@@ -3,17 +3,16 @@ pragma solidity ^0.6.11;
 
 import "../components/PerpetualEscapes.sol";
 import "../components/UpdatePerpetualState.sol";
-import "../../components/Configuration.sol";
+import "../components/Configuration.sol";
+import "../interactions/ForcedTradeActionState.sol";
+import "../interactions/ForcedWithdrawalActionState.sol";
 import "../../components/Freezable.sol";
 import "../../components/KeyGetters.sol";
 import "../../components/MainGovernance.sol";
 import "../../components/Operator.sol";
 import "../../interactions/AcceptModifications.sol";
-import "../../interactions/ForcedTradeActionState.sol";
-import "../../interactions/ForcedWithdrawalActionState.sol";
 import "../../interactions/StateRoot.sol";
 import "../../interactions/TokenQuantization.sol";
-import "../../interfaces/IFactRegistry.sol";
 import "../../interfaces/SubContractor.sol";
 
 contract PerpetualState is
@@ -48,12 +47,12 @@ contract PerpetualState is
         require(data.length == INITIALIZER_SIZE, "INCORRECT_INIT_DATA_SIZE_384");
 
         (
-            IFactRegistry escapeVerifier,
+            address escapeVerifierAddress,
             uint256 initialSequenceNumber,
             uint256[] memory initialState
         ) = abi.decode(
             data,
-            (IFactRegistry, uint256, uint256[])
+            (address, uint256, uint256[])
         );
 
         initGovernance();
@@ -67,7 +66,7 @@ contract PerpetualState is
             initialState[3]
         );
         sharedStateHash = keccak256(abi.encodePacked(initialState));
-        PerpetualEscapes.initialize(escapeVerifier);
+        PerpetualEscapes.initialize(escapeVerifierAddress);
     }
 
     /*

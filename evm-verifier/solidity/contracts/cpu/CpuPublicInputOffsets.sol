@@ -19,17 +19,19 @@ contract CpuPublicInputOffsets {
     uint256 internal constant OFFSET_RANGE_CHECK_STOP_PTR = 13;
     uint256 internal constant OFFSET_ECDSA_BEGIN_ADDR = 14;
     uint256 internal constant OFFSET_ECDSA_STOP_PTR = 15;
-    uint256 internal constant OFFSET_CHECKPOINTS_BEGIN_PTR = 16;
-    uint256 internal constant OFFSET_CHECKPOINTS_STOP_PTR = 17;
-    uint256 internal constant OFFSET_PUBLIC_MEMORY_PADDING_ADDR = 18;
-    uint256 internal constant OFFSET_PUBLIC_MEMORY_PADDING_VALUE = 19;
-    uint256 internal constant OFFSET_N_PUBLIC_MEMORY_PAGES = 20;
-    uint256 internal constant OFFSET_PUBLIC_MEMORY = 21;
+    uint256 internal constant OFFSET_PUBLIC_MEMORY_PADDING_ADDR = 16;
+    uint256 internal constant OFFSET_PUBLIC_MEMORY_PADDING_VALUE = 17;
+    uint256 internal constant OFFSET_N_PUBLIC_MEMORY_PAGES = 18;
+    uint256 internal constant OFFSET_PUBLIC_MEMORY = 19;
 
     uint256 internal constant N_WORDS_PER_PUBLIC_MEMORY_ENTRY = 2;
     // The program segment starts from 1, so that memory address 0 is kept for the null pointer.
     uint256 internal constant INITIAL_PC = 1;
-    uint256 internal constant FINAL_PC = INITIAL_PC + 2;
+    // The first Cairo instructions are:
+    //   ap += n_args; call main; jmp rel 0.
+    // As the first two instructions occupy 2 cells each, the "jmp rel 0" instruction is at
+    // offset 4 relative to INITIAL_PC.
+    uint256 internal constant FINAL_PC = INITIAL_PC + 4;
 
     // The format of the public input, starting at OFFSET_PUBLIC_MEMORY is as follows:
     //   * For each page:

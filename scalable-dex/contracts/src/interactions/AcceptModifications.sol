@@ -81,14 +81,15 @@ abstract contract AcceptModifications is
                 fromQuantized(presumedAssetType, quantizedAmount),
                 quantizedAmount
             );
-        } else if(assetId == ((assetId & MASK_240) | STARKEX_MINTABLE_ASSET_ID_FLAG)) {
+        } else if(assetId == ((assetId & MASK_240) | MINTABLE_ASSET_ID_FLAG)) {
             emit LogMintableWithdrawalAllowed(
                 starkKey,
                 assetId,
                 quantizedAmount
             );
-        }
-        else {
+        } else {
+            // Default case is Non-Mintable ERC721 asset id.
+            require(assetId == assetId & MASK_250, "INVALID_NFT_ASSET_ID");
             // In ERC721 case, assetId is not the assetType.
             require(withdrawal <= 1, "INVALID_NFT_AMOUNT");
             emit LogNftWithdrawalAllowed(starkKey, assetId);

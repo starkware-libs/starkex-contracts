@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0.
 pragma solidity ^0.6.11;
 
-import "../interfaces/MGovernance.sol";
-import "../libraries/LibConstants.sol";
-import "../perpetual/components/PerpetualStorage.sol";
+import "../PerpetualConstants.sol";
+import "../components/PerpetualStorage.sol";
+import "../../interfaces/MGovernance.sol";
 
 /**
   Configuration contract facilitates storing system configuration hashes.
@@ -12,7 +12,7 @@ import "../perpetual/components/PerpetualStorage.sol";
   If there is a need for a configuration change (not addition of new one),
   it shall be performed via upgrade using a dedicated External Initializing Contract (EIC).
 */
-abstract contract Configuration is PerpetualStorage, LibConstants, MGovernance {
+abstract contract Configuration is PerpetualStorage, PerpetualConstants, MGovernance {
 
     // This key is used in for the actionsTimeLock.
     uint256 constant GLOBAL_CONFIG_KEY = uint256(~0);

@@ -5,6 +5,7 @@ import "./MainStorage.sol";
 import "../libraries/LibConstants.sol";
 import "../interfaces/MGovernance.sol";
 import "../interfaces/MKeyGetters.sol";
+import "../interfaces/MUsers.sol";
 
 /**
   Users of the Stark Exchange are identified within the exchange by their Stark Key which is a
@@ -40,7 +41,7 @@ import "../interfaces/MKeyGetters.sol";
   This mapping is later used to ensure that withdrawals from accounts mapped to the Stark Keys can
   only be performed by users authenticated with the associated Ethereum public keys (see :sol:mod:`Withdrawals`).
 */
-abstract contract Users is MainStorage, LibConstants, MGovernance, MKeyGetters {
+abstract contract Users is MainStorage, LibConstants, MGovernance, MUsers, MKeyGetters {
     event LogUserRegistered(address ethKey, uint256 starkKey, address sender);
     event LogUserAdminAdded(address userAdmin);
     event LogUserAdminRemoved(address userAdmin);
@@ -64,7 +65,7 @@ abstract contract Users is MainStorage, LibConstants, MGovernance, MKeyGetters {
         return userAdmins[testedAdmin];
     }
 
-    function registerUser(address ethKey, uint256 starkKey, bytes calldata signature) external {
+    function registerUser(address ethKey, uint256 starkKey, bytes calldata signature) public override {
         // Validate keys and availability.
         require(starkKey != 0, "INVALID_STARK_KEY");
         require(starkKey < K_MODULUS, "INVALID_STARK_KEY");

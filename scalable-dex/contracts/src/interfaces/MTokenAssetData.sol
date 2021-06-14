@@ -22,6 +22,18 @@ abstract contract MTokenAssetData {
         virtual
         returns (bool);
 
+    function isERC20(uint256 assetType)
+        internal
+        view
+        virtual
+        returns (bool);
+
+    function isERC721(uint256 assetType)
+        internal
+        view
+        virtual
+        returns (bool);
+
     function isFungibleAssetType(uint256 assetType)
         internal
         view
@@ -34,11 +46,22 @@ abstract contract MTokenAssetData {
         virtual
         returns (bool);
 
-    function extractContractAddress(bytes memory assetInfo)
+    function extractContractAddress(uint256 assetType)
+        internal
+        view
+        virtual
+        returns (address);
+
+    function verifyAssetInfo(bytes memory assetInfo)
+        internal
+        view
+        virtual;
+
+    function isNonFungibleAssetInfo(bytes memory assetInfo)
         internal
         pure
         virtual
-        returns (address _contract);
+        returns (bool);
 
     function calculateNftAssetId(uint256 assetType, uint256 tokenId)
         internal

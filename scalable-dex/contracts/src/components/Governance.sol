@@ -63,17 +63,11 @@ abstract contract Governance is GovernanceStorage, MGovernance {
         addGovernor(msg.sender);
     }
 
-    modifier onlyGovernance () override
-    {
-        require(isGovernor(msg.sender), "ONLY_GOVERNANCE");
-        _;
-    }
-
     function isGovernor(address testGovernor)
-        internal view
-        returns (bool addressIsGovernor){
+        internal view override
+        returns (bool){
         GovernanceInfoStruct storage gub = contractGovernanceInfo();
-        addressIsGovernor = gub.effectiveGovernors[testGovernor];
+        return gub.effectiveGovernors[testGovernor];
     }
 
     /*

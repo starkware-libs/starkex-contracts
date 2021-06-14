@@ -36,6 +36,23 @@ library Addresses {
     }
 
     /*
+      Validates that the passed contract address is of a real contract,
+      and that its id hash (as infered fromn identify()) matched the expected one.
+    */
+    function validateContractId(address contractAddress, bytes32 expectedIdHash)
+        internal
+    {
+        require(isContract(contractAddress), "ADDRESS_NOT_CONTRACT");
+        (bool success, bytes memory returndata) = contractAddress.call( // NOLINT: low-level-calls.
+            abi.encodeWithSignature("identify()"));
+        require(success, "FAILED_TO_IDENTIFY_CONTRACT");
+        string memory realContractId = abi.decode(returndata, (string));
+        require(
+            keccak256(abi.encodePacked(realContractId)) == expectedIdHash,
+            "UNEXPECTED_CONTRACT_IDENTIFIER");
+    }
+
+    /*
       Similar to safeTokenContractCall, but always ignores the return value.
 
       Assumes some other method is used to detect the failures

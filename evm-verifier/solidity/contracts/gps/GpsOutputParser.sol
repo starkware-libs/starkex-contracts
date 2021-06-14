@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0.
 pragma solidity ^0.6.11;
 
+import "../components/FactRegistry.sol";
 import "../cpu/CpuPublicInputOffsets.sol";
-import "../interfaces/FactRegistry.sol";
 
 /*
   A utility contract to parse the GPS output.

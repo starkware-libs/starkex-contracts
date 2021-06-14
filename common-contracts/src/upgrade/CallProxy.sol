@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0.
 pragma solidity ^0.6.11;
 
+import "../interfaces/IFactRegistry.sol";
 import "./StorageSlots.sol";
+import "../interfaces/BlockDirectCall.sol";
 import "../libraries/Common.sol";
 
 /**
@@ -22,9 +24,11 @@ import "../libraries/Common.sol";
   The assumption is that if a different implementation is needed, it will be performed
   in an upgradeTo a new deployed CallProxy, pointing to a new implementation.
 */
-contract CallProxy is StorageSlots {
+contract CallProxy is BlockDirectCall, StorageSlots {
 
     using Addresses for address;
+
+    string public constant CALL_PROXY_VERSION = "3.0.0";
 
     // Proxy client - initialize & isFrozen.
     // NOLINTNEXTLINE: external-function.
@@ -32,7 +36,7 @@ contract CallProxy is StorageSlots {
         return false;
     }
 
-    function initialize(bytes calldata data) external {
+    function initialize(bytes calldata data) external notCalledDirectly {
         require(data.length == 32, "INCORRECT_DATA_SIZE");
         address impl = abi.decode(data, (address));
         require(impl.isContract(), "ADDRESS_NOT_CONTRACT");
@@ -60,11 +64,29 @@ contract CallProxy is StorageSlots {
     }
 
     /*
+      An explicit isValid entry point, used to make isValid a part of the ABI and visible
+      on Etherscan (and alike).
+    */
+    function isValid(bytes32 fact)
+        external view
+        returns(bool)
+    {
+        return IFactRegistry(callProxyImplementation()).isValid(fact);
+    }
+
+    /*
+      This entry point serves only transactions with empty calldata. (i.e. pure value transfer tx).
+      We don't expect to receive such, thus block them.
+    */
+    receive() external payable {
+        revert("CONTRACT_NOT_EXPECTED_TO_RECEIVE");
+    }
+
+    /*
       Contract's default function. Pass execution to the implementation contract (using call).
       It returns back to the external caller whatever the implementation called code returns.
     */
-    // NOLINTNEXTLINE: locked-ether.
-    fallback() external payable {
+    fallback() external payable { // NOLINT locked-ether.
         address _implementation = callProxyImplementation();
         require(_implementation != address(0x0), "MISSING_IMPLEMENTATION");
         uint256 value = msg.value;

@@ -1,14 +1,15 @@
 // SPDX-License-Identifier: Apache-2.0.
 pragma solidity ^0.6.11;
 
-import "../components/ActionHash.sol";
-import "../components/MainStorage.sol";
+import "../components/StarkExStorage.sol";
 import "../interfaces/MStarkExForcedActionState.sol";
+import "../../components/ActionHash.sol";
+
 /*
   StarkExchange specific action hashses.
 */
 contract StarkExForcedActionState is
-    MainStorage,
+    StarkExStorage,
     ActionHash,
     MStarkExForcedActionState
 {
@@ -52,7 +53,7 @@ contract StarkExForcedActionState is
         internal
         override
     {
-        // FullWithdrawal is always at premium cost, henec the `true`.
+        // FullWithdrawal is always at premium cost, hence the `true`.
         setActionHash(fullWithdrawActionHash(starkKey, vaultId), true);
     }
 }

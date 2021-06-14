@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: Apache-2.0.
 pragma solidity ^0.6.11;
 
-import "../components/ActionHash.sol";
-import "../components/MainStorage.sol";
+import "../components/PerpetualStorage.sol";
 import "../interfaces/MForcedWithdrawalActionState.sol";
+import "../../components/ActionHash.sol";
 
 /*
   ForcedWithdrawal specific action hashses.
 */
 contract ForcedWithdrawalActionState is
-    MainStorage,
+    PerpetualStorage,
     ActionHash,
     MForcedWithdrawalActionState
 {

@@ -2,34 +2,32 @@
 pragma solidity ^0.6.11;
 
 import "./PerpetualStorage.sol";
+import "../interfaces/MForcedTradeActionState.sol";
+import "../interfaces/MForcedWithdrawalActionState.sol";
+import "../PerpetualConstants.sol";
 import "../ProgramOutputOffsets.sol";
 import "../../components/OnchainDataFactTreeEncoder.sol";
 import "../../components/VerifyFactChain.sol";
-import "../../interfaces/IFactRegistry.sol";
 import "../../interfaces/MAcceptModifications.sol";
-import "../../interfaces/MForcedTradeActionState.sol";
-import "../../interfaces/MForcedWithdrawalActionState.sol";
 import "../../interfaces/MFreezable.sol";
 import "../../interfaces/MOperator.sol";
 import "../../libraries/Common.sol";
-import "../../libraries/LibConstants.sol";
 
 /**
   TO-DO:DOC.
 */
 abstract contract UpdatePerpetualState is
-    PerpetualStorage,
-    LibConstants,
-    MForcedTradeActionState,
-    MForcedWithdrawalActionState,
-    VerifyFactChain,
-    MAcceptModifications,
-    MFreezable,
-    MOperator,
-    ProgramOutputOffsets,
-    OnchainDataFactTreeEncoder
-{
-    using UintArray for uint256[];
+        PerpetualStorage,
+        PerpetualConstants,
+        MForcedTradeActionState,
+        MForcedWithdrawalActionState,
+        VerifyFactChain,
+        MAcceptModifications,
+        MFreezable,
+        MOperator,
+        ProgramOutputOffsets
+    {
+        using UintArray for uint256[];
 
     event LogUpdateState(
         uint256 sequenceNumber,
@@ -102,8 +100,18 @@ abstract contract UpdatePerpetualState is
             "WRONG_PREVIOUS_BATCH_ID"
         );
 
-        bytes32 stateTransitionFact = encodeFactWithOnchainData(
-            programOutput, outputMarkers.forcedActionsOffset);
+        require(
+            programOutput.length >= outputMarkers.forcedActionsOffset +
+            OnchainDataFactTreeEncoder.ONCHAIN_DATA_FACT_ADDITIONAL_WORDS,
+            "programOutput does not contain all required fields.");
+        bytes32 stateTransitionFact = OnchainDataFactTreeEncoder.encodeFactWithOnchainData(
+            programOutput[
+                :programOutput.length -
+                OnchainDataFactTreeEncoder.ONCHAIN_DATA_FACT_ADDITIONAL_WORDS],
+            OnchainDataFactTreeEncoder.DataAvailabilityFact({
+                onchainDataHash: programOutput[programOutput.length - 2],
+                onchainDataSize: programOutput[programOutput.length - 1]
+            }));
 
         emit LogStateTransitionFact(stateTransitionFact);
 
@@ -196,7 +204,7 @@ abstract contract UpdatePerpetualState is
         markers.conditionsOffset = offset;
         offset += markers.nConditions;
 
-        offset += ONCHAIN_DATA_FACT_ADDITIONAL_WORDS;
+        offset += OnchainDataFactTreeEncoder.ONCHAIN_DATA_FACT_ADDITIONAL_WORDS;
 
         require(
             programOutput.length == offset,

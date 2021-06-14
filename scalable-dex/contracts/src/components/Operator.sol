@@ -24,12 +24,6 @@ abstract contract Operator is MainStorage, MGovernance, MOperator {
         emit LogOperatorAdded(msg.sender);
     }
 
-    modifier onlyOperator() override
-    {
-        require(operators[msg.sender], "ONLY_OPERATOR");
-        _;
-    }
-
     function registerOperator(address newOperator)
         external
         override
@@ -48,7 +42,11 @@ abstract contract Operator is MainStorage, MGovernance, MOperator {
         emit LogOperatorRemoved(removedOperator);
     }
 
-    function isOperator(address testedOperator) external view returns (bool) {
+    function isOperator(address testedOperator)
+        public
+        view
+        override
+        returns (bool) {
         return operators[testedOperator];
     }
 }

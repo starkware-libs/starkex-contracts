@@ -6,7 +6,7 @@ import "../interfaces/MTokenQuantization.sol";
 import "../interfaces/MTokenAssetData.sol";
 import "../interfaces/MFreezable.sol";
 import "../interfaces/MKeyGetters.sol";
-import "../interfaces/MTokens.sol";
+import "../interfaces/MTokenTransfers.sol";
 import "../components/MainStorage.sol";
 
 /**
@@ -55,7 +55,7 @@ abstract contract Withdrawals is
     MTokenAssetData,
     MFreezable,
     MKeyGetters,
-    MTokens  {
+    MTokenTransfers  {
     event LogWithdrawalPerformed(
         uint256 starkKey,
         uint256 assetType,
@@ -101,7 +101,7 @@ abstract contract Withdrawals is
         uint256 assetType,
         address payable recipient)
         external
-        isSenderStarkKey(starkKey)
+        onlyStarkKeyOwner(starkKey)
     {
         internalWithdrawTo(starkKey, assetType, recipient);
     }
@@ -157,21 +157,19 @@ abstract contract Withdrawals is
         address recipient
     )
         public
-        isSenderStarkKey(starkKey)
+        onlyStarkKeyOwner(starkKey)
     // No notFrozen modifier: This function can always be used, even when frozen.
     {
         // Calculate assetId.
         uint256 assetId = calculateNftAssetId(assetType, tokenId);
         require(!isMintableAssetType(assetType), "MINTABLE_ASSET_TYPE");
         require(!isFungibleAssetType(assetType), "FUNGIBLE_ASSET_TYPE");
-        if (pendingWithdrawals[starkKey][assetId] > 0) {
-            require(pendingWithdrawals[starkKey][assetId] == 1, "ILLEGAL_NFT_BALANCE");
-            pendingWithdrawals[starkKey][assetId] = 0;
+        require(pendingWithdrawals[starkKey][assetId] == 1, "ILLEGAL_NFT_BALANCE");
+        pendingWithdrawals[starkKey][assetId] = 0;
 
-            // Transfer funds.
-            transferOutNft(recipient, assetType, tokenId);
-            emit LogNftWithdrawalPerformed(starkKey, assetType, tokenId, assetId, recipient);
-        }
+        // Transfer funds.
+        transferOutNft(recipient, assetType, tokenId);
+        emit LogNftWithdrawalPerformed(starkKey, assetType, tokenId, assetId, recipient);
     }
 
     /*
@@ -193,18 +191,17 @@ abstract contract Withdrawals is
         uint256 starkKey,
         uint256 assetType,
         bytes calldata mintingBlob
-    ) external isSenderStarkKey(starkKey) {
+    ) external onlyStarkKeyOwner(starkKey) {
         require(registeredAssetType[assetType], "INVALID_ASSET_TYPE");
         require(isMintableAssetType(assetType), "NON_MINTABLE_ASSET_TYPE");
         uint256 assetId = calculateMintableAssetId(assetType, mintingBlob);
-        if (pendingWithdrawals[starkKey][assetId] > 0) {
-            uint256 quantizedAmount = pendingWithdrawals[starkKey][assetId];
-            pendingWithdrawals[starkKey][assetId] = 0;
-            // Transfer funds.
-            transferOutMint(assetType, quantizedAmount, mintingBlob);
-            emit LogMintWithdrawalPerformed(
-                starkKey, assetType, fromQuantized(assetType, quantizedAmount), quantizedAmount,
-                assetId);
-        }
+        require(pendingWithdrawals[starkKey][assetId] > 0, "NO_PENDING_WITHDRAWAL_BALANCE");
+        uint256 quantizedAmount = pendingWithdrawals[starkKey][assetId];
+        pendingWithdrawals[starkKey][assetId] = 0;
+        // Transfer funds.
+        transferOutMint(assetType, quantizedAmount, mintingBlob);
+        emit LogMintWithdrawalPerformed(
+            starkKey, assetType, fromQuantized(assetType, quantizedAmount), quantizedAmount,
+            assetId);
     }
 }

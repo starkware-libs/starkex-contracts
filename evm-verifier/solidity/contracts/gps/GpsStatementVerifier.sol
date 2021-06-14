@@ -15,9 +15,9 @@ contract GpsStatementVerifier is
     MemoryPageFactRegistry memoryPageFactRegistry;
     CairoVerifierContract[] cairoVerifierContractAddresses;
 
-    uint256 internal constant N_MAIN_ARGS = 5;
-    uint256 internal constant N_MAIN_RETURN_VALUES = 5;
     uint256 internal constant N_BUILTINS = 4;
+    uint256 internal constant N_MAIN_ARGS = N_BUILTINS;
+    uint256 internal constant N_MAIN_RETURN_VALUES = N_BUILTINS;
 
     /*
       Constructs an instance of GpsStatementVerifier.
@@ -130,8 +130,8 @@ contract GpsStatementVerifier is
 
         // Public memory length.
         publicMemoryLength = (
-            PROGRAM_SIZE + N_MAIN_ARGS + N_MAIN_RETURN_VALUES + /*Number of tasks cell*/1 +
-            2 * nTasks);
+            PROGRAM_SIZE + /*return fp and pc*/2 + N_MAIN_ARGS + N_MAIN_RETURN_VALUES +
+            /*Number of tasks cell*/1 + 2 * nTasks);
         uint256[] memory publicMemory = new uint256[](
             N_WORDS_PER_PUBLIC_MEMORY_ENTRY * publicMemoryLength);
 
@@ -151,35 +151,43 @@ contract GpsStatementVerifier is
         }
 
         {
+        // Execution segment - Make sure [initial_fp - 2] = initial_fp and .
+        // This is required for the "safe call" feature (that is, all "call" instructions will
+        // return, even if the called function is malicious).
+        // It guarantees that it's not possible to create a cycle in the call stack.
+        uint256 initialFp = cairoAuxInput[OFFSET_EXECUTION_BEGIN_ADDR];
+        require(initialFp >= 2, "Invalid execution begin address.");
+        publicMemory[offset + 0] = initialFp - 2;
+        publicMemory[offset + 1] = initialFp;
+        // Make sure [initial_fp - 1] = 0.
+        publicMemory[offset + 2] = initialFp - 1;
+        publicMemory[offset + 3] = 0;
+        offset += 4;
+
         // Execution segment - main's arguments.
-        uint256 executionBeginAddr = cairoAuxInput[OFFSET_EXECUTION_BEGIN_ADDR];
-        publicMemory[offset + 0] = executionBeginAddr - 5;
+        publicMemory[offset + 0] = initialFp;
         publicMemory[offset + 1] = cairoAuxInput[OFFSET_OUTPUT_BEGIN_ADDR];
-        publicMemory[offset + 2] = executionBeginAddr - 4;
+        publicMemory[offset + 2] = initialFp + 1;
         publicMemory[offset + 3] = cairoAuxInput[OFFSET_PEDERSEN_BEGIN_ADDR];
-        publicMemory[offset + 4] = executionBeginAddr - 3;
+        publicMemory[offset + 4] = initialFp + 2;
         publicMemory[offset + 5] = cairoAuxInput[OFFSET_RANGE_CHECK_BEGIN_ADDR];
-        publicMemory[offset + 6] = executionBeginAddr - 2;
+        publicMemory[offset + 6] = initialFp + 3;
         publicMemory[offset + 7] = cairoAuxInput[OFFSET_ECDSA_BEGIN_ADDR];
-        publicMemory[offset + 8] = executionBeginAddr - 1;
-        publicMemory[offset + 9] = cairoAuxInput[OFFSET_CHECKPOINTS_BEGIN_PTR];
-        offset += 10;
+        offset += 8;
         }
 
         {
         // Execution segment - return values.
         uint256 executionStopPtr = cairoAuxInput[OFFSET_EXECUTION_STOP_PTR];
-        publicMemory[offset + 0] = executionStopPtr - 5;
+        publicMemory[offset + 0] = executionStopPtr - 4;
         publicMemory[offset + 1] = cairoAuxInput[OFFSET_OUTPUT_STOP_PTR];
-        publicMemory[offset + 2] = executionStopPtr - 4;
+        publicMemory[offset + 2] = executionStopPtr - 3;
         publicMemory[offset + 3] = cairoAuxInput[OFFSET_PEDERSEN_STOP_PTR];
-        publicMemory[offset + 4] = executionStopPtr - 3;
+        publicMemory[offset + 4] = executionStopPtr - 2;
         publicMemory[offset + 5] = cairoAuxInput[OFFSET_RANGE_CHECK_STOP_PTR];
-        publicMemory[offset + 6] = executionStopPtr - 2;
+        publicMemory[offset + 6] = executionStopPtr - 1;
         publicMemory[offset + 7] = cairoAuxInput[OFFSET_ECDSA_STOP_PTR];
-        publicMemory[offset + 8] = executionStopPtr - 1;
-        publicMemory[offset + 9] = cairoAuxInput[OFFSET_CHECKPOINTS_STOP_PTR];
-        offset += 10;
+        offset += 8;
         }
 
         // Program output.
@@ -190,11 +198,6 @@ contract GpsStatementVerifier is
             cairoAuxInput[OFFSET_RANGE_CHECK_STOP_PTR] >=
             cairoAuxInput[OFFSET_RANGE_CHECK_BEGIN_ADDR] + N_BUILTINS * nTasks,
             "Range-check stop pointer should be after all range checks used for validations.");
-        // The checkpoint builtin is used once for each task, taking up two cells.
-        require(
-            cairoAuxInput[OFFSET_CHECKPOINTS_STOP_PTR] >=
-            cairoAuxInput[OFFSET_CHECKPOINTS_BEGIN_PTR] + 2 * nTasks,
-            "Number of checkpoints should be at least the number of tasks.");
 
         uint256 outputAddress = cairoAuxInput[OFFSET_OUTPUT_BEGIN_ADDR];
         // Force that memory[outputAddress] = nTasks.

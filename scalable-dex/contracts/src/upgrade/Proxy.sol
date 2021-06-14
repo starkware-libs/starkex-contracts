@@ -39,19 +39,21 @@ import "../libraries/Common.sol";
 contract Proxy is ProxyStorage, ProxyGovernance, StorageSlots {
 
     // Emitted when the active implementation is replaced.
-    event Upgraded(address indexed implementation);
+    event ImplementationUpgraded(address indexed implementation, bytes initializer);
 
     // Emitted when an implementation is submitted as an upgrade candidate and a time lock
     // is activated.
     event ImplementationAdded(address indexed implementation, bytes initializer, bool finalize);
 
     // Emitted when an implementation is removed from the list of upgrade candidates.
-    event ImplementationRemoved(address indexed implementation);
+    event ImplementationRemoved(address indexed implementation, bytes initializer, bool finalize);
 
     // Emitted when the implementation is finalized.
     event FinalizedImplementation(address indexed implementation);
 
     using Addresses for address;
+
+    string public constant PROXY_VERSION = "3.0.0";
 
     constructor (uint256 upgradeActivationDelay)
         public
@@ -73,6 +75,17 @@ contract Proxy is ProxyStorage, ProxyGovernance, StorageSlots {
             delay := sload(slot)
         }
         return delay;
+    }
+
+    /*
+      Returns the address of the current implementation.
+    */
+    // NOLINTNEXTLINE external-function.
+    function implementation() public view returns(address _implementation) {
+        bytes32 slot = IMPLEMENTATION_SLOT;
+        assembly {
+            _implementation := sload(slot)
+        }
     }
 
     /*
@@ -118,6 +131,14 @@ contract Proxy is ProxyStorage, ProxyGovernance, StorageSlots {
     {
         require(!implementationIsFrozen(), "STATE_IS_FROZEN");
         _;
+    }
+
+    /*
+      This entry point serves only transactions with empty calldata. (i.e. pure value transfer tx).
+      We don't expect to receive such, thus block them.
+    */
+    receive() external payable {
+        revert("CONTRACT_NOT_EXPECTED_TO_RECEIVE");
     }
 
     /*
@@ -190,17 +211,16 @@ contract Proxy is ProxyStorage, ProxyGovernance, StorageSlots {
         external onlyGovernance {
         require(newImplementation.isContract(), "ADDRESS_NOT_CONTRACT");
 
-        bytes32 init_hash = keccak256(abi.encode(data, finalize));
-        initializationHash[newImplementation] = init_hash;
+        bytes32 implVectorHash = keccak256(abi.encode(newImplementation, data, finalize));
 
-        uint256 activation_time = block.timestamp + getUpgradeActivationDelay();
+        uint256 activationTime = block.timestamp + getUpgradeActivationDelay();
 
         // First implementation should not have time-lock.
         if (implementation() == address(0x0)) {
-            activation_time = block.timestamp;
+            activationTime = block.timestamp;
         }
 
-        enabledTime[newImplementation] = activation_time;
+        enabledTime[implVectorHash] = activationTime;
         emit ImplementationAdded(newImplementation, data, finalize);
     }
 
@@ -209,18 +229,15 @@ contract Proxy is ProxyStorage, ProxyGovernance, StorageSlots {
       Note that it is possible to remove the current implementation. Doing so doesn't affect the
       current implementation, but rather revokes it as a future candidate.
     */
-    function removeImplementation(address newImplementation)
+    function removeImplementation(address removedImplementation, bytes calldata data, bool finalize)
         external onlyGovernance {
+        bytes32 implVectorHash = keccak256(abi.encode(removedImplementation, data, finalize));
 
         // If we have initializer, we set the hash of it.
-        uint256 activation_time = enabledTime[newImplementation];
-
-        require(activation_time > 0, "ADDRESS_NOT_UPGRADE_CANDIDATE");
-
-        enabledTime[newImplementation] = 0;
-
-        initializationHash[newImplementation] = 0;
-        emit ImplementationRemoved(newImplementation);
+        uint256 activationTime = enabledTime[implVectorHash];
+        require(activationTime > 0, "UNKNOWN_UPGRADE_INFORMATION");
+        delete enabledTime[implVectorHash];
+        emit ImplementationRemoved(removedImplementation, data, finalize);
     }
 
     /*
@@ -243,14 +260,13 @@ contract Proxy is ProxyStorage, ProxyGovernance, StorageSlots {
     // NOLINTNEXTLINE: reentrancy-events timestamp.
     function upgradeTo(address newImplementation, bytes calldata data, bool finalize)
         external payable onlyGovernance notFinalized notFrozen {
-        uint256 activation_time = enabledTime[newImplementation];
-        require(activation_time > 0, "ADDRESS_NOT_UPGRADE_CANDIDATE");
+        bytes32 implVectorHash = keccak256(abi.encode(newImplementation, data, finalize));
+        uint256 activationTime = enabledTime[implVectorHash];
+        require(activationTime > 0, "UNKNOWN_UPGRADE_INFORMATION");
         require(newImplementation.isContract(), "ADDRESS_NOT_CONTRACT");
         // NOLINTNEXTLINE: timestamp.
-        require(activation_time <= block.timestamp, "UPGRADE_NOT_ENABLED_YET");
+        require(activationTime <= block.timestamp, "UPGRADE_NOT_ENABLED_YET");
 
-        bytes32 init_vector_hash = initializationHash[newImplementation];
-        require(init_vector_hash == keccak256(abi.encode(data, finalize)), "CHANGED_INITIALIZER");
         setImplementation(newImplementation);
 
         // NOLINTNEXTLINE: low-level-calls controlled-delegatecall.
@@ -270,6 +286,6 @@ contract Proxy is ProxyStorage, ProxyGovernance, StorageSlots {
             emit FinalizedImplementation(newImplementation);
         }
 
-        emit Upgraded(newImplementation);
+        emit ImplementationUpgraded(newImplementation, data);
     }
 }

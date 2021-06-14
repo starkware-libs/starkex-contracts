@@ -40,22 +40,7 @@ contract LibConstants {
 
     uint256 public constant MAX_FORCED_ACTIONS_REQS_PER_BLOCK = 10;
 
-    // ======================================================
-    //            StarkEx specific constants
-    // ======================================================
-    uint256 constant STARKEX_MAX_VAULT_ID = 2**31 - 1;
-    uint256 constant STARKEX_MAX_QUANTUM = 2**128 - 1;
-    uint256 constant STARKEX_EXPIRATION_TIMESTAMP_BITS = 22;
-    uint256 internal constant STARKEX_MINTABLE_ASSET_ID_FLAG = 1<<250;
+    uint256 constant QUANTUM_UPPER_BOUND = 2**128;
+    uint256 internal constant MINTABLE_ASSET_ID_FLAG = 1<<250;
 
-    // ======================================================
-    //            StarkEx specific constants
-    // ======================================================
-    uint256 constant PERPETUAL_POSITION_ID_UPPER_BOUND = 2**64;
-    uint256 constant PERPETUAL_AMOUNT_UPPER_BOUND = 2**64;
-    uint256 constant PERPETUAL_TIMESTAMP_BITS = 32;
-    uint256 constant PERPETUAL_ASSET_ID_UPPER_BOUND = 2**120;
-    uint256 constant PERPETUAL_SYSTEM_TIME_LAG_BOUND = 7 days;
-    uint256 constant PERPETUAL_SYSTEM_TIME_ADVANCE_BOUND = 4 hours;
-    uint256 constant PERPETUAL_CONFIGURATION_DELAY = 0;
 }

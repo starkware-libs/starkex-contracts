@@ -10,5 +10,9 @@ abstract contract MKeyGetters {
     /*
       Allows calling the function only if starkKey is registered to msg.sender.
     */
-    modifier isSenderStarkKey(uint256 starkKey) virtual; // NOLINT incorrect-modifier.
+    modifier onlyStarkKeyOwner(uint256 starkKey) {
+        // Require the calling user to own the stark key.
+        require(isMsgSenderStarkKeyOwner(starkKey), "MISMATCHING_STARK_ETH_KEYS");
+        _;
+    }
 }

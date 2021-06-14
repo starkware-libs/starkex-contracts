@@ -10,13 +10,12 @@ import "../components/GovernanceStorage.sol";
 */
 contract ProxyStorage is GovernanceStorage {
 
-    // Stores the hash of the initialization vector of the added implementation.
-    // Upon upgradeTo the implementation, the initialization vector is verified
-    // to be identical to the one submitted when adding the implementation.
-    mapping (address => bytes32) internal initializationHash;
+    // NOLINTNEXTLINE: naming-convention.
+    mapping (address => bytes32) internal initializationHash_DEPRECATED;
 
     // The time after which we can switch to the implementation.
-    mapping (address => uint256) internal enabledTime;
+    // Hash(implementation, data, finalize) => time.
+    mapping (bytes32 => uint256) internal enabledTime;
 
     // A central storage of the flags whether implementation has been initialized.
     // Note - it can be used flexibly enough to accommodate multiple levels of initialization

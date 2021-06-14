@@ -27,7 +27,7 @@ contract GpsFactRegistryAdapter is IQueryableFactRegistry, Identity {
     }
 
     function identify()
-        external pure override
+        external pure virtual override
         returns(string memory)
     {
         return "StarkWare_GpsFactRegistryAdapter_2020_1";

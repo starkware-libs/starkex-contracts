@@ -2,8 +2,17 @@
 pragma solidity ^0.6.11;
 
 abstract contract MOperator {
+    function isOperator(address testedOperator)
+        public
+        view
+        virtual
+        returns (bool);
 
-    modifier onlyOperator() virtual; // NOLINT incorrect-modifier.
+    modifier onlyOperator()
+    {
+        require(isOperator(msg.sender), "ONLY_OPERATOR");
+        _;
+    }
 
     function registerOperator(address newOperator)
         external
@@ -12,5 +21,4 @@ abstract contract MOperator {
     function unregisterOperator(address removedOperator)
         virtual
         external;
-
 }

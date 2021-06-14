@@ -30,6 +30,9 @@ interface PeriodicColumnContract {
   * verify that the arguments and return values for main() are properly set (e.g., the segment
     pointers).
   * check anything on the program output.
+  * verify that [initial_fp - 2] = initial_fp, which is required to guarantee the "safe call"
+    feature (that is, all "call" instructions will return, even if the called function is
+    malicious). It guarantees that it's not possible to create a cycle in the call stack.
 */
 contract CpuVerifier is StarkParameters, StarkVerifier, CpuPublicInputOffsets,
         CairoVerifierContract, MemoryPageFactRegistryConstants {
@@ -161,17 +164,6 @@ contract CpuVerifier is StarkParameters, StarkVerifier, CpuPublicInputOffsets,
         require(outputBeginAddr <= outputStopPtr, "output begin_addr must be <= stop_ptr");
         require(outputStopPtr < 2**64, "Out of range output stop_ptr.");
         }
-
-        // "checkpoints" memory segment.
-        ctx[MM_INITIAL_CHECKPOINTS_ADDR] = publicInput[OFFSET_CHECKPOINTS_BEGIN_PTR];
-        ctx[MM_FINAL_CHECKPOINTS_ADDR] = publicInput[OFFSET_CHECKPOINTS_STOP_PTR];
-        require(
-            ctx[MM_INITIAL_CHECKPOINTS_ADDR] <= ctx[MM_FINAL_CHECKPOINTS_ADDR],
-            "checkpoints begin_addr must be <= stop_ptr");
-        require(ctx[MM_FINAL_CHECKPOINTS_ADDR] < 2**64, "Out of range checkpoints stop_ptr.");
-        require(
-            (ctx[MM_FINAL_CHECKPOINTS_ADDR] - ctx[MM_INITIAL_CHECKPOINTS_ADDR]) % 2 == 0,
-            "Checkpoints should occupy an even number of cells.");
 
         // "pedersen" memory segment.
         ctx[MM_INITIAL_PEDERSEN_ADDR] = publicInput[OFFSET_PEDERSEN_BEGIN_ADDR];

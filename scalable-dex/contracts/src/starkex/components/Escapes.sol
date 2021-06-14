@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: Apache-2.0.
 pragma solidity ^0.6.11;
 
+import "./StarkExStorage.sol";
 import "../../libraries/LibConstants.sol";
 import "../../interfaces/MAcceptModifications.sol";
 import "../../interfaces/MFreezable.sol";
 import "../../interfaces/IFactRegistry.sol";
 import "../../interfaces/MStateRoot.sol";
-import "../../components/MainStorage.sol";
 
 /**
   Escaping the exchange is the last resort for users that wish to withdraw their funds without
@@ -24,12 +24,9 @@ import "../../components/MainStorage.sol";
   exchange operator, for example), only the owner of the vault may perform the final step of
   transferring the funds.
 */
-abstract contract Escapes is MainStorage, MAcceptModifications, MFreezable, MStateRoot {
-    function initialize (
-        IFactRegistry escapeVerifier
-    ) internal
-    {
-        escapeVerifier_ = escapeVerifier;
+abstract contract Escapes is StarkExStorage, MAcceptModifications, MFreezable, MStateRoot {
+    function initialize(address escapeVerifier) internal {
+        escapeVerifierAddress = escapeVerifier;
     }
     /*
       Escape when the contract is frozen.
@@ -52,7 +49,8 @@ abstract contract Escapes is MainStorage, MAcceptModifications, MFreezable, MSta
         bytes32 claimHash = keccak256(
             abi.encode(
         starkKey, assetId, quantizedAmount, getVaultRoot(), getVaultTreeHeight(), vaultId));
-        require(escapeVerifier_.isValid(claimHash), "ESCAPE_LACKS_PROOF");
+        IFactRegistry escapeVerifier = IFactRegistry(escapeVerifierAddress);
+        require(escapeVerifier.isValid(claimHash), "ESCAPE_LACKS_PROOF");
 
         allowWithdrawal(starkKey, assetId, quantizedAmount);
     }
