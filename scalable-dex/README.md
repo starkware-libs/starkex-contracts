@@ -30,3 +30,6 @@ derivates trading (StarkPerpetual).
    contract updates where the only state update is the Proxy upgrade activation timelock.
 10. UpdatePerpetualConfigExternalInitializer - Implements an initialization procedure to be used for
     contract updates where the only state update is the StarkPerpetual configuration hash.
+11. V2toV3ChangesExternalInitializer - Implements an initialization procedure to be used for
+    StarkEx contract updates from v2 contracts to v3 contracts which requires setting some default
+    values.
