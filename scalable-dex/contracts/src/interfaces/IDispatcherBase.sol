@@ -10,7 +10,6 @@ pragma solidity ^0.6.11;
   The interface is implemented as contract, because interface implies all methods external.
 */
 abstract contract IDispatcherBase {
-
     function getSubContract(bytes4 selector) internal view virtual returns (address);
 
     function setSubContractAddress(uint256 index, address subContract) internal virtual;

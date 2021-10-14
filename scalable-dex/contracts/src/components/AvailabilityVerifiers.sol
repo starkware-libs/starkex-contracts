@@ -32,34 +32,26 @@ import "./MainStorage.sol";
 */
 abstract contract AvailabilityVerifiers is MainStorage, LibConstants, MApprovalChain {
     function getRegisteredAvailabilityVerifiers()
-        external view
+        external
+        view
         returns (address[] memory _verifers)
     {
         return availabilityVerifiersChain.list;
     }
 
-    function isAvailabilityVerifier(address verifierAddress)
-        external view
-        returns (bool)
-    {
+    function isAvailabilityVerifier(address verifierAddress) external view returns (bool) {
         return findEntry(availabilityVerifiersChain.list, verifierAddress) != ENTRY_NOT_FOUND;
     }
 
-    function registerAvailabilityVerifier(address verifier, string calldata identifier)
-        external
-    {
+    function registerAvailabilityVerifier(address verifier, string calldata identifier) external {
         addEntry(availabilityVerifiersChain, verifier, MAX_VERIFIER_COUNT, identifier);
     }
 
-    function announceAvailabilityVerifierRemovalIntent(address verifier)
-        external
-    {
+    function announceAvailabilityVerifierRemovalIntent(address verifier) external {
         announceRemovalIntent(availabilityVerifiersChain, verifier, VERIFIER_REMOVAL_DELAY);
     }
 
-    function removeAvailabilityVerifier(address verifier)
-        external
-    {
+    function removeAvailabilityVerifier(address verifier) external {
         removeEntry(availabilityVerifiersChain, verifier);
     }
 }

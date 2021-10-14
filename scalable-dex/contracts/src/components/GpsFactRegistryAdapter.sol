@@ -14,43 +14,29 @@ import "../interfaces/IQueryableFactRegistry.sol";
   the gpsContractAddress.
 */
 contract GpsFactRegistryAdapter is IQueryableFactRegistry, Identity {
-
     IQueryableFactRegistry public gpsContract;
     uint256 public programHash;
 
-    constructor(
-        IQueryableFactRegistry gpsStatementContract, uint256 programHash_)
-        public
-    {
+    constructor(IQueryableFactRegistry gpsStatementContract, uint256 programHash_) public {
         gpsContract = gpsStatementContract;
         programHash = programHash_;
     }
 
-    function identify()
-        external pure virtual override
-        returns(string memory)
-    {
+    function identify() external pure virtual override returns (string memory) {
         return "StarkWare_GpsFactRegistryAdapter_2020_1";
     }
 
     /*
       Checks if a fact has been verified.
     */
-    function isValid(bytes32 fact)
-        external view override
-        returns(bool)
-    {
+    function isValid(bytes32 fact) external view override returns (bool) {
         return gpsContract.isValid(keccak256(abi.encode(programHash, fact)));
     }
-
 
     /*
       Indicates whether at least one fact was registered.
     */
-    function hasRegisteredFact()
-        external view override
-        returns(bool)
-    {
+    function hasRegisteredFact() external view override returns (bool) {
         return gpsContract.hasRegisteredFact();
     }
 }

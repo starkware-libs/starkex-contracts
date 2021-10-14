@@ -10,6 +10,7 @@ import "../../perpetual/components/PerpetualStorage.sol";
 */
 contract ModifyConfigurationDelayExternalInitializer is ExternalInitializer, PerpetualStorage {
     uint256 constant MAX_CONFIG_DELAY = 28 days;
+
     function initialize(bytes calldata data) external override {
         require(data.length == 32, "INCORRECT_INIT_DATA_SIZE_32");
         uint256 delayInSeconds;

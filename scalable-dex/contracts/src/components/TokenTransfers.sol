@@ -65,6 +65,8 @@ abstract contract TokenTransfers is MTokenQuantization, MTokenAssetData, MTokenT
         uint256 assetType,
         uint256 quantizedAmount
     ) internal override {
+        // Make sure we don't accidentally burn funds.
+        require(recipient != address(0x0), "INVALID_RECIPIENT");
         uint256 amount = fromQuantized(assetType, quantizedAmount);
         if (isERC20(assetType)) {
             address tokenAddress = extractContractAddress(assetType);
@@ -98,6 +100,8 @@ abstract contract TokenTransfers is MTokenQuantization, MTokenAssetData, MTokenT
         uint256 assetType,
         uint256 tokenId
     ) internal override {
+        // Make sure we don't accidentally burn funds.
+        require(recipient != address(0x0), "INVALID_RECIPIENT");
         require(isERC721(assetType), "NOT_ERC721_TOKEN");
         address tokenAddress = extractContractAddress(assetType);
         tokenAddress.safeTokenContractCall(
@@ -113,15 +117,18 @@ abstract contract TokenTransfers is MTokenQuantization, MTokenAssetData, MTokenT
     function transferOutMint(
         uint256 assetType,
         uint256 quantizedAmount,
+        address recipient,
         bytes memory mintingBlob
     ) internal override {
+        // Make sure we don't accidentally burn funds.
+        require(recipient != address(0x0), "INVALID_RECIPIENT");
         require(isMintableAssetType(assetType), "NON_MINTABLE_ASSET_TYPE");
         uint256 amount = fromQuantized(assetType, quantizedAmount);
         address tokenAddress = extractContractAddress(assetType);
         tokenAddress.safeTokenContractCall(
             abi.encodeWithSignature(
                 "mintFor(address,uint256,bytes)",
-                msg.sender,
+                recipient,
                 amount,
                 mintingBlob
             )

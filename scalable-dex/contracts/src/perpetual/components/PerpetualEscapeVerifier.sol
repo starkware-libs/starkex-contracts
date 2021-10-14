@@ -16,8 +16,11 @@ import "../ProgramOutputOffsets.sol";
         publicKey, withdrawalAmount, sharedStateHash, positionId).
 */
 contract PerpetualEscapeVerifier is
-    PedersenMerkleVerifier, FactRegistry,
-    Identity, ProgramOutputOffsets {
+    PedersenMerkleVerifier,
+    FactRegistry,
+    Identity,
+    ProgramOutputOffsets
+{
     event LogEscapeVerified(
         uint256 publicKey,
         int256 withdrawalAmount,
@@ -34,16 +37,9 @@ contract PerpetualEscapeVerifier is
     uint256 internal constant FUNDING_ENTRY_SIZE = 2;
     uint256 internal constant PRICE_ENTRY_SIZE = 2;
 
-    constructor(address[N_TABLES] memory tables)
-        PedersenMerkleVerifier(tables)
-        public
-    {
-    }
+    constructor(address[N_TABLES] memory tables) public PedersenMerkleVerifier(tables) {}
 
-    function identify()
-        external pure override virtual
-        returns(string memory)
-    {
+    function identify() external pure virtual override returns (string memory) {
         return "StarkWare_PerpetualEscapeVerifier_2021_2";
     }
 
@@ -52,15 +48,17 @@ contract PerpetualEscapeVerifier is
       Assumes that size of each entry is 2 and that the key is in offset 0 of an entry.
     */
     function findAssetId(
-        uint256 assetId, uint256[] memory array, uint256 startIdx, uint256 endIdx)
-        internal pure returns (uint256 idx) {
+        uint256 assetId,
+        uint256[] memory array,
+        uint256 startIdx,
+        uint256 endIdx
+    ) internal pure returns (uint256 idx) {
         idx = startIdx;
-        while(array[idx] != assetId) {
-            idx += /*entry_size*/2;
+        while (array[idx] != assetId) {
+            idx += 2; // entry_size.
             require(idx < endIdx, "assetId not found.");
         }
     }
-
 
     /*
       Computes the balance of the position according to the sharedState.
@@ -74,10 +72,11 @@ contract PerpetualEscapeVerifier is
          assedId << 128 | cachedFunding << BALANCE_BITS | biased_asset_balance.
 
     */
-    function computeFxpBalance(
-        uint256[] memory position, uint256[] memory sharedState)
-        internal pure returns (int256) {
-
+    function computeFxpBalance(uint256[] memory position, uint256[] memory sharedState)
+        internal
+        pure
+        returns (int256)
+    {
         uint256 nAssets;
         uint256 fxpBalance;
 
@@ -117,8 +116,13 @@ contract PerpetualEscapeVerifier is
             uint256 assetBalance = (positionAsset & (2**BALANCE_BITS - 1)) - BALANCE_BIAS;
 
             fundingIndicesOffset = findAssetId(
-                assedId, sharedStateCopy, fundingIndicesOffset, fundingEnd);
-            fundingTotal -= assetBalance *
+                assedId,
+                sharedStateCopy,
+                fundingIndicesOffset,
+                fundingEnd
+            );
+            fundingTotal -=
+                assetBalance *
                 (sharedStateCopy[fundingIndicesOffset + 1] - cachedFunding);
 
             pricesOffset = findAssetId(assedId, sharedStateCopy, pricesOffset, pricesEnd);
@@ -128,7 +132,6 @@ contract PerpetualEscapeVerifier is
         uint256 truncatedFunding = fundingTotal & ~(2**FXP_BITS - 1);
         return int256(fxpBalance + truncatedFunding);
     }
-
 
     /*
       Extracts the position from the escapeProof.
@@ -142,10 +145,11 @@ contract PerpetualEscapeVerifier is
       See PedersenMerkleVerifier.sol for more details.
     */
     function extractPosition(uint256[] memory merkleProof, uint256 nAssets)
-        internal pure
-        returns (uint256 positionId, uint256[] memory position) {
-
-        require((merkleProof[0] >> 8) == 0, 'Position hash-chain must start with 0.');
+        internal
+        pure
+        returns (uint256 positionId, uint256[] memory position)
+    {
+        require((merkleProof[0] >> 8) == 0, "Position hash-chain must start with 0.");
 
         uint256 positionLength = nAssets + 2;
         position = new uint256[](positionLength);
@@ -154,7 +158,8 @@ contract PerpetualEscapeVerifier is
         // Check that the merkleProof starts with a hash_chain of 'positionLength' elements.
         require(
             (nodeIdx & ((1 << positionLength) - 1)) == 0,
-            "merkleProof is inconsistent with nAssets.");
+            "merkleProof is inconsistent with nAssets."
+        );
         positionId = nodeIdx >> positionLength;
 
         assembly {
@@ -162,14 +167,22 @@ contract PerpetualEscapeVerifier is
             let positionEnd := add(positionPtr, mul(mload(position), 0x20))
             let proofPtr := add(merkleProof, 0x3f)
 
-            for { } lt(positionPtr, positionEnd)  { positionPtr := add(positionPtr, 0x20) } {
-                mstore(positionPtr, and(mload(proofPtr),
-                       0x0fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff))
+            for {
+
+            } lt(positionPtr, positionEnd) {
+                positionPtr := add(positionPtr, 0x20)
+            } {
+                mstore(
+                    positionPtr,
+                    and(
+                        mload(proofPtr),
+                        0x0fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+                    )
+                )
                 proofPtr := add(proofPtr, 0x40)
             }
         }
     }
-
 
     /*
       Verifies an escape and registers the corresponding fact as
@@ -185,7 +198,10 @@ contract PerpetualEscapeVerifier is
       the end of the merkleProof is adjusted accordingly.
     */
     function verifyEscape(
-        uint256[] calldata merkleProof, uint256 nAssets, uint256[] calldata sharedState) external {
+        uint256[] calldata merkleProof,
+        uint256 nAssets,
+        uint256[] calldata sharedState
+    ) external {
         (uint256 positionId, uint256[] memory position) = extractPosition(merkleProof, nAssets);
 
         int256 withdrawalAmount = computeFxpBalance(position, sharedState) >> FXP_BITS;
@@ -196,11 +212,13 @@ contract PerpetualEscapeVerifier is
 
         require(
             sharedState[STATE_OFFSET_VAULTS_ROOT] == (merkleProof[merkleProof.length - 2] >> 4),
-            "merkleProof is inconsistent with the root in the sharedState.");
+            "merkleProof is inconsistent with the root in the sharedState."
+        );
 
         require(
             sharedState[STATE_OFFSET_VAULTS_HEIGHT] == positionTreeHeight,
-            "merkleProof is inconsistent with the height in the sharedState.");
+            "merkleProof is inconsistent with the height in the sharedState."
+        );
 
         require(withdrawalAmount > 0, "Withdrawal amount must be positive.");
         bytes32 sharedStateHash = keccak256(abi.encodePacked(sharedState));
@@ -208,8 +226,8 @@ contract PerpetualEscapeVerifier is
         uint256 publicKey = position[nAssets];
         emit LogEscapeVerified(publicKey, withdrawalAmount, sharedStateHash, positionId);
         bytes32 fact = keccak256(
-            abi.encodePacked(
-            publicKey, withdrawalAmount, sharedStateHash, positionId));
+            abi.encodePacked(publicKey, withdrawalAmount, sharedStateHash, positionId)
+        );
 
         verifyMerkle(merkleProof);
 

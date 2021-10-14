@@ -1,17 +1,14 @@
 // SPDX-License-Identifier: Apache-2.0.
 pragma solidity ^0.6.11;
 
+import "./ECDSA.sol";
 import "./MainStorage.sol";
 import "../libraries/LibConstants.sol";
-import "../interfaces/MGovernance.sol";
-import "../interfaces/MKeyGetters.sol";
-import "../interfaces/MUsers.sol";
 
 /**
   Users of the Stark Exchange are identified within the exchange by their Stark Key which is a
   public key defined over a Stark-friendly elliptic curve that is different from the standard
-  Ethereum elliptic curve. These keys may be generated using the same private key used by the user
-  on Ethereum.
+  Ethereum elliptic curve.
 
   The Stark-friendly elliptic curve used is defined as follows:
 
@@ -23,71 +20,61 @@ import "../interfaces/MUsers.sol";
   .. math:: \beta = 3141592653589793238462643383279502884197169399375105820974944592307816406665
   .. math:: p = 3618502788666131213697322783095070105623107215331596699973092056135872020481
 
-  In order to associate exchange users with Ethereum account addresses, an Ethereum address must be
-  registered with the Stark Key on the exchange contract before any other user operation can take
-  place.
-  User registration is performed by calling :sol:func:`registerUser` with the selected Stark Key,
-  representing an `x` coordinate on the Stark-friendly elliptic curve, and the `y` coordinate of
-  the key on the curve (due to the nature of the curve, only two such possible `y` coordinates
-  exist).
+  User registration is the mechanism that associates an Ethereum address with a StarkKey
+  within the main contract context.
+
+  User registrations that were done on previous versions (up to v3.0) are still supported.
+  However, in most cases, there is no need to register a user.
+  The only flows that require user registration are the anti-concorship flows:
+  forced actions and deposit cancellation.
+
+  User registration is performed by calling :sol:func:`registerEthAddress` with the selected 
+  Stark Key, representing an `x` coordinate on the Stark-friendly elliptic curve,
+  and the `y` coordinate of the key on the curve (due to the nature of the curve,
+  only two such possible `y` coordinates exist).
 
   The registration is accepted if the following holds:
 
   1. The key registered is not zero and has not been registered in the past by the user or anyone else.
   2. The key provided represents a valid point on the Stark-friendly elliptic curve.
-  3. The linkage between the provided Ethereum key and the selected Stark Key is signed by the User Admin (typically the exchange operator).
+  3. The linkage between the provided Ethereum address and the selected Stark Key is signed using
+     the privte key of the selected Stark Key.
 
-  If the above holds, the Stark Key is registered by the contract, mapping it to the Ethereum key.
-  This mapping is later used to ensure that withdrawals from accounts mapped to the Stark Keys can
-  only be performed by users authenticated with the associated Ethereum public keys (see :sol:mod:`Withdrawals`).
+  If the above holds, the Ethereum address is registered by the contract, mapping it to the Stark Key.
 */
-abstract contract Users is MainStorage, LibConstants, MGovernance, MUsers, MKeyGetters {
+abstract contract Users is MainStorage, LibConstants {
     event LogUserRegistered(address ethKey, uint256 starkKey, address sender);
-    event LogUserAdminAdded(address userAdmin);
-    event LogUserAdminRemoved(address userAdmin);
 
     function isOnCurve(uint256 starkKey) private view returns (bool) {
         uint256 xCubed = mulmod(mulmod(starkKey, starkKey, K_MODULUS), starkKey, K_MODULUS);
         return isQuadraticResidue(addmod(addmod(xCubed, starkKey, K_MODULUS), K_BETA, K_MODULUS));
     }
 
-    function registerUserAdmin(address newAdmin) external onlyGovernance() {
-        userAdmins[newAdmin] = true;
-        emit LogUserAdminAdded(newAdmin);
+    function registerSender(uint256 starkKey, bytes calldata starkSignature) external {
+        registerEthAddress(msg.sender, starkKey, starkSignature);
     }
 
-    function unregisterUserAdmin(address oldAdmin) external onlyGovernance() {
-        userAdmins[oldAdmin] = false;
-        emit LogUserAdminRemoved(oldAdmin);
-    }
-
-    function isUserAdmin(address testedAdmin) public view returns (bool) {
-        return userAdmins[testedAdmin];
-    }
-
-    function registerUser(address ethKey, uint256 starkKey, bytes calldata signature) public override {
+    function registerEthAddress(
+        address ethKey,
+        uint256 starkKey,
+        bytes calldata starkSignature
+    ) public {
         // Validate keys and availability.
         require(starkKey != 0, "INVALID_STARK_KEY");
         require(starkKey < K_MODULUS, "INVALID_STARK_KEY");
         require(ethKey != ZERO_ADDRESS, "INVALID_ETH_ADDRESS");
         require(ethKeys[starkKey] == ZERO_ADDRESS, "STARK_KEY_UNAVAILABLE");
         require(isOnCurve(starkKey), "INVALID_STARK_KEY");
-        require(signature.length == 65, "INVALID_SIGNATURE");
+        require(starkSignature.length == 32 * 3, "INVALID_STARK_SIGNATURE");
 
-        bytes32 signedData = keccak256(abi.encodePacked("UserRegistration:", ethKey, starkKey));
+        bytes memory sig = starkSignature;
+        (uint256 r, uint256 s, uint256 StarkKeyY) = abi.decode(sig, (uint256, uint256, uint256));
 
-        bytes memory sig = signature;
-        uint8 v = uint8(sig[64]);
-        bytes32 r;
-        bytes32 s;
+        uint256 msgHash = uint256(
+            keccak256(abi.encodePacked("UserRegistration:", ethKey, starkKey))
+        ) % K_MODULUS;
 
-        assembly {
-            r := mload(add(sig, 32))
-            s := mload(add(sig, 64))
-        }
-
-        address signer = ecrecover(signedData, v, r, s);
-        require(signer != ZERO_ADDRESS && isUserAdmin(signer), "INVALID_SIGNATURE");
+        ECDSA.verify(msgHash, r, s, starkKey, StarkKeyY);
 
         // Update state.
         ethKeys[starkKey] = ethKey;

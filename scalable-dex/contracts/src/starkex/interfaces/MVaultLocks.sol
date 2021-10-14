@@ -11,5 +11,5 @@ abstract contract MVaultLocks {
         address ethKey,
         uint256 assetId,
         uint256 vaultId
-    ) public virtual view returns (bool);
+    ) public view virtual returns (bool);
 }

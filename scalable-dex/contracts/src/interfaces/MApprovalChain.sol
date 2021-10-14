@@ -17,9 +17,10 @@ abstract contract MApprovalChain {
     */
     function addEntry(
         StarkExTypes.ApprovalChainData storage chain,
-        address entry, uint256 maxLength, string memory identifier)
-        internal
-        virtual;
+        address entry,
+        uint256 maxLength,
+        string memory identifier
+    ) internal virtual;
 
     /*
       Returns the index of the verifier in the list if it exists and returns ENTRY_NOT_FOUND
@@ -46,9 +47,10 @@ abstract contract MApprovalChain {
       Reverts if the verifier is not found.
     */
     function announceRemovalIntent(
-        StarkExTypes.ApprovalChainData storage chain, address entry, uint256 removalDelay)
-        internal
-        virtual;
+        StarkExTypes.ApprovalChainData storage chain,
+        address entry,
+        uint256 removalDelay
+    ) internal virtual;
 
     /*
       Removes a verifier assuming the expected time has passed.

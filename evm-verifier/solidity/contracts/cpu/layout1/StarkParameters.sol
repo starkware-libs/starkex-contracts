@@ -5,7 +5,7 @@ pragma solidity ^0.6.11;
 import "../../PrimeFieldElement0.sol";
 
 contract StarkParameters is PrimeFieldElement0 {
-    uint256 constant internal N_COEFFICIENTS = 358;
+    uint256 constant internal N_COEFFICIENTS = 179;
     uint256 constant internal N_INTERACTION_ELEMENTS = 3;
     uint256 constant internal MASK_SIZE = 200;
     uint256 constant internal N_ROWS_IN_MASK = 82;

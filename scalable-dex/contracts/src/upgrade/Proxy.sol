@@ -37,7 +37,6 @@ import "../libraries/Common.sol";
   point.
 */
 contract Proxy is ProxyStorage, ProxyGovernance, StorageSlots {
-
     // Emitted when the active implementation is replaced.
     event ImplementationUpgraded(address indexed implementation, bytes initializer);
 
@@ -55,9 +54,7 @@ contract Proxy is ProxyStorage, ProxyGovernance, StorageSlots {
 
     string public constant PROXY_VERSION = "3.0.0";
 
-    constructor (uint256 upgradeActivationDelay)
-        public
-    {
+    constructor(uint256 upgradeActivationDelay) public {
         initGovernance();
         setUpgradeActivationDelay(upgradeActivationDelay);
     }
@@ -81,7 +78,7 @@ contract Proxy is ProxyStorage, ProxyGovernance, StorageSlots {
       Returns the address of the current implementation.
     */
     // NOLINTNEXTLINE external-function.
-    function implementation() public view returns(address _implementation) {
+    function implementation() public view returns (address _implementation) {
         bytes32 slot = IMPLEMENTATION_SLOT;
         assembly {
             _implementation := sload(slot)
@@ -102,7 +99,8 @@ contract Proxy is ProxyStorage, ProxyGovernance, StorageSlots {
 
         // NOLINTNEXTLINE: low-level-calls.
         (bool success, bytes memory returndata) = _implementation.delegatecall(
-            abi.encodeWithSignature("isFrozen()"));
+            abi.encodeWithSignature("isFrozen()")
+        );
         require(success, string(returndata));
         return abi.decode(returndata, (bool));
     }
@@ -111,14 +109,13 @@ contract Proxy is ProxyStorage, ProxyGovernance, StorageSlots {
       This method blocks delegation to initialize().
       Only upgradeTo should be able to delegate call to initialize().
     */
-    function initialize(bytes calldata /*data*/)
-        external pure
-    {
+    function initialize(
+        bytes calldata /*data*/
+    ) external pure {
         revert("CANNOT_CALL_INITIALIZE");
     }
 
-    modifier notFinalized()
-    {
+    modifier notFinalized() {
         require(isNotFinalized(), "IMPLEMENTATION_FINALIZED");
         _;
     }
@@ -127,8 +124,7 @@ contract Proxy is ProxyStorage, ProxyGovernance, StorageSlots {
       Forbids calling the function if the implementation is frozen.
       This modifier relies on the lower level (logical contract) implementation of isFrozen().
     */
-    modifier notFrozen()
-    {
+    modifier notFrozen() {
         require(!implementationIsFrozen(), "STATE_IS_FROZEN");
         _;
     }
@@ -147,7 +143,7 @@ contract Proxy is ProxyStorage, ProxyGovernance, StorageSlots {
     */
     fallback() external payable {
         address _implementation = implementation();
-        require (_implementation != address(0x0), "MISSING_IMPLEMENTATION");
+        require(_implementation != address(0x0), "MISSING_IMPLEMENTATION");
 
         assembly {
             // Copy msg.data. We take full control of memory in this inline assembly
@@ -164,8 +160,12 @@ contract Proxy is ProxyStorage, ProxyGovernance, StorageSlots {
 
             switch result
             // delegatecall returns 0 on error.
-            case 0 { revert(0, returndatasize()) }
-            default { return(0, returndatasize()) }
+            case 0 {
+                revert(0, returndatasize())
+            }
+            default {
+                return(0, returndatasize())
+            }
         }
     }
 
@@ -207,8 +207,11 @@ contract Proxy is ProxyStorage, ProxyGovernance, StorageSlots {
       addImplementation is not blocked when frozen or finalized.
       (upgradeTo API is blocked when finalized or frozen).
     */
-    function addImplementation(address newImplementation, bytes calldata data, bool finalize)
-        external onlyGovernance {
+    function addImplementation(
+        address newImplementation,
+        bytes calldata data,
+        bool finalize
+    ) external onlyGovernance {
         require(newImplementation.isContract(), "ADDRESS_NOT_CONTRACT");
 
         bytes32 implVectorHash = keccak256(abi.encode(newImplementation, data, finalize));
@@ -229,8 +232,11 @@ contract Proxy is ProxyStorage, ProxyGovernance, StorageSlots {
       Note that it is possible to remove the current implementation. Doing so doesn't affect the
       current implementation, but rather revokes it as a future candidate.
     */
-    function removeImplementation(address removedImplementation, bytes calldata data, bool finalize)
-        external onlyGovernance {
+    function removeImplementation(
+        address removedImplementation,
+        bytes calldata data,
+        bool finalize
+    ) external onlyGovernance {
         bytes32 implVectorHash = keccak256(abi.encode(removedImplementation, data, finalize));
 
         // If we have initializer, we set the hash of it.
@@ -258,8 +264,11 @@ contract Proxy is ProxyStorage, ProxyGovernance, StorageSlots {
       (See comments in Governance.sol).
     */
     // NOLINTNEXTLINE: reentrancy-events timestamp.
-    function upgradeTo(address newImplementation, bytes calldata data, bool finalize)
-        external payable onlyGovernance notFinalized notFrozen {
+    function upgradeTo(
+        address newImplementation,
+        bytes calldata data,
+        bool finalize
+    ) external payable onlyGovernance notFinalized notFrozen {
         bytes32 implVectorHash = keccak256(abi.encode(newImplementation, data, finalize));
         uint256 activationTime = enabledTime[implVectorHash];
         require(activationTime > 0, "UNKNOWN_UPGRADE_INFORMATION");
@@ -271,13 +280,15 @@ contract Proxy is ProxyStorage, ProxyGovernance, StorageSlots {
 
         // NOLINTNEXTLINE: low-level-calls controlled-delegatecall.
         (bool success, bytes memory returndata) = newImplementation.delegatecall(
-            abi.encodeWithSelector(this.initialize.selector, data));
+            abi.encodeWithSelector(this.initialize.selector, data)
+        );
         require(success, string(returndata));
 
         // Verify that the new implementation is not frozen post initialization.
         // NOLINTNEXTLINE: low-level-calls controlled-delegatecall.
         (success, returndata) = newImplementation.delegatecall(
-            abi.encodeWithSignature("isFrozen()"));
+            abi.encodeWithSignature("isFrozen()")
+        );
         require(success, "CALL_TO_ISFROZEN_REVERTED");
         require(!abi.decode(returndata, (bool)), "NEW_IMPLEMENTATION_FROZEN");
 

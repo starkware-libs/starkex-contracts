@@ -30,11 +30,7 @@ abstract contract Freezable is MainStorage, LibConstants, MGovernance, MFreezabl
         require(freezeTime > unFreezeTime, "REFREEZE_ATTEMPT");
     }
 
-    function freeze()
-        internal
-        override
-        notFrozen()
-    {
+    function freeze() internal override notFrozen {
         unFreezeTime = block.timestamp + UNFREEZE_DELAY;
 
         // Update state.
@@ -44,11 +40,7 @@ abstract contract Freezable is MainStorage, LibConstants, MGovernance, MFreezabl
         emit LogFrozen();
     }
 
-    function unFreeze()
-        external
-        onlyFrozen()
-        onlyGovernance()
-    {
+    function unFreeze() external onlyFrozen onlyGovernance {
         require(block.timestamp >= unFreezeTime, "UNFREEZE_NOT_ALLOWED_YET");
 
         // Update state.
@@ -61,5 +53,4 @@ abstract contract Freezable is MainStorage, LibConstants, MGovernance, MFreezabl
         // Log event.
         emit LogUnFrozen();
     }
-
 }

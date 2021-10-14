@@ -17,26 +17,19 @@ import "../../libraries/Common.sol";
   TO-DO:DOC.
 */
 abstract contract UpdatePerpetualState is
-        PerpetualStorage,
-        PerpetualConstants,
-        MForcedTradeActionState,
-        MForcedWithdrawalActionState,
-        VerifyFactChain,
-        MAcceptModifications,
-        MFreezable,
-        MOperator,
-        ProgramOutputOffsets
-    {
-        using UintArray for uint256[];
+    PerpetualStorage,
+    PerpetualConstants,
+    MForcedTradeActionState,
+    MForcedWithdrawalActionState,
+    VerifyFactChain,
+    MAcceptModifications,
+    MFreezable,
+    MOperator,
+    ProgramOutputOffsets
+{
+    event LogUpdateState(uint256 sequenceNumber, uint256 batchId);
 
-    event LogUpdateState(
-        uint256 sequenceNumber,
-        uint256 batchId
-    );
-
-    event LogStateTransitionFact(
-        bytes32 stateTransitionFact
-    );
+    event LogStateTransitionFact(bytes32 stateTransitionFact);
 
     enum ForcedAction {
         Withdrawal,
@@ -64,8 +57,8 @@ abstract contract UpdatePerpetualState is
 
     function updateState(uint256[] calldata programOutput, uint256[] calldata applicationData)
         external
-        notFrozen()
-        onlyOperator()
+        notFrozen
+        onlyOperator
     {
         ProgramOutputMarkers memory outputMarkers = parseProgramOutput(programOutput);
         require(
@@ -75,11 +68,13 @@ abstract contract UpdatePerpetualState is
 
         require(
             outputMarkers.newSystemTime > (block.timestamp - PERPETUAL_SYSTEM_TIME_LAG_BOUND),
-            "SYSTEM_TIME_OUTDATED");
+            "SYSTEM_TIME_OUTDATED"
+        );
 
         require(
             outputMarkers.newSystemTime < (block.timestamp + PERPETUAL_SYSTEM_TIME_ADVANCE_BOUND),
-            "SYSTEM_TIME_INVALID");
+            "SYSTEM_TIME_INVALID"
+        );
 
         require(
             outputMarkers.expirationTimestamp > block.timestamp / 3600,
@@ -89,11 +84,14 @@ abstract contract UpdatePerpetualState is
         validateConfigHashes(programOutput, outputMarkers);
 
         // Caclulate previous shared state hash, and compare with stored one.
-        bytes32 prevStateHash = programOutput.hashSubArray(
-            outputMarkers.prevSharedStateOffset,
-            outputMarkers.prevSharedStateSize);
-        require(
-            prevStateHash == sharedStateHash, "INVALID_PREVIOUS_SHARED_STATE");
+        bytes32 prevStateHash = keccak256(
+            abi.encodePacked(
+                programOutput[outputMarkers.prevSharedStateOffset:outputMarkers
+                    .prevSharedStateOffset + outputMarkers.prevSharedStateSize]
+            )
+        );
+
+        require(prevStateHash == sharedStateHash, "INVALID_PREVIOUS_SHARED_STATE");
 
         require(
             applicationData[APP_DATA_PREVIOUS_BATCH_ID_OFFSET] == lastBatchId,
@@ -101,17 +99,19 @@ abstract contract UpdatePerpetualState is
         );
 
         require(
-            programOutput.length >= outputMarkers.forcedActionsOffset +
-            OnchainDataFactTreeEncoder.ONCHAIN_DATA_FACT_ADDITIONAL_WORDS,
-            "programOutput does not contain all required fields.");
+            programOutput.length >=
+                outputMarkers.forcedActionsOffset +
+                    OnchainDataFactTreeEncoder.ONCHAIN_DATA_FACT_ADDITIONAL_WORDS,
+            "programOutput does not contain all required fields."
+        );
         bytes32 stateTransitionFact = OnchainDataFactTreeEncoder.encodeFactWithOnchainData(
-            programOutput[
-                :programOutput.length -
+            programOutput[:programOutput.length -
                 OnchainDataFactTreeEncoder.ONCHAIN_DATA_FACT_ADDITIONAL_WORDS],
             OnchainDataFactTreeEncoder.DataAvailabilityFact({
                 onchainDataHash: programOutput[programOutput.length - 2],
                 onchainDataSize: programOutput[programOutput.length - 1]
-            }));
+            })
+        );
 
         emit LogStateTransitionFact(stateTransitionFact);
 
@@ -126,8 +126,9 @@ abstract contract UpdatePerpetualState is
     }
 
     function validateConfigHashes(
-        uint256[] memory programOutput,
-        ProgramOutputMarkers memory markers) internal view {
+        uint256[] calldata programOutput,
+        ProgramOutputMarkers memory markers
+    ) internal view {
         require(globalConfigurationHash != bytes32(0), "GLOBAL_CONFIGURATION_NOT_SET");
         require(
             globalConfigurationHash == bytes32(markers.globalConfigurationHash),
@@ -138,16 +139,14 @@ abstract contract UpdatePerpetualState is
         for (uint256 i = 0; i < markers.nAssets; i++) {
             uint256 assetId = programOutput[offset + ASSET_CONFIG_OFFSET_ASSET_ID];
             bytes32 assetConfigHash = bytes32(
-                programOutput[offset + ASSET_CONFIG_OFFSET_CONFIG_HASH]);
-            require(
-                configurationHash[assetId] == assetConfigHash,
-                "ASSET_CONFIGURATION_MISMATCH"
+                programOutput[offset + ASSET_CONFIG_OFFSET_CONFIG_HASH]
             );
+            require(configurationHash[assetId] == assetConfigHash, "ASSET_CONFIGURATION_MISMATCH");
             offset += PROG_OUT_N_WORDS_PER_ASSET_CONFIG;
         }
     }
 
-    function parseProgramOutput(uint256[] memory programOutput)
+    function parseProgramOutput(uint256[] calldata programOutput)
         internal
         pure
         returns (ProgramOutputMarkers memory)
@@ -176,18 +175,20 @@ abstract contract UpdatePerpetualState is
         offset += markers.prevSharedStateSize;
         require(
             programOutput.length >= offset + 1, // Adding +1 for the next mandatory field.
-            "programOutput invalid size (prevState)");
+            "programOutput invalid size (prevState)"
+        );
 
         markers.newSharedStateSize = programOutput[offset++];
         markers.newSharedStateOffset = offset;
 
         offset += markers.newSharedStateSize;
         require(
-            programOutput.length >= offset + 2,  // Adding +2 for the next mandatory fields.
-            "programOutput invalid size (newState)");
+            programOutput.length >= offset + 2, // Adding +2 for the next mandatory fields.
+            "programOutput invalid size (newState)"
+        );
 
         // System time is the last field in the state.
-        markers.newSystemTime = programOutput[offset-1];
+        markers.newSystemTime = programOutput[offset - 1];
 
         markers.expirationTimestamp = programOutput[offset++];
 
@@ -214,12 +215,16 @@ abstract contract UpdatePerpetualState is
     }
 
     function performUpdateState(
-        uint256[] memory programOutput,
+        uint256[] calldata programOutput,
         ProgramOutputMarkers memory markers,
-        uint256[] memory applicationData
+        uint256[] calldata applicationData
     ) internal {
-        sharedStateHash = programOutput.hashSubArray(
-            markers.newSharedStateOffset, markers.newSharedStateSize);
+        sharedStateHash = keccak256(
+            abi.encodePacked(
+                programOutput[markers.newSharedStateOffset:markers.newSharedStateOffset +
+                    markers.newSharedStateSize]
+            )
+        );
 
         sequenceNumber += 1;
         uint256 batchId = applicationData[APP_DATA_BATCH_ID_OFFSET];
@@ -240,18 +245,17 @@ abstract contract UpdatePerpetualState is
       If invalid, or not flag not exist - revert.
     */
     function clearForcedActionsFlags(
-        uint256[] memory programOutput,
+        uint256[] calldata programOutput,
         ProgramOutputMarkers memory markers
     ) private {
         uint256 offset = markers.forcedActionsOffset;
-        for (uint256 i = 0 ; i < markers.nForcedActions ; i++) {
+        for (uint256 i = 0; i < markers.nForcedActions; i++) {
             ForcedAction forcedActionType = ForcedAction(programOutput[offset++]);
-            if (forcedActionType == ForcedAction.Withdrawal){
+            if (forcedActionType == ForcedAction.Withdrawal) {
                 offset = clearForcedWithdrawal(programOutput, offset);
-            } else if(forcedActionType == ForcedAction.Trade){
+            } else if (forcedActionType == ForcedAction.Trade) {
                 offset = clearForcedTrade(programOutput, offset);
-            }
-            else {
+            } else {
                 revert("UNKNOWN_FORCED_ACTION_TYPE");
             }
         }
@@ -259,10 +263,10 @@ abstract contract UpdatePerpetualState is
         require(markers.forcedActionsOffset + markers.forcedActionsSize == offset, "SIZE_MISMATCH");
     }
 
-    function clearForcedWithdrawal(
-        uint256[] memory programOutput,
-        uint256 offset
-    ) private returns(uint256){
+    function clearForcedWithdrawal(uint256[] calldata programOutput, uint256 offset)
+        private
+        returns (uint256)
+    {
         uint256 starkKey = programOutput[offset++];
         uint256 vaultId = programOutput[offset++];
         uint256 quantizedAmount = programOutput[offset++];
@@ -270,10 +274,10 @@ abstract contract UpdatePerpetualState is
         return offset;
     }
 
-    function clearForcedTrade(
-        uint256[] memory programOutput,
-        uint256 offset
-    ) private returns(uint256){
+    function clearForcedTrade(uint256[] calldata programOutput, uint256 offset)
+        private
+        returns (uint256)
+    {
         uint256 starkKeyA = programOutput[offset++];
         uint256 starkKeyB = programOutput[offset++];
         uint256 vaultIdA = programOutput[offset++];
@@ -300,13 +304,11 @@ abstract contract UpdatePerpetualState is
     }
 
     function verifyConditionalTransfers(
-        uint256[] memory programOutput,
+        uint256[] calldata programOutput,
         ProgramOutputMarkers memory markers,
-        uint256[] memory applicationData
+        uint256[] calldata applicationData
     ) private view {
-        require(
-            applicationData.length >= APP_DATA_N_CONDITIONAL_TRANSFER, "APP_DATA_TOO_SHORT");
-
+        require(applicationData.length >= APP_DATA_N_CONDITIONAL_TRANSFER, "APP_DATA_TOO_SHORT");
 
         require(
             applicationData[APP_DATA_N_CONDITIONAL_TRANSFER] == markers.nConditions,
@@ -315,9 +317,11 @@ abstract contract UpdatePerpetualState is
 
         require(
             applicationData.length >=
-            APP_DATA_CONDITIONAL_TRANSFER_DATA_OFFSET +
-            markers.nConditions * APP_DATA_N_WORDS_PER_CONDITIONAL_TRANSFER,
-            "BAD_APP_DATA_SIZE");
+                APP_DATA_CONDITIONAL_TRANSFER_DATA_OFFSET +
+                    markers.nConditions *
+                    APP_DATA_N_WORDS_PER_CONDITIONAL_TRANSFER,
+            "BAD_APP_DATA_SIZE"
+        );
 
         uint256 conditionsOffset = markers.conditionsOffset;
         uint256 preImageOffset = APP_DATA_CONDITIONAL_TRANSFER_DATA_OFFSET;
@@ -331,25 +335,27 @@ abstract contract UpdatePerpetualState is
             // The condition is the 250 LS bits of keccak256 of the fact registry & fact.
             require(
                 condition ==
-                    uint256(keccak256(abi.encodePacked(transferRegistry, transferFact))) &
-                    MASK_250,
-                "Condition mismatch.");
+                    uint256(keccak256(abi.encodePacked(transferRegistry, transferFact))) & MASK_250,
+                "Condition mismatch."
+            );
             // NOLINTNEXTLINE: low-level-calls-loop reentrancy-events.
             (bool success, bytes memory returndata) = transferRegistry.staticcall(
-                abi.encodeWithSignature("isValid(bytes32)",transferFact));
+                abi.encodeWithSignature("isValid(bytes32)", transferFact)
+            );
             require(success && returndata.length == 32, "BAD_FACT_REGISTRY_CONTRACT");
             require(
                 abi.decode(returndata, (bool)),
-                "Condition for the conditional transfer was not met.");
+                "Condition for the conditional transfer was not met."
+            );
             conditionsOffset += 1;
             preImageOffset += APP_DATA_N_WORDS_PER_CONDITIONAL_TRANSFER;
         }
     }
 
     function sendModifications(
-        uint256[] memory programOutput,
+        uint256[] calldata programOutput,
         ProgramOutputMarkers memory markers,
-        uint256[] memory /*applicationData*/
+        uint256[] calldata /*applicationData*/
     ) private {
         uint256 assetId = systemAssetType;
         require(assetId < K_MODULUS, "Asset id >= PRIME");

@@ -34,15 +34,10 @@ import "./Governance.sol";
   must have unique names in order for the proxy to successfully delegate to them.
 */
 contract MainGovernance is Governance {
-
     // The tag is the sting key that is used in the Governance storage mapping.
     string public constant MAIN_GOVERNANCE_INFO_TAG = "StarkEx.Main.2019.GovernorsInformation";
 
-    function getGovernanceTag()
-        internal
-        pure
-        override
-        returns (string memory tag) {
+    function getGovernanceTag() internal pure override returns (string memory tag) {
         tag = MAIN_GOVERNANCE_INFO_TAG;
     }
 
@@ -58,14 +53,11 @@ contract MainGovernance is Governance {
         removeGovernor(governorForRemoval);
     }
 
-    function mainAcceptGovernance()
-        external
-    {
+    function mainAcceptGovernance() external {
         acceptGovernance();
     }
 
     function mainCancelNomination() external {
         cancelNomination();
     }
-
 }

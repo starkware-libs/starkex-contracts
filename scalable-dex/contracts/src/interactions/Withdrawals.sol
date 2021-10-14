@@ -55,9 +55,10 @@ abstract contract Withdrawals is
     MTokenAssetData,
     MFreezable,
     MKeyGetters,
-    MTokenTransfers  {
+    MTokenTransfers
+{
     event LogWithdrawalPerformed(
-        uint256 starkKey,
+        uint256 ownerKey,
         uint256 assetType,
         uint256 nonQuantizedAmount,
         uint256 quantizedAmount,
@@ -65,7 +66,7 @@ abstract contract Withdrawals is
     );
 
     event LogNftWithdrawalPerformed(
-        uint256 starkKey,
+        uint256 ownerKey,
         uint256 assetType,
         uint256 tokenId,
         uint256 assetId,
@@ -73,61 +74,40 @@ abstract contract Withdrawals is
     );
 
     event LogMintWithdrawalPerformed(
-        uint256 starkKey,
-        uint256 tokenId,
+        uint256 ownerKey,
+        uint256 assetType,
         uint256 nonQuantizedAmount,
         uint256 quantizedAmount,
         uint256 assetId
     );
 
-    function getWithdrawalBalance(
-        uint256 starkKey,
-        uint256 assetId
-    )
+    function getWithdrawalBalance(uint256 ownerKey, uint256 assetId)
         external
         view
         returns (uint256 balance)
     {
         uint256 presumedAssetType = assetId;
-        balance = fromQuantized(presumedAssetType, pendingWithdrawals[starkKey][assetId]);
+        balance = fromQuantized(presumedAssetType, pendingWithdrawals[ownerKey][assetId]);
     }
 
     /*
-      Allows a user to withdraw accepted funds to a recipient's account.
-      This function can be called normally while frozen.
+      Moves funds from the pending withdrawal account to the owner address.
+      Note: this function can be called by anyone.
+      Can be called normally while frozen.
     */
-    function withdrawTo(
-        uint256 starkKey,
-        uint256 assetType,
-        address payable recipient)
-        external
-        onlyStarkKeyOwner(starkKey)
-    {
-        internalWithdrawTo(starkKey, assetType, recipient);
-    }
-
-    /*
-      Underlying implementation of withdraw & withdrawTo.
-      Checking that the address of the recipient preserves self-custody is the responsibility of the
-      calling function. (i.e. that the recipient is either the owner of the assets or that the owner
-      has authorized the withdrawal).
-    */
-    function internalWithdrawTo(
-        uint256 starkKey,
-        uint256 assetType,
-        address payable recipient) internal
-    {
+    function withdraw(uint256 ownerKey, uint256 assetType) external {
+        address payable recipient = payable(strictGetEthKey(ownerKey));
         require(!isMintableAssetType(assetType), "MINTABLE_ASSET_TYPE");
         require(isFungibleAssetType(assetType), "NON_FUNGIBLE_ASSET_TYPE");
         uint256 assetId = assetType;
         // Fetch and clear quantized amount.
-        uint256 quantizedAmount = pendingWithdrawals[starkKey][assetId];
-        pendingWithdrawals[starkKey][assetId] = 0;
+        uint256 quantizedAmount = pendingWithdrawals[ownerKey][assetId];
+        pendingWithdrawals[ownerKey][assetId] = 0;
 
         // Transfer funds.
         transferOut(recipient, assetType, quantizedAmount);
         emit LogWithdrawalPerformed(
-            starkKey,
+            ownerKey,
             assetType,
             fromQuantized(assetType, quantizedAmount),
             quantizedAmount,
@@ -136,72 +116,48 @@ abstract contract Withdrawals is
     }
 
     /*
-      Moves funds from the pending withdrawal account to the owner address.
+      Allows withdrawal of an NFT to its owner account.
       Note: this function can be called by anyone.
-      Can be called normally while frozen.
-    */
-    function withdraw(uint256 starkKey, uint256 assetType)
-        external
-    {
-        internalWithdrawTo(starkKey, assetType, address(uint160(getEthKey(starkKey))));
-    }
-
-    /*
-      Allows a user to withdraw an accepted NFT to a recipient's account.
       This function can be called normally while frozen.
     */
-    function withdrawNftTo(
-        uint256 starkKey,
+    function withdrawNft(
+        uint256 ownerKey,
         uint256 assetType,
-        uint256 tokenId,
-        address recipient
-    )
-        public
-        onlyStarkKeyOwner(starkKey)
-    // No notFrozen modifier: This function can always be used, even when frozen.
-    {
+        uint256 tokenId // No notFrozen modifier: This function can always be used, even when frozen.
+    ) external {
+        address recipient = strictGetEthKey(ownerKey);
         // Calculate assetId.
         uint256 assetId = calculateNftAssetId(assetType, tokenId);
         require(!isMintableAssetType(assetType), "MINTABLE_ASSET_TYPE");
         require(!isFungibleAssetType(assetType), "FUNGIBLE_ASSET_TYPE");
-        require(pendingWithdrawals[starkKey][assetId] == 1, "ILLEGAL_NFT_BALANCE");
-        pendingWithdrawals[starkKey][assetId] = 0;
+        require(pendingWithdrawals[ownerKey][assetId] == 1, "ILLEGAL_NFT_BALANCE");
+        pendingWithdrawals[ownerKey][assetId] = 0;
 
         // Transfer funds.
         transferOutNft(recipient, assetType, tokenId);
-        emit LogNftWithdrawalPerformed(starkKey, assetType, tokenId, assetId, recipient);
-    }
-
-    /*
-      Allows a user to withdraw an accepted NFT to its own account.
-      This function can be called normally while frozen.
-    */
-    function withdrawNft(
-        uint256 starkKey,
-        uint256 assetType,
-        uint256 tokenId
-    )
-        external
-    // No notFrozen modifier: This function can always be used, even when frozen.
-    {
-        withdrawNftTo(starkKey, assetType, tokenId, msg.sender);
+        emit LogNftWithdrawalPerformed(ownerKey, assetType, tokenId, assetId, recipient);
     }
 
     function withdrawAndMint(
-        uint256 starkKey,
+        uint256 ownerKey,
         uint256 assetType,
         bytes calldata mintingBlob
-    ) external onlyStarkKeyOwner(starkKey) {
+    ) external {
+        address recipient = strictGetEthKey(ownerKey);
         require(registeredAssetType[assetType], "INVALID_ASSET_TYPE");
         require(isMintableAssetType(assetType), "NON_MINTABLE_ASSET_TYPE");
         uint256 assetId = calculateMintableAssetId(assetType, mintingBlob);
-        require(pendingWithdrawals[starkKey][assetId] > 0, "NO_PENDING_WITHDRAWAL_BALANCE");
-        uint256 quantizedAmount = pendingWithdrawals[starkKey][assetId];
-        pendingWithdrawals[starkKey][assetId] = 0;
+        require(pendingWithdrawals[ownerKey][assetId] > 0, "NO_PENDING_WITHDRAWAL_BALANCE");
+        uint256 quantizedAmount = pendingWithdrawals[ownerKey][assetId];
+        pendingWithdrawals[ownerKey][assetId] = 0;
         // Transfer funds.
-        transferOutMint(assetType, quantizedAmount, mintingBlob);
+        transferOutMint(assetType, quantizedAmount, recipient, mintingBlob);
         emit LogMintWithdrawalPerformed(
-            starkKey, assetType, fromQuantized(assetType, quantizedAmount), quantizedAmount,
-            assetId);
+            ownerKey,
+            assetType,
+            fromQuantized(assetType, quantizedAmount),
+            quantizedAmount,
+            assetId
+        );
     }
 }

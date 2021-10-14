@@ -2,11 +2,11 @@
 pragma solidity ^0.6.11;
 
 contract PedersenMerkleVerifier {
-
     // Note that those values are hardcoded in the assembly.
-    uint256 constant internal N_TABLES = 63;
+    uint256 internal constant N_TABLES = 63;
 
     address[N_TABLES] lookupTables;
+
     constructor(address[N_TABLES] memory tables) public {
         lookupTables = tables;
 
@@ -18,7 +18,6 @@ contract PedersenMerkleVerifier {
                 // the lookup table address is taken into account.
                 revert(0, 0)
             }
-
         }
     }
 
@@ -142,8 +141,10 @@ contract PedersenMerkleVerifier {
             }
 
             let left_node := shr(4, mload(proof))
-            let right_node := and(mload(add(proof, 0x1f)),
-                               0x0fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff)
+            let right_node := and(
+                mload(add(proof, 0x1f)),
+                0x0fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+            )
 
             let primeMinusOne := 0x800000000000011000000000000000000000000000000000000000000000000
             if or(gt(left_node, primeMinusOne), gt(right_node, primeMinusOne)) {
@@ -154,14 +155,33 @@ contract PedersenMerkleVerifier {
 
             // Allocate EC points table with dimensions N_TABLES by N_HASHES.
             let table := mload(0x40)
-            let tableEnd := add(table, mul(rowSize, /*N_TABLES*/63))
+            let tableEnd := add(
+                table,
+                mul(
+                    rowSize,
+                    // N_TABLES=
+                    63
+                )
+            )
 
             // for i = 0..N_TABLES-1, fill the i'th row in the table.
-            for { let i := 0 } lt(i, 63) { i := add(i, 1)} {
-                if iszero(staticcall(gas(), sload(i), add(proof, i), rowSize,
-                                     add(table, mul(i, rowSize)), rowSize)) {
-                   returndatacopy(0, 0, returndatasize())
-                   revert(0, returndatasize())
+            for {
+                let i := 0
+            } lt(i, 63) {
+                i := add(i, 1)
+            } {
+                if iszero(
+                    staticcall(
+                        gas(),
+                        sload(i),
+                        add(proof, i),
+                        rowSize,
+                        add(table, mul(i, rowSize)),
+                        rowSize
+                    )
+                ) {
+                    returndatacopy(0, 0, returndatasize())
+                    revert(0, returndatasize())
                 }
             }
 
@@ -177,7 +197,11 @@ contract PedersenMerkleVerifier {
             // Instead of k we use offset := k * sizeof(EC point).
             // Additonally we use ptr := offset + j * rowSize to ge over the EC points we want
             // to sum.
-            for { } lt(offset, rowSize) { } {
+            for {
+
+            } lt(offset, rowSize) {
+
+            } {
                 // Init (aX, aY, aZ) to the first value in the current column and sum over the
                 // column.
                 ptr := add(table, offset)
@@ -185,9 +209,11 @@ contract PedersenMerkleVerifier {
                 let aX := mload(ptr)
                 let aY := mload(add(ptr, 0x20))
 
-                for { ptr := add(ptr, rowSize) } lt(ptr, tableEnd)
-                    { ptr:= add(ptr, rowSize) } {
-
+                for {
+                    ptr := add(ptr, rowSize)
+                } lt(ptr, tableEnd) {
+                    ptr := add(ptr, rowSize)
+                } {
                     let bX := mload(ptr)
                     let bY := mload(add(ptr, 0x20))
 
@@ -208,11 +234,11 @@ contract PedersenMerkleVerifier {
                     // (xN/xD) = ((sN)^2/(sD)^2) - (aX/aZ) - (bX/1).
                     // xN = (sN)^2 * aZ - aX * (sD)^2 - bX * (sD)^2 * aZ.
                     // = (sN)^2 * aZ + (sD^2) (bX * (-aZ) - aX).
-                    let xN := addmod(mulmod(mulmod(sN, sN, PRIME), aZ, PRIME),
-                                    mulmod(sSqrD,
-                                            add(minusAZBX, sub(PRIME, aX)),
-                                            PRIME),
-                                    PRIME)
+                    let xN := addmod(
+                        mulmod(mulmod(sN, sN, PRIME), aZ, PRIME),
+                        mulmod(sSqrD, add(minusAZBX, sub(PRIME, aX)), PRIME),
+                        PRIME
+                    )
 
                     // xD = (sD)^2 * aZ.
                     let xD := mulmod(sSqrD, aZ, PRIME)
@@ -222,12 +248,11 @@ contract PedersenMerkleVerifier {
                     // aZ' = sD*xD.
                     aZ := mulmod(sD, xD, PRIME)
                     // aY' = sN*(bX * xD - xN) - bY*z = -bY * z + sN * (-xN + xD*bX).
-                    aY := addmod(sub(PRIME, mulmod(bY, aZ, PRIME)),
-                                    mulmod(sN,
-                                    add(sub(PRIME, xN),
-                                        mulmod(xD, bX, PRIME)),
-                                    PRIME),
-                                PRIME)
+                    aY := addmod(
+                        sub(PRIME, mulmod(bY, aZ, PRIME)),
+                        mulmod(sN, add(sub(PRIME, xN), mulmod(xD, bX, PRIME)), PRIME),
+                        PRIME
+                    )
 
                     // As the value of the affine x coordinate is xN/xD and z=sD*xD,
                     // the projective x coordinate is xN*sD.
@@ -245,9 +270,11 @@ contract PedersenMerkleVerifier {
                 // It will be replaced by right_node if necessary.
                 let expected_hash := shr(4, mload(add(proof, offset)))
 
-                let other_node := and(  // right_node
+                let other_node := and(
+                    // right_node
                     mload(add(proof, add(offset, 0x1f))),
-                    0x0fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff)
+                    0x0fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+                )
 
                 // Make sure both nodes are in the range [0, PRIME - 1].
                 if or(gt(expected_hash, primeMinusOne), gt(other_node, primeMinusOne)) {
@@ -268,11 +295,11 @@ contract PedersenMerkleVerifier {
                 // implies knowing a non-trivial linear equation on the random points defining the
                 // hash function.
                 if iszero(aZ) {
-                   raise_error("aZ is zero.", 11)
+                    raise_error("aZ is zero.", 11)
                 }
 
-                if sub(aX, mulmod(expected_hash, aZ, PRIME))/*!=0*/ {
-                   raise_error("Bad Merkle path.", 16)
+                if sub(aX, mulmod(expected_hash, aZ, PRIME)) {
+                    raise_error("Bad Merkle path.", 16)
                 }
             }
         }

@@ -4,14 +4,13 @@ pragma solidity ^0.6.11;
 import "./Prng.sol";
 
 contract VerifierChannel is Prng {
-
     /*
       We store the state of the channel in uint256[3] as follows:
         [0] proof pointer.
         [1] prng digest.
         [2] prng counter.
     */
-    uint256 constant private CHANNEL_STATE_SIZE = 3;
+    uint256 private constant CHANNEL_STATE_SIZE = 3;
 
     event LogValue(bytes32 val);
 
@@ -21,16 +20,15 @@ contract VerifierChannel is Prng {
 
     event ReadHashEvent(bytes32 val);
 
-    function getPrngPtr(uint256 channelPtr)
-        internal pure
-        returns (uint256)
-    {
+    function getPrngPtr(uint256 channelPtr) internal pure returns (uint256) {
         return channelPtr + 0x20;
     }
 
-    function initChannel(uint256 channelPtr, uint256 proofPtr, bytes32 publicInputHash)
-        internal pure
-    {
+    function initChannel(
+        uint256 channelPtr,
+        uint256 proofPtr,
+        bytes32 publicInputHash
+    ) internal pure {
         assembly {
             // Skip 0x20 bytes length at the beginning of the proof.
             mstore(channelPtr, add(proofPtr, 0x20))
@@ -39,9 +37,11 @@ contract VerifierChannel is Prng {
         initPrng(getPrngPtr(channelPtr), publicInputHash);
     }
 
-    function sendFieldElements(uint256 channelPtr, uint256 nElements, uint256 targetPtr)
-        internal pure
-    {
+    function sendFieldElements(
+        uint256 channelPtr,
+        uint256 nElements,
+        uint256 targetPtr
+    ) internal pure {
         require(nElements < 0x1000000, "Overflow protection failed.");
         assembly {
             let PRIME := 0x800000000000011000000000000000000000000000000000000000000000001
@@ -51,12 +51,20 @@ contract VerifierChannel is Prng {
             let counterPtr := add(channelPtr, 0x40)
 
             let endPtr := add(targetPtr, mul(nElements, 0x20))
-            for { } lt(targetPtr, endPtr) { targetPtr := add(targetPtr, 0x20) } {
+            for {
+
+            } lt(targetPtr, endPtr) {
+                targetPtr := add(targetPtr, 0x20)
+            } {
                 // *targetPtr = getRandomFieldElement(getPrngPtr(channelPtr));
 
                 let fieldElement := PRIME
                 // while (fieldElement >= PRIME).
-                for { } iszero(lt(fieldElement, PRIME)) { } {
+                for {
+
+                } iszero(lt(fieldElement, PRIME)) {
+
+                } {
                     // keccak256(abi.encodePacked(digest, counter));
                     fieldElement := and(keccak256(digestPtr, 0x40), PRIME_MASK)
                     // *counterPtr += 1;
@@ -80,9 +88,12 @@ contract VerifierChannel is Prng {
       stride = 0x20*(number of interleaved arrays).
     */
     function sendRandomQueries(
-        uint256 channelPtr, uint256 count, uint256 mask, uint256 queriesOutPtr, uint256 stride)
-        internal pure returns (uint256)
-    {
+        uint256 channelPtr,
+        uint256 count,
+        uint256 mask,
+        uint256 queriesOutPtr,
+        uint256 stride
+    ) internal pure returns (uint256) {
         uint256 val;
         uint256 shift = 0;
         uint256 endPtr = queriesOutPtr;
@@ -133,10 +144,7 @@ contract VerifierChannel is Prng {
         return (endPtr - queriesOutPtr) / stride;
     }
 
-    function readBytes(uint256 channelPtr, bool mix)
-        internal pure
-        returns (bytes32)
-    {
+    function readBytes(uint256 channelPtr, bool mix) internal pure returns (bytes32) {
         uint256 proofPtr;
         bytes32 val;
 
@@ -161,18 +169,14 @@ contract VerifierChannel is Prng {
         return val;
     }
 
-    function readHash(uint256 channelPtr, bool mix)
-        internal pure
-        returns (bytes32)
-    {
+    function readHash(uint256 channelPtr, bool mix) internal pure returns (bytes32) {
         bytes32 val = readBytes(channelPtr, mix);
         // emit ReadHashEvent(val);
 
         return val;
     }
 
-    function readFieldElement(uint256 channelPtr, bool mix)
-        internal pure returns (uint256) {
+    function readFieldElement(uint256 channelPtr, bool mix) internal pure returns (uint256) {
         uint256 val = fromMontgomery(uint256(readBytes(channelPtr, mix)));
         // emit ReadFieldElementEvent(val);
 

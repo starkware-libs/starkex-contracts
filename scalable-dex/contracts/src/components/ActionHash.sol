@@ -7,18 +7,16 @@ import "../libraries/LibConstants.sol";
 /*
   Calculation action hash for the various forced actions in a generic manner.
 */
-contract ActionHash is MainStorage , LibConstants{
-
+contract ActionHash is MainStorage, LibConstants {
     function getActionHash(string memory actionName, bytes memory packedActionParameters)
         internal
         pure
-        returns(bytes32 actionHash)
+        returns (bytes32 actionHash)
     {
         actionHash = keccak256(abi.encodePacked(actionName, packedActionParameters));
     }
 
-    function setActionHash(bytes32 actionHash, bool premiumCost) internal
-    {
+    function setActionHash(bytes32 actionHash, bool premiumCost) internal {
         // The rate of forced trade requests is restricted.
         // First restriction is by capping the number of requests in a block.
         // User can override this cap by requesting with a permium flag set,
@@ -29,20 +27,19 @@ contract ActionHash is MainStorage , LibConstants{
         } else {
             require(
                 forcedRequestsInBlock[block.number] < MAX_FORCED_ACTIONS_REQS_PER_BLOCK,
-                "MAX_REQUESTS_PER_BLOCK_REACHED");
+                "MAX_REQUESTS_PER_BLOCK_REACHED"
+            );
             forcedRequestsInBlock[block.number] += 1;
         }
         forcedActionRequests[actionHash] = block.timestamp;
         actionHashList.push(actionHash);
     }
 
-    function getActionCount() external view returns(uint256)
-    {
+    function getActionCount() external view returns (uint256) {
         return actionHashList.length;
     }
 
-    function getActionHashByIndex(uint256 actionIndex) external view returns(bytes32)
-    {
+    function getActionHashByIndex(uint256 actionIndex) external view returns (bytes32) {
         require(actionIndex < actionHashList.length, "ACTION_INDEX_TOO_HIGH");
         return actionHashList[actionIndex];
     }

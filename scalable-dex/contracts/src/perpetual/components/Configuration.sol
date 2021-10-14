@@ -13,7 +13,6 @@ import "../../interfaces/MGovernance.sol";
   it shall be performed via upgrade using a dedicated External Initializing Contract (EIC).
 */
 abstract contract Configuration is PerpetualStorage, PerpetualConstants, MGovernance {
-
     // This key is used in for the actionsTimeLock.
     uint256 constant GLOBAL_CONFIG_KEY = uint256(~0);
 
@@ -35,10 +34,7 @@ abstract contract Configuration is PerpetualStorage, PerpetualConstants, MGovern
     /*
       Register global configuration hash, for applying once configuration delay time-lock expires.
     */
-    function registerGlobalConfigurationChange(bytes32 configHash)
-        external
-        onlyGovernance
-    {
+    function registerGlobalConfigurationChange(bytes32 configHash) external onlyGovernance {
         require(uint256(configHash) < K_MODULUS, "INVALID_CONFIG_HASH");
         bytes32 actionKey = keccak256(abi.encodePacked(GLOBAL_CONFIG_KEY, configHash));
 
@@ -49,10 +45,7 @@ abstract contract Configuration is PerpetualStorage, PerpetualConstants, MGovern
     /*
       Applies global configuration hash.
     */
-    function applyGlobalConfigurationChange(bytes32 configHash)
-        external
-        onlyGovernance
-    {
+    function applyGlobalConfigurationChange(bytes32 configHash) external onlyGovernance {
         bytes32 actionKey = keccak256(abi.encode(GLOBAL_CONFIG_KEY, configHash));
         uint256 activationTime = actionsTimeLock[actionKey];
         require(activationTime > 0, "CONFIGURATION_NOT_REGSITERED");
@@ -61,10 +54,7 @@ abstract contract Configuration is PerpetualStorage, PerpetualConstants, MGovern
         emit LogGlobalConfigurationApplied(configHash);
     }
 
-    function removeGlobalConfigurationChange(bytes32 configHash)
-        external
-        onlyGovernance
-    {
+    function removeGlobalConfigurationChange(bytes32 configHash) external onlyGovernance {
         bytes32 actionKey = keccak256(abi.encodePacked(GLOBAL_CONFIG_KEY, configHash));
         require(actionsTimeLock[actionKey] > 0, "CONFIGURATION_NOT_REGSITERED");
         delete actionsTimeLock[actionKey];

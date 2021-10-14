@@ -8,12 +8,8 @@ import "./IFactRegistry.sol";
   whether the fact registry has successfully registered any fact or is still empty of such facts.
 */
 interface IQueryableFactRegistry is IFactRegistry {
-
     /*
       Returns true if at least one fact has been registered.
     */
-    function hasRegisteredFact()
-        external view
-        returns(bool);
-
+    function hasRegisteredFact() external view returns (bool);
 }

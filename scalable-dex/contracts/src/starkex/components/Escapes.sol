@@ -28,6 +28,7 @@ abstract contract Escapes is StarkExStorage, MAcceptModifications, MFreezable, M
     function initialize(address escapeVerifier) internal {
         escapeVerifierAddress = escapeVerifier;
     }
+
     /*
       Escape when the contract is frozen.
     */
@@ -36,10 +37,7 @@ abstract contract Escapes is StarkExStorage, MAcceptModifications, MFreezable, M
         uint256 vaultId,
         uint256 assetId,
         uint256 quantizedAmount
-    )
-        external
-        onlyFrozen()
-    {
+    ) external onlyFrozen {
         require(!escapesUsed[vaultId], "ESCAPE_ALREADY_USED");
 
         // Escape can be used only once.
@@ -48,7 +46,14 @@ abstract contract Escapes is StarkExStorage, MAcceptModifications, MFreezable, M
 
         bytes32 claimHash = keccak256(
             abi.encode(
-        starkKey, assetId, quantizedAmount, getVaultRoot(), getVaultTreeHeight(), vaultId));
+                starkKey,
+                assetId,
+                quantizedAmount,
+                getVaultRoot(),
+                getVaultTreeHeight(),
+                vaultId
+            )
+        );
         IFactRegistry escapeVerifier = IFactRegistry(escapeVerifierAddress);
         require(escapeVerifier.isValid(claimHash), "ESCAPE_LACKS_PROOF");
 

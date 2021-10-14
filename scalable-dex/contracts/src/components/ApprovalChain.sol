@@ -15,7 +15,6 @@ import "../libraries/Common.sol";
   and slow time-locked removal of entries.
 */
 abstract contract ApprovalChain is MainStorage, MApprovalChain, MGovernance, MFreezable {
-
     using Addresses for address;
 
     event LogRemovalIntent(address entry, string entryId);
@@ -24,12 +23,10 @@ abstract contract ApprovalChain is MainStorage, MApprovalChain, MGovernance, MFr
 
     function addEntry(
         StarkExTypes.ApprovalChainData storage chain,
-        address entry, uint256 maxLength, string memory identifier)
-        internal
-        onlyGovernance()
-        notFrozen()
-        override
-    {
+        address entry,
+        uint256 maxLength,
+        string memory identifier
+    ) internal override onlyGovernance notFrozen {
         address[] storage list = chain.list;
         require(entry.isContract(), "ADDRESS_NOT_CONTRACT");
         bytes32 hash_real = keccak256(abi.encodePacked(Identity(entry).identify()));
@@ -42,7 +39,8 @@ abstract contract ApprovalChain is MainStorage, MApprovalChain, MGovernance, MFr
         // unless it's the first verifier in the chain.
         require(
             list.length == 0 || IQueryableFactRegistry(entry).hasRegisteredFact(),
-            "ENTRY_NOT_ENABLED");
+            "ENTRY_NOT_ENABLED"
+        );
         chain.list.push(entry);
         emit LogRegistered(entry, identifier);
     }
@@ -67,8 +65,7 @@ abstract contract ApprovalChain is MainStorage, MApprovalChain, MGovernance, MFr
         internal
         view
         override
-        returns
-        (uint256 idx)
+        returns (uint256 idx)
     {
         idx = findEntry(list, entry);
 
@@ -76,12 +73,10 @@ abstract contract ApprovalChain is MainStorage, MApprovalChain, MGovernance, MFr
     }
 
     function announceRemovalIntent(
-        StarkExTypes.ApprovalChainData storage chain, address entry, uint256 removalDelay)
-        internal
-        onlyGovernance()
-        notFrozen()
-        override
-    {
+        StarkExTypes.ApprovalChainData storage chain,
+        address entry,
+        uint256 removalDelay
+    ) internal override onlyGovernance notFrozen {
         safeFindEntry(chain.list, entry);
         require(block.timestamp + removalDelay > block.timestamp, "INVALID_REMOVAL_DELAY");
         require(chain.unlockedForRemovalTime[entry] == 0, "ALREADY_ANNOUNCED");
@@ -92,9 +87,9 @@ abstract contract ApprovalChain is MainStorage, MApprovalChain, MGovernance, MFr
 
     function removeEntry(StarkExTypes.ApprovalChainData storage chain, address entry)
         internal
-        onlyGovernance()
-        notFrozen()
         override
+        onlyGovernance
+        notFrozen
     {
         address[] storage list = chain.list;
         // Make sure entry exists.

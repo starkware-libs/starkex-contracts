@@ -81,20 +81,19 @@ contract OrderRegistry is MessageRegistry {
         uint256 nonce,
         uint256 expirationTimestamp
     ) external {
-        bytes32 orderHash =
-            calcL1LimitOrderHash(
-                tokenIdSell,
-                tokenIdBuy,
-                tokenIdFee,
-                amountSell,
-                amountBuy,
-                amountFee,
-                vaultIdSell,
-                vaultIdBuy,
-                vaultIdFee,
-                nonce,
-                expirationTimestamp
-            );
+        bytes32 orderHash = calcL1LimitOrderHash(
+            tokenIdSell,
+            tokenIdBuy,
+            tokenIdFee,
+            amountSell,
+            amountBuy,
+            amountFee,
+            vaultIdSell,
+            vaultIdBuy,
+            vaultIdFee,
+            nonce,
+            expirationTimestamp
+        );
         registerMessage(exchangeAddress, orderHash);
 
         emit LogL1LimitOrderRegistered(

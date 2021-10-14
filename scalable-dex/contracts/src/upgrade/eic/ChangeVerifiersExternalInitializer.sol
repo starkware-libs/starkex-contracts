@@ -11,11 +11,7 @@ import "../../libraries/LibConstants.sol";
   This contract is simple impelementation of an external initializing contract
   that removes all existing verifiers and committees and insall the ones provided in parameters.
 */
-contract ChangeVerifiersExternalInitializer is
-    ExternalInitializer,
-    MainStorage,
-    LibConstants
-{
+contract ChangeVerifiersExternalInitializer is ExternalInitializer, MainStorage, LibConstants {
     using Addresses for address;
     uint256 constant ENTRY_NOT_FOUND = uint256(~0);
 
@@ -48,8 +44,11 @@ contract ChangeVerifiersExternalInitializer is
         // ApprovalChain addEntry performs all the required checks for us.
         addEntry(verifiersChain, newVerifierAddress, MAX_VERIFIER_COUNT, verifierIdHash);
         addEntry(
-            availabilityVerifiersChain, newAvailabilityVerifierAddress,
-            MAX_VERIFIER_COUNT, availabilityVerifierIdHash);
+            availabilityVerifiersChain,
+            newAvailabilityVerifierAddress,
+            MAX_VERIFIER_COUNT,
+            availabilityVerifierIdHash
+        );
 
         emit LogExternalInitialize(data);
     }
@@ -61,9 +60,10 @@ contract ChangeVerifiersExternalInitializer is
     */
     function addEntry(
         StarkExTypes.ApprovalChainData storage chain,
-        address entry, uint256 maxLength, bytes32 hashExpectedId)
-        internal
-    {
+        address entry,
+        uint256 maxLength,
+        bytes32 hashExpectedId
+    ) internal {
         address[] storage list = chain.list;
         require(entry.isContract(), "ADDRESS_NOT_CONTRACT");
         bytes32 hashRealId = keccak256(abi.encodePacked(Identity(entry).identify()));
@@ -74,9 +74,7 @@ contract ChangeVerifiersExternalInitializer is
         chain.unlockedForRemovalTime[entry] = 0;
     }
 
-    function findEntry(address[] storage list, address entry)
-        internal view returns (uint256)
-    {
+    function findEntry(address[] storage list, address entry) internal view returns (uint256) {
         uint256 n_entries = list.length;
         for (uint256 i = 0; i < n_entries; i++) {
             if (list[i] == entry) {

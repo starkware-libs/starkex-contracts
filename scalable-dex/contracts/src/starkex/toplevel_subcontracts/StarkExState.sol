@@ -56,7 +56,9 @@ contract StarkExState is
         // Copies initializer values into initValues.
         InitializationArgStruct memory initValues;
         bytes memory _data = data;
-        assembly {initValues := add(32, _data)}
+        assembly {
+            initValues := add(32, _data)
+        }
 
         initGovernance();
         Operator.initialize();
@@ -82,6 +84,6 @@ contract StarkExState is
     }
 
     function identify() external pure override returns (string memory) {
-        return "StarkWare_StarkExState_2020_1";
+        return "StarkWare_StarkExState_2021_1";
     }
 }

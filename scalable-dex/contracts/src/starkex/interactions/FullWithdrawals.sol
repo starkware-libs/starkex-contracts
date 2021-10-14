@@ -40,11 +40,15 @@ abstract contract FullWithdrawals is
     StarkExConstants,
     MStarkExForcedActionState,
     MFreezable,
-    MKeyGetters {
+    MKeyGetters
+{
     event LogFullWithdrawalRequest(uint256 starkKey, uint256 vaultId);
 
-    function fullWithdrawalRequest(uint256 starkKey, uint256 vaultId) external notFrozen()
-        onlyStarkKeyOwner(starkKey) {
+    function fullWithdrawalRequest(uint256 starkKey, uint256 vaultId)
+        external
+        notFrozen
+        onlyKeyOwner(starkKey)
+    {
         // Verify vault ID in range.
         require(vaultId < STARKEX_VAULT_ID_UPPER_BOUND, "OUT_OF_RANGE_VAULT_ID");
 
@@ -55,7 +59,7 @@ abstract contract FullWithdrawals is
         emit LogFullWithdrawalRequest(starkKey, vaultId);
     }
 
-    function freezeRequest(uint256 starkKey, uint256 vaultId) external notFrozen() {
+    function freezeRequest(uint256 starkKey, uint256 vaultId) external notFrozen {
         // Verify vaultId in range.
         require(vaultId < STARKEX_VAULT_ID_UPPER_BOUND, "OUT_OF_RANGE_VAULT_ID");
 

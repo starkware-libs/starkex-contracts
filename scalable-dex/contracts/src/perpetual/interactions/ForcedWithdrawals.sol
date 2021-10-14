@@ -18,8 +18,8 @@ abstract contract ForcedWithdrawals is
         uint256 starkKey,
         uint256 vaultId,
         uint256 quantizedAmount,
-        bool premiumCost)
-        external notFrozen() onlyStarkKeyOwner(starkKey) {
+        bool premiumCost
+    ) external notFrozen onlyKeyOwner(starkKey) {
         // Verify vault ID in range.
         require(vaultId < PERPETUAL_POSITION_ID_UPPER_BOUND, "OUT_OF_RANGE_POSITION_ID");
         require(quantizedAmount < PERPETUAL_AMOUNT_UPPER_BOUND, "ILLEGAL_AMOUNT");
@@ -28,7 +28,8 @@ abstract contract ForcedWithdrawals is
         // User can either wait for pending one to be cleared, or issue one with different amount.
         require(
             getForcedWithdrawalRequest(starkKey, vaultId, quantizedAmount) == 0,
-            "REQUEST_ALREADY_PENDING");
+            "REQUEST_ALREADY_PENDING"
+        );
 
         // Start timer on escape request.
         setForcedWithdrawalRequest(starkKey, vaultId, quantizedAmount, premiumCost);
@@ -40,8 +41,8 @@ abstract contract ForcedWithdrawals is
     function freezeRequest(
         uint256 starkKey,
         uint256 vaultId,
-        uint256 quantizedAmount)
-        external notFrozen() {
+        uint256 quantizedAmount
+    ) external notFrozen {
         // Verify vaultId in range.
         require(vaultId < PERPETUAL_POSITION_ID_UPPER_BOUND, "OUT_OF_RANGE_POSITION_ID");
 

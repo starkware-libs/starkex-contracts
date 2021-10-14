@@ -7,7 +7,6 @@ import "../interfaces/BlockDirectCall.sol";
 import "../libraries/Common.sol";
 
 abstract contract MainDispatcherBase is IDispatcherBase, BlockDirectCall {
-
     using Addresses for address;
 
     /*
@@ -36,13 +35,13 @@ abstract contract MainDispatcherBase is IDispatcherBase, BlockDirectCall {
             returndatacopy(0, 0, returndatasize())
 
             switch result
-                // delegatecall returns 0 on error.
-                case 0 {
-                    revert(0, returndatasize())
-                }
-                default {
-                    return(0, returndatasize())
-                }
+            // delegatecall returns 0 on error.
+            case 0 {
+                revert(0, returndatasize())
+            }
+            default {
+                return(0, returndatasize())
+            }
         }
     }
 
@@ -107,37 +106,33 @@ abstract contract MainDispatcherBase is IDispatcherBase, BlockDirectCall {
               initializing data and passes it to the subcontract's initialize function.
 
     */
-    // NOLINTNEXTLINE: external-function.
-    function initialize(bytes memory data) public virtual
-        notCalledDirectly
-    {
+    function initialize(bytes calldata data) external virtual notCalledDirectly {
         // Number of sub-contracts.
         uint256 nSubContracts = getNumSubcontracts();
 
         // We support currently 4 bits per contract, i.e. 16, reserving 00 leads to 15.
         require(nSubContracts <= 15, "TOO_MANY_SUB_CONTRACTS");
 
-        // Init data MUST include addresses for all sub-contracts + EIC.
-        require(data.length >= 32 * (nSubContracts + 1), "SUB_CONTRACTS_NOT_PROVIDED");
-
-        // Size of passed data, excluding sub-contract addresses.
-        uint256 additionalDataSize = data.length - 32 * (nSubContracts + 1);
-
         // Sum of subcontract initializers. Aggregated for verification near the end.
         uint256 totalInitSizes = 0;
 
         // Offset (within data) of sub-contract initializer vector.
-        // Just past the sub-contract addresses.
+        // Just past the sub-contract+eic addresses.
         uint256 initDataContractsOffset = 32 * (nSubContracts + 1);
+
+        // Init data MUST include addresses for all sub-contracts + EIC.
+        require(data.length >= initDataContractsOffset, "SUB_CONTRACTS_NOT_PROVIDED");
+
+        // Size of passed data, excluding sub-contract addresses.
+        uint256 additionalDataSize = data.length - initDataContractsOffset;
 
         // Extract & update contract addresses.
         for (uint256 nContract = 1; nContract <= nSubContracts; nContract++) {
-            address contractAddress;
-
             // Extract sub-contract address.
-            assembly {
-                contractAddress := mload(add(data, mul(32, nContract)))
-            }
+            address contractAddress = abi.decode(
+                data[32 * (nContract - 1):32 * nContract],
+                (address)
+            );
 
             validateSubContractIndex(nContract, contractAddress);
 
@@ -146,16 +141,14 @@ abstract contract MainDispatcherBase is IDispatcherBase, BlockDirectCall {
         }
 
         // Check if we have an external initializer contract.
-        address externalInitializerAddr;
-
-        // 2. Extract sub-contract address, again. It's cheaper than reading from storage.
-        assembly {
-            externalInitializerAddr := mload(add(data, mul(32, add(nSubContracts, 1))))
-        }
+        address externalInitializerAddr = abi.decode(
+            data[initDataContractsOffset - 32:initDataContractsOffset],
+            (address)
+        );
 
         // 3(a). Yield to EIC initialization.
         if (externalInitializerAddr != address(0x0)) {
-            callExternalInitializer(data, externalInitializerAddr, additionalDataSize);
+            callExternalInitializer(externalInitializerAddr, data[initDataContractsOffset:]);
             return;
         }
 
@@ -173,21 +166,18 @@ abstract contract MainDispatcherBase is IDispatcherBase, BlockDirectCall {
 
         // III. Loops through the subcontracts, extracts their data and calls their initializer.
         for (uint256 nContract = 1; nContract <= nSubContracts; nContract++) {
-            address contractAddress;
-
-            // Extract sub-contract address, again. It's cheaper than reading from storage.
-            assembly {
-                contractAddress := mload(add(data, mul(32, nContract)))
-            }
-            // The initializerSize returns the expected size, with respect also to the state status.
-            // i.e. different size if it's a first init (clean state) or upgrade init (alive state).
-            // NOLINTNEXTLINE: calls-loop.
+            // Extract sub-contract address.
+            address contractAddress = abi.decode(
+                data[32 * (nContract - 1):32 * nContract],
+                (address)
+            );
 
             // The initializerSize is called via delegatecall, so that it can relate to the state,
             // and not only to the new contract code. (e.g. return 0 if state-intialized else 192).
-            // NOLINTNEXTLINE: reentrancy-events low-level-calls calls-loop.
+            // NOLINTNEXTLINE: controlled-delegatecall low-level-calls calls-loop.
             (bool success, bytes memory returndata) = contractAddress.delegatecall(
-                abi.encodeWithSelector(SubContractor(contractAddress).initializerSize.selector));
+                abi.encodeWithSelector(SubContractor(contractAddress).initializerSize.selector)
+            );
             require(success, string(returndata));
             uint256 initSize = abi.decode(returndata, (uint256));
             require(initSize <= additionalDataSize, "INVALID_INITIALIZER_SIZE");
@@ -197,61 +187,27 @@ abstract contract MainDispatcherBase is IDispatcherBase, BlockDirectCall {
                 continue;
             }
 
-            // Extract sub-contract init vector.
-            bytes memory subContractInitData = new bytes(initSize);
-            for (uint256 trgOffset = 32; trgOffset <= initSize; trgOffset += 32) {
-                assembly {
-                    mstore(
-                        add(subContractInitData, trgOffset),
-                        mload(add(add(data, trgOffset), initDataContractsOffset))
-                    )
-                }
-            }
-
             // Call sub-contract initializer.
-            // NOLINTNEXTLINE: low-level-calls.
+            // NOLINTNEXTLINE: controlled-delegatecall calls-loop.
             (success, returndata) = contractAddress.delegatecall(
-                abi.encodeWithSelector(this.initialize.selector, subContractInitData)
+                abi.encodeWithSelector(
+                    this.initialize.selector,
+                    data[initDataContractsOffset:initDataContractsOffset + initSize]
+                )
             );
             require(success, string(returndata));
             totalInitSizes += initSize;
             initDataContractsOffset += initSize;
         }
-        require(
-            additionalDataSize == totalInitSizes,
-            "MISMATCHING_INIT_DATA_SIZE");
+        require(additionalDataSize == totalInitSizes, "MISMATCHING_INIT_DATA_SIZE");
     }
 
-    function callExternalInitializer(
-        bytes memory data,
-        address externalInitializerAddr,
-        uint256 dataSize)
-        private {
+    function callExternalInitializer(address externalInitializerAddr, bytes calldata extInitData)
+        private
+    {
         require(externalInitializerAddr.isContract(), "NOT_A_CONTRACT");
-        require(dataSize <= data.length, "INVALID_DATA_SIZE");
-        bytes memory extInitData = new bytes(dataSize);
 
-        // Prepare memcpy pointers.
-        uint256 srcDataOffset = 32 + data.length - dataSize;
-        uint256 srcData;
-        uint256 trgData;
-
-        assembly {
-            srcData := add(data, srcDataOffset)
-            trgData := add(extInitData, 32)
-        }
-
-        // Copy initializer data to be passed to the EIC.
-        for (uint256 seek = 0; seek < dataSize; seek += 32) {
-            assembly {
-                mstore(
-                    add(trgData, seek),
-                    mload(add(srcData, seek))
-                )
-            }
-        }
-
-        // NOLINTNEXTLINE: low-level-calls.
+        // NOLINTNEXTLINE: low-level-calls, controlled-delegatecall.
         (bool success, bytes memory returndata) = externalInitializerAddr.delegatecall(
             abi.encodeWithSelector(this.initialize.selector, extInitData)
         );

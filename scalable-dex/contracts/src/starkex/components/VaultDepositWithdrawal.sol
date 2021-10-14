@@ -75,6 +75,7 @@ abstract contract VaultDepositWithdrawal is
         return fromQuantized(assetId, getQuantizedVaultBalance(ethKey, assetId, vaultId));
     }
 
+    // NOLINTNEXTLINE: locked-ether.
     function depositEthToVault(uint256 assetId, uint256 vaultId) external payable {
         require(isEther(assetId), "INVALID_ASSET_TYPE");
         uint256 quantizedAmount = toQuantized(assetId, msg.value);
@@ -119,5 +120,4 @@ abstract contract VaultDepositWithdrawal is
             quantizedAmount
         );
     }
-
 }

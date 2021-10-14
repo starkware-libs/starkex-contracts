@@ -10,7 +10,6 @@ import "../../components/Users.sol";
 import "../../components/MainGovernance.sol";
 import "../../interactions/AcceptModifications.sol";
 import "../../interactions/Deposits.sol";
-import "../../interactions/CompositeActions.sol";
 import "../../interactions/TokenAssetData.sol";
 import "../../interactions/TokenQuantization.sol";
 import "../../interactions/Withdrawals.sol";
@@ -29,7 +28,6 @@ contract PerpetualTokensAndRamping is
     KeyGetters,
     Users,
     Deposits,
-    CompositeActions,
     Withdrawals
 {
     function initialize(
@@ -38,11 +36,11 @@ contract PerpetualTokensAndRamping is
         revert("NOT_IMPLEMENTED");
     }
 
-    function initializerSize() external override view returns (uint256) {
+    function initializerSize() external view override returns (uint256) {
         return 0;
     }
 
-    function identify() external override pure returns (string memory) {
+    function identify() external pure override returns (string memory) {
         return "StarkWare_PerpetualTokensAndRamping_2020_1";
     }
 }

@@ -87,18 +87,20 @@ contract ForcedTradeActionState is PerpetualStorage, ActionHash, MForcedTradeAct
         uint256 nonce
     ) public view override returns (uint256) {
         return
-            forcedActionRequests[forcedTradeActionHash(
-                starkKeyA,
-                starkKeyB,
-                vaultIdA,
-                vaultIdB,
-                collateralAssetId,
-                syntheticAssetId,
-                amountCollateral,
-                amountSynthetic,
-                aIsBuyingSynthetic,
-                nonce
-            )];
+            forcedActionRequests[
+                forcedTradeActionHash(
+                    starkKeyA,
+                    starkKeyB,
+                    vaultIdA,
+                    vaultIdB,
+                    collateralAssetId,
+                    syntheticAssetId,
+                    amountCollateral,
+                    amountSynthetic,
+                    aIsBuyingSynthetic,
+                    nonce
+                )
+            ];
     }
 
     function setForcedTradeRequest(

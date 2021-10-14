@@ -10,8 +10,7 @@ abstract contract MFreezable {
     /*
       Forbids calling the function if the exchange is frozen.
     */
-    modifier notFrozen()
-    {
+    modifier notFrozen() {
         require(!isFrozen(), "STATE_IS_FROZEN");
         _;
     }
@@ -21,8 +20,7 @@ abstract contract MFreezable {
     /*
       Allows calling the function only if the exchange is frozen.
     */
-    modifier onlyFrozen()
-    {
+    modifier onlyFrozen() {
         require(isFrozen(), "STATE_NOT_FROZEN");
         _;
     }

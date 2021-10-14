@@ -9,11 +9,11 @@ import "../../interfaces/IFactRegistry.sol";
   specific height and root.
 */
 contract EscapeVerifier is IFactRegistry {
-
     // Note that those values are hardcoded in the assembly.
-    uint256 constant internal N_TABLES = 63;
+    uint256 internal constant N_TABLES = 63;
 
     address[N_TABLES] lookupTables;
+
     constructor(address[N_TABLES] memory tables) public {
         lookupTables = tables;
 
@@ -25,7 +25,6 @@ contract EscapeVerifier is IFactRegistry {
                 // the lookup table address is taken into account.
                 revert(0, 0)
             }
-
         }
     }
 
@@ -150,8 +149,10 @@ contract EscapeVerifier is IFactRegistry {
             }
 
             let starkKey := shr(4, mload(proof))
-            let assetId := and(mload(add(proof, 0x1f)),
-                               0x0fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff)
+            let assetId := and(
+                mload(add(proof, 0x1f)),
+                0x0fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+            )
 
             let primeMinusOne := 0x800000000000011000000000000000000000000000000000000000000000000
             if or(gt(starkKey, primeMinusOne), gt(assetId, primeMinusOne)) {
@@ -163,14 +164,33 @@ contract EscapeVerifier is IFactRegistry {
 
             // Allocate EC points table with dimensions N_TABLES by N_HASHES.
             let table := mload(0x40)
-            let tableEnd := add(table, mul(rowSize, /*N_TABLES*/63))
+            let tableEnd := add(
+                table,
+                mul(
+                    rowSize,
+                    // N_TABLES=
+                    63
+                )
+            )
 
             // for i = 0..N_TABLES-1, fill the i'th row in the table.
-            for { let i := 0 } lt(i, 63) { i := add(i, 1)} {
-                if iszero(staticcall(gas(), sload(i), add(proof, i), rowSize,
-                                     add(table, mul(i, rowSize)), rowSize)) {
-                   returndatacopy(0, 0, returndatasize())
-                   revert(0, returndatasize())
+            for {
+                let i := 0
+            } lt(i, 63) {
+                i := add(i, 1)
+            } {
+                if iszero(
+                    staticcall(
+                        gas(),
+                        sload(i),
+                        add(proof, i),
+                        rowSize,
+                        add(table, mul(i, rowSize)),
+                        rowSize
+                    )
+                ) {
+                    returndatacopy(0, 0, returndatasize())
+                    revert(0, returndatasize())
                 }
             }
 
@@ -186,7 +206,11 @@ contract EscapeVerifier is IFactRegistry {
             // Instead of k we use offset := k * sizeof(EC point).
             // Additonally we use ptr := offset + j * rowSize to ge over the EC points we want
             // to sum.
-            for { } lt(offset, rowSize) { } {
+            for {
+
+            } lt(offset, rowSize) {
+
+            } {
                 // Init (aX, aY, aZ) to the first value in the current column and sum over the
                 // column.
                 ptr := add(table, offset)
@@ -194,9 +218,11 @@ contract EscapeVerifier is IFactRegistry {
                 let aX := mload(ptr)
                 let aY := mload(add(ptr, 0x20))
 
-                for { ptr := add(ptr, rowSize) } lt(ptr, tableEnd)
-                    { ptr:= add(ptr, rowSize) } {
-
+                for {
+                    ptr := add(ptr, rowSize)
+                } lt(ptr, tableEnd) {
+                    ptr := add(ptr, rowSize)
+                } {
                     let bX := mload(ptr)
                     let bY := mload(add(ptr, 0x20))
 
@@ -217,11 +243,11 @@ contract EscapeVerifier is IFactRegistry {
                     // (xN/xD) = ((sN)^2/(sD)^2) - (aX/aZ) - (bX/1).
                     // xN = (sN)^2 * aZ - aX * (sD)^2 - bX * (sD)^2 * aZ.
                     // = (sN)^2 * aZ + (sD^2) (bX * (-aZ) - aX).
-                    let xN := addmod(mulmod(mulmod(sN, sN, PRIME), aZ, PRIME),
-                                    mulmod(sSqrD,
-                                            add(minusAZBX, sub(PRIME, aX)),
-                                            PRIME),
-                                    PRIME)
+                    let xN := addmod(
+                        mulmod(mulmod(sN, sN, PRIME), aZ, PRIME),
+                        mulmod(sSqrD, add(minusAZBX, sub(PRIME, aX)), PRIME),
+                        PRIME
+                    )
 
                     // xD = (sD)^2 * aZ.
                     let xD := mulmod(sSqrD, aZ, PRIME)
@@ -231,12 +257,11 @@ contract EscapeVerifier is IFactRegistry {
                     // aZ' = sD*xD.
                     aZ := mulmod(sD, xD, PRIME)
                     // aY' = sN*(bX * xD - xN) - bY*z = -bY * z + sN * (-xN + xD*bX).
-                    aY := addmod(sub(PRIME, mulmod(bY, aZ, PRIME)),
-                                    mulmod(sN,
-                                    add(sub(PRIME, xN),
-                                        mulmod(xD, bX, PRIME)),
-                                    PRIME),
-                                PRIME)
+                    aY := addmod(
+                        sub(PRIME, mulmod(bY, aZ, PRIME)),
+                        mulmod(sN, add(sub(PRIME, xN), mulmod(xD, bX, PRIME)), PRIME),
+                        PRIME
+                    )
 
                     // As the value of the affine x coordinate is xN/xD and z=sD*xD,
                     // the projective x coordinate is xN*sD.
@@ -254,9 +279,11 @@ contract EscapeVerifier is IFactRegistry {
                 // It will be replaced by right_node if necessary.
                 let expected_hash := shr(4, mload(add(proof, offset)))
 
-                let other_node := and(  // right_node
+                let other_node := and(
+                    // right_node
                     mload(add(proof, add(offset, 0x1f))),
-                    0x0fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff)
+                    0x0fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+                )
 
                 // Make sure both nodes are in the range [0, PRIME - 1].
                 if or(gt(expected_hash, primeMinusOne), gt(other_node, primeMinusOne)) {
@@ -276,20 +303,25 @@ contract EscapeVerifier is IFactRegistry {
                 // implies knowing a non-trivial linear equation on the random points defining the
                 // hash function.
                 if iszero(aZ) {
-                   raise_error("aZ is zero.", 11)
+                    raise_error("aZ is zero.", 11)
                 }
 
-                if sub(aX, mulmod(expected_hash, aZ, PRIME))/*!=0*/ {
-                   raise_error("Bad Merkle path.", 16)
+                if sub(aX, mulmod(expected_hash, aZ, PRIME)) {
+                    // !=0
+                    raise_error("Bad Merkle path.", 16)
                 }
                 nodeSelectors := shr(1, nodeSelectors)
             }
 
             mstore(0, starkKey)
-            mstore(0x20,  assetId)
-            mstore(0x40,  // quantizedAmount
-                   and(mload(add(proof, 0x5f)),
-                       0x0fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff))
+            mstore(0x20, assetId)
+            mstore(
+                0x40, // quantizedAmount
+                and(
+                    mload(add(proof, 0x5f)),
+                    0x0fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+                )
+            )
             mstore(0x60, shr(4, mload(add(proof, rowSize)))) // vaultRoot
             mstore(0x80, height)
             mstore(0xa0, vaultId)
@@ -301,14 +333,11 @@ contract EscapeVerifier is IFactRegistry {
         }
     }
 
-
     /*
       Checks the validity status of the claim corresponding to:
       keccak256(abi.encode(starkKey, assetId, quantizedAmount, root, height, vaultId)).
     */
-    function isValid(bytes32 hash)
-    external view override returns(bool val)
-    {
+    function isValid(bytes32 hash) external view override returns (bool val) {
         assembly {
             val := sload(hash)
         }

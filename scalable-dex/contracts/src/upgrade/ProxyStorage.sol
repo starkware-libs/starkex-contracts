@@ -9,16 +9,15 @@ import "../components/GovernanceStorage.sol";
   to prevent collision hazard.
 */
 contract ProxyStorage is GovernanceStorage {
-
-    // NOLINTNEXTLINE: naming-convention.
-    mapping (address => bytes32) internal initializationHash_DEPRECATED;
+    // NOLINTNEXTLINE: naming-convention uninitialized-state.
+    mapping(address => bytes32) internal initializationHash_DEPRECATED;
 
     // The time after which we can switch to the implementation.
     // Hash(implementation, data, finalize) => time.
-    mapping (bytes32 => uint256) internal enabledTime;
+    mapping(bytes32 => uint256) internal enabledTime;
 
     // A central storage of the flags whether implementation has been initialized.
     // Note - it can be used flexibly enough to accommodate multiple levels of initialization
     // (i.e. using different key salting schemes for different initialization levels).
-    mapping (bytes32 => bool) internal initialized;
+    mapping(bytes32 => bool) internal initialized;
 }

@@ -11,7 +11,8 @@ pragma solidity ^0.6.11;
 */
 abstract contract BlockDirectCall {
     bytes32 immutable UNIQUE_SAFEGUARD_SLOT; // NOLINT naming-convention.
-    constructor( ) internal {
+
+    constructor() internal {
         // The slot is pseudo-random to allow hierarchy of contracts with guarded functions.
         bytes32 slot = keccak256(abi.encode(this, block.timestamp, gasleft()));
         UNIQUE_SAFEGUARD_SLOT = slot;
@@ -21,7 +22,8 @@ abstract contract BlockDirectCall {
     }
 
     modifier notCalledDirectly() {
-        { // Prevent too many local variables in stack.
+        {
+            // Prevent too many local variables in stack.
             uint256 safeGuardValue;
             bytes32 slot = UNIQUE_SAFEGUARD_SLOT;
             assembly {

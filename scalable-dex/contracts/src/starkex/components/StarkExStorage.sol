@@ -20,13 +20,13 @@ contract StarkExStorage is MainStorage {
 
     // Enforces the minimal balance requirement (as output by Cairo) on onchain vault updates.
     // When disabled, flash loans are enabled.
-    bool strictVaultBalancePolicy;
+    bool strictVaultBalancePolicy; // NOLINT: constable-states, uninitialized-state.
 
     // The default time, in seconds, that an onchain vault is locked for withdrawal after a deposit.
-    uint256 public defaultVaultWithdrawalLock;
+    uint256 public defaultVaultWithdrawalLock; // NOLINT: constable-states.
 
     // Address of the message registry contract that is used to sign and verify L1 orders.
-    address public orderRegistryAddress;
+    address public orderRegistryAddress; // NOLINT: constable-states.
 
     // Reserved storage space for Extensibility.
     // Every added MUST be added above the end gap, and the __endGap size must be reduced

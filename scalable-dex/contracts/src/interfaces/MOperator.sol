@@ -2,23 +2,14 @@
 pragma solidity ^0.6.11;
 
 abstract contract MOperator {
-    function isOperator(address testedOperator)
-        public
-        view
-        virtual
-        returns (bool);
+    function isOperator(address testedOperator) public view virtual returns (bool);
 
-    modifier onlyOperator()
-    {
+    modifier onlyOperator() {
         require(isOperator(msg.sender), "ONLY_OPERATOR");
         _;
     }
 
-    function registerOperator(address newOperator)
-        external
-        virtual;
+    function registerOperator(address newOperator) external virtual;
 
-    function unregisterOperator(address removedOperator)
-        virtual
-        external;
+    function unregisterOperator(address removedOperator) external virtual;
 }

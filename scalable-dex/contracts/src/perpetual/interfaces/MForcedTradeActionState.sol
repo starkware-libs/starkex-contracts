@@ -12,8 +12,8 @@ abstract contract MForcedTradeActionState {
         uint256 amountCollateral,
         uint256 amountSynthetic,
         bool aIsBuyingSynthetic,
-        uint256 nonce)
-        internal pure virtual returns (bytes32);
+        uint256 nonce
+    ) internal pure virtual returns (bytes32);
 
     function clearForcedTradeRequest(
         uint256 starkKeyA,
@@ -25,8 +25,8 @@ abstract contract MForcedTradeActionState {
         uint256 amountCollateral,
         uint256 amountSynthetic,
         bool aIsBuyingSynthetic,
-        uint256 nonce)
-        internal virtual;
+        uint256 nonce
+    ) internal virtual;
 
     // NOLINTNEXTLINE: external-function.
     function getForcedTradeRequest(
@@ -39,8 +39,8 @@ abstract contract MForcedTradeActionState {
         uint256 amountCollateral,
         uint256 amountSynthetic,
         bool aIsBuyingSynthetic,
-        uint256 nonce)
-        public view virtual returns (uint256 res);
+        uint256 nonce
+    ) public view virtual returns (uint256 res);
 
     function setForcedTradeRequest(
         uint256 starkKeyA,
@@ -53,6 +53,6 @@ abstract contract MForcedTradeActionState {
         uint256 amountSynthetic,
         bool aIsBuyingSynthetic,
         uint256 nonce,
-        bool premiumCost)
-        internal virtual;
+        bool premiumCost
+    ) internal virtual;
 }

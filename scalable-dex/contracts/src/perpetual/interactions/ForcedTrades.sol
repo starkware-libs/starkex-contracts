@@ -42,7 +42,7 @@ abstract contract ForcedTrades is
         uint256 nonce,
         bytes calldata signature,
         bool premiumCost
-    ) external notFrozen() onlyStarkKeyOwner(starkKeyA) {
+    ) external notFrozen onlyKeyOwner(starkKeyA) {
         require(vaultIdA < PERPETUAL_POSITION_ID_UPPER_BOUND, "OUT_OF_RANGE_POSITION_ID");
         require(vaultIdB < PERPETUAL_POSITION_ID_UPPER_BOUND, "OUT_OF_RANGE_POSITION_ID");
 
@@ -112,7 +112,7 @@ abstract contract ForcedTrades is
         uint256 amountSynthetic,
         bool aIsBuyingSynthetic,
         uint256 nonce
-    ) external notFrozen() {
+    ) external notFrozen {
         // Verify vaultId in range.
         require(vaultIdA < PERPETUAL_POSITION_ID_UPPER_BOUND, "OUT_OF_RANGE_POSITION_ID");
         require(vaultIdB < PERPETUAL_POSITION_ID_UPPER_BOUND, "OUT_OF_RANGE_POSITION_ID");
@@ -149,7 +149,6 @@ abstract contract ForcedTrades is
         uint256 nonce,
         bytes memory signature
     ) internal view {
-
         bytes32 actionHash = forcedTradeActionHash(
             starkKeyA,
             starkKeyB,
@@ -163,19 +162,21 @@ abstract contract ForcedTrades is
             nonce
         );
 
-        bytes32 signedData = keccak256(abi.encodePacked(actionHash,submissionExpirationTime));
+        bytes32 signedData = keccak256(abi.encodePacked(actionHash, submissionExpirationTime));
         address signer;
         {
-        uint8 v = uint8(signature[64]);
-        bytes32 r;
-        bytes32 s;
+            uint8 v = uint8(signature[64]);
+            bytes32 r;
+            bytes32 s;
 
-        assembly {
-            r := mload(add(signature, 32))
-            s := mload(add(signature, 64))
+            assembly {
+                r := mload(add(signature, 32))
+                s := mload(add(signature, 64))
+            }
+            signer = ecrecover(signedData, v, r, s);
         }
-        signer = ecrecover(signedData, v, r, s);
-        }
-        require(signer == getEthKey(starkKeyB), "INVALID_SIGNATURE");
+        address starkKeyBOwner = getEthKey(starkKeyB);
+        require(starkKeyBOwner != address(0x0), "USER_B_UNREGISTERED");
+        require(signer == starkKeyBOwner, "INVALID_SIGNATURE");
     }
 }

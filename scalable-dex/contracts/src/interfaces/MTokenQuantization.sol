@@ -9,11 +9,7 @@ abstract contract MTokenQuantization {
         returns (uint256 amount);
 
     // NOLINTNEXTLINE: external-function.
-    function getQuantum(uint256 presumedAssetType)
-        public
-        view
-        virtual
-        returns (uint256 quantum);
+    function getQuantum(uint256 presumedAssetType) public view virtual returns (uint256 quantum);
 
     function toQuantized(uint256 presumedAssetType, uint256 amount)
         internal

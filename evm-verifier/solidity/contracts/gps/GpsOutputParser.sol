@@ -2,13 +2,13 @@
 pragma solidity ^0.6.11;
 
 import "../components/FactRegistry.sol";
-import "../cpu/CpuPublicInputOffsets.sol";
+import "../cpu/CpuPublicInputOffsetsBase.sol";
 
 /*
   A utility contract to parse the GPS output.
   See registerGpsFacts for more details.
 */
-contract GpsOutputParser is CpuPublicInputOffsets, FactRegistry {
+contract GpsOutputParser is CpuPublicInputOffsetsBase, FactRegistry {
     uint256 internal constant METADATA_TASKS_OFFSET = 1;
     uint256 internal constant METADATA_OFFSET_TASK_OUTPUT_SIZE = 0;
     uint256 internal constant METADATA_OFFSET_TASK_PROGRAM_HASH = 1;
@@ -60,11 +60,15 @@ contract GpsOutputParser is CpuPublicInputOffsets, FactRegistry {
       [(3, 2), (0, 2)] will create a Merkle tree with a root whose left child is a leaf and
       right child has two leaf children.
 
-      Assumptions: taskMetadata and cairoAuxInput are verified externaly.
+      Assumptions: taskMetadata and cairoAuxInput are verified externally.
     */
-    function registerGpsFacts(uint256[] memory taskMetadata, uint256[] memory cairoAuxInput)
-        internal
-    {
+    function registerGpsFacts(
+        uint256[] calldata taskMetadata,
+        uint256[] memory publicMemoryPages,
+        uint256 outputStartAddress
+    ) internal {
+        uint256 totalNumPages = publicMemoryPages[0];
+
         // Allocate some of the loop variables here to avoid the stack-too-deep error.
         uint256 task;
         uint256 nTreePairs;
@@ -73,8 +77,7 @@ contract GpsOutputParser is CpuPublicInputOffsets, FactRegistry {
         // Contains fact hash with the relevant memory pages' hashes.
         // Size is bounded from above with the total number of pages. Three extra places are
         // dedicated for the fact hash and the array address and length.
-        uint256[] memory pageHashesLogData = new uint256[](
-            cairoAuxInput[OFFSET_N_PUBLIC_MEMORY_PAGES] + 3);
+        uint256[] memory pageHashesLogData = new uint256[](totalNumPages + 3);
         // Relative address to the beginning of the memory pages' hashes in the array.
         pageHashesLogData[1] = 0x40;
 
@@ -82,51 +85,71 @@ contract GpsOutputParser is CpuPublicInputOffsets, FactRegistry {
 
         // Skip the 3 first output cells which contain the number of tasks and the size and
         // program hash of the first task. curAddr points to the output of the first task.
-        uint256 curAddr = cairoAuxInput[OFFSET_OUTPUT_BEGIN_ADDR] + 3;
+        uint256 curAddr = outputStartAddress + 3;
 
         // Skip the main page.
         uint256 curPage = FIRST_CONTINUOUS_PAGE_INDEX;
 
         // Bound the size of the stack by the total number of pages.
-        uint256[] memory nodeStack = new uint256[](
-            NODE_STACK_ITEM_SIZE * cairoAuxInput[OFFSET_N_PUBLIC_MEMORY_PAGES]);
+        uint256[] memory nodeStack = new uint256[](NODE_STACK_ITEM_SIZE * totalNumPages);
 
-        // Copy to avoid the "stack too deep" error.
+        // Copy to memory to workaround the "stack too deep" error.
         uint256[] memory taskMetadataCopy = taskMetadata;
-        uint256[] memory cairoAuxInputCopy = cairoAuxInput;
+
+        uint256[PAGE_INFO_SIZE] memory pageInfoPtr;
+        assembly {
+            // Skip the array length and the first page.
+            pageInfoPtr := add(add(publicMemoryPages, 0x20), PAGE_INFO_SIZE_IN_BYTES)
+        }
 
         // Register the fact for each task.
         for (task = 0; task < nTasks; task++) {
             uint256 curOffset = 0;
             uint256 firstPageOfTask = curPage;
-            nTreePairs = taskMetadataCopy[
-                taskMetadataOffset + METADATA_OFFSET_TASK_N_TREE_PAIRS];
+            nTreePairs = taskMetadataCopy[taskMetadataOffset + METADATA_OFFSET_TASK_N_TREE_PAIRS];
 
             // Build the Merkle tree using a stack (see the function documentation) to compute
             // the fact.
             uint256 nodeStackLen = 0;
             for (uint256 treePair = 0; treePair < nTreePairs; treePair++) {
-                // Add n_pages to the stack of nodes.
+                // Add nPages to the stack of nodes.
                 uint256 nPages = taskMetadataCopy[
-                    taskMetadataOffset + METADATA_TASK_HEADER_SIZE + 2 * treePair +
-                    METADATA_OFFSET_TREE_PAIR_N_PAGES];
+                    taskMetadataOffset +
+                        METADATA_TASK_HEADER_SIZE +
+                        2 *
+                        treePair +
+                        METADATA_OFFSET_TREE_PAIR_N_PAGES
+                ];
                 require(nPages < 2**20, "Invalid value of n_pages in tree structure.");
 
                 for (uint256 i = 0; i < nPages; i++) {
                     (uint256 pageSize, uint256 pageHash) = pushPageToStack(
-                        curPage, curAddr, curOffset, nodeStack, nodeStackLen, cairoAuxInputCopy);
+                        pageInfoPtr,
+                        curAddr,
+                        curOffset,
+                        nodeStack,
+                        nodeStackLen
+                    );
                     pageHashesLogData[curPage - firstPageOfTask + 3] = pageHash;
                     curPage += 1;
                     nodeStackLen += 1;
                     curAddr += pageSize;
                     curOffset += pageSize;
+
+                    assembly {
+                        pageInfoPtr := add(pageInfoPtr, PAGE_INFO_SIZE_IN_BYTES)
+                    }
                 }
 
                 // Pop the top n_nodes, construct a parent node for them, and push it back to the
                 // stack.
                 uint256 nNodes = taskMetadataCopy[
-                    taskMetadataOffset + METADATA_TASK_HEADER_SIZE + 2 * treePair +
-                    METADATA_OFFSET_TREE_PAIR_N_NODES];
+                    taskMetadataOffset +
+                        METADATA_TASK_HEADER_SIZE +
+                        2 *
+                        treePair +
+                        METADATA_OFFSET_TREE_PAIR_N_NODES
+                ];
                 if (nNodes != 0) {
                     nodeStackLen = constructNode(nodeStack, nodeStackLen, nNodes);
                 }
@@ -134,39 +157,42 @@ contract GpsOutputParser is CpuPublicInputOffsets, FactRegistry {
             require(nodeStackLen == 1, "Node stack must contain exactly one item.");
 
             uint256 programHash = taskMetadataCopy[
-                taskMetadataOffset + METADATA_OFFSET_TASK_PROGRAM_HASH];
+                taskMetadataOffset + METADATA_OFFSET_TASK_PROGRAM_HASH
+            ];
 
             // Verify that the sizes of the pages correspond to the task output, to make
             // sure that the computed hash is indeed the hash of the entire output of the task.
             {
-            uint256 outputSize = taskMetadataCopy[
-                taskMetadataOffset + METADATA_OFFSET_TASK_OUTPUT_SIZE];
+                uint256 outputSize = taskMetadataCopy[
+                    taskMetadataOffset + METADATA_OFFSET_TASK_OUTPUT_SIZE
+                ];
 
-            require(
-                nodeStack[NODE_STACK_OFFSET_END] + 2 == outputSize,
-                "The sum of the page sizes does not match output size.");
+                require(
+                    nodeStack[NODE_STACK_OFFSET_END] + 2 == outputSize,
+                    "The sum of the page sizes does not match output size."
+                );
             }
 
-            uint256 fact_without_program_hash = nodeStack[NODE_STACK_OFFSET_HASH];
-            bytes32 fact = keccak256(abi.encode(programHash, fact_without_program_hash));
+            uint256 factWithoutProgramHash = nodeStack[NODE_STACK_OFFSET_HASH];
+            bytes32 fact = keccak256(abi.encode(programHash, factWithoutProgramHash));
 
             // Update taskMetadataOffset.
             taskMetadataOffset += METADATA_TASK_HEADER_SIZE + 2 * nTreePairs;
 
             {
-            // Documents each fact hash together with the hashes of the relavent memory pages.
-            // Instead of emit, we use log1 https://docs.soliditylang.org/en/v0.4.24/assembly.html,
-            // https://docs.soliditylang.org/en/v0.6.2/abi-spec.html#use-of-dynamic-types.
+                // Documents each fact hash together with the hashes of the relavent memory pages.
+                // Instead of emit, we use log1 https://docs.soliditylang.org/en/v0.4.24/assembly.html,
+                // https://docs.soliditylang.org/en/v0.6.2/abi-spec.html#use-of-dynamic-types.
 
-            bytes32 logHash = keccak256("LogMemoryPagesHashes(bytes32,bytes32[])");
-            assembly {
-                let buf := add(pageHashesLogData, 0x20)
-                // Number of memory pages that are relavent for this fact.
-                let length := sub(curPage, firstPageOfTask)
-                mstore(buf, fact_without_program_hash)
-                mstore(add(buf, 0x40), length)
-                log1(buf, mul(add(length, 3), 0x20), logHash)
-            }
+                bytes32 logHash = keccak256("LogMemoryPagesHashes(bytes32,bytes32[])");
+                assembly {
+                    let buf := add(pageHashesLogData, 0x20)
+                    // Number of memory pages that are relavent for this fact.
+                    let length := sub(curPage, firstPageOfTask)
+                    mstore(buf, factWithoutProgramHash)
+                    mstore(add(buf, 0x40), length)
+                    log1(buf, mul(add(length, 3), 0x20), logHash)
+                }
             }
             registerFact(fact);
 
@@ -174,9 +200,7 @@ contract GpsOutputParser is CpuPublicInputOffsets, FactRegistry {
             curAddr += 2;
         }
 
-        require(
-            cairoAuxInput[OFFSET_N_PUBLIC_MEMORY_PAGES] == curPage,
-            "Not all memory pages were processed.");
+        require(totalNumPages == curPage, "Not all memory pages were processed.");
     }
 
     /*
@@ -186,48 +210,53 @@ contract GpsOutputParser is CpuPublicInputOffsets, FactRegistry {
       hash.
     */
     function pushPageToStack(
-        uint256 curPage, uint256 curAddr, uint256 curOffset, uint256[] memory nodeStack,
-        uint256 nodeStackLen, uint256[] memory cairoAuxInput)
-        internal pure returns (uint256, uint256)
-    {
-        // Extract the page size, first address and hash from cairoAuxInput.
-        uint256 pageSizeOffset = getOffsetPageSize(curPage);
-        uint256 pageSize;
-        uint256 pageAddrOffset = getOffsetPageAddr(curPage);
-        uint256 pageAddr;
-        uint256 pageHashOffset = getOffsetPageHash(curPage);
-        uint256 pageHash;
-        assembly {
-            pageSize := mload(add(cairoAuxInput, mul(add(pageSizeOffset, 1), 0x20)))
-            pageAddr := mload(add(cairoAuxInput, mul(add(pageAddrOffset, 1), 0x20)))
-            pageHash := mload(add(cairoAuxInput, mul(add(pageHashOffset, 1), 0x20)))
-        }
+        uint256[PAGE_INFO_SIZE] memory pageInfoPtr,
+        uint256 curAddr,
+        uint256 curOffset,
+        uint256[] memory nodeStack,
+        uint256 nodeStackLen
+    ) internal pure returns (uint256 pageSize, uint256 pageHash) {
+        // Read the first address, page size and hash.
+        uint256 pageAddr = pageInfoPtr[PAGE_INFO_ADDRESS_OFFSET];
+        pageSize = pageInfoPtr[PAGE_INFO_SIZE_OFFSET];
+        pageHash = pageInfoPtr[PAGE_INFO_HASH_OFFSET];
+
         require(pageSize < 2**30, "Invalid page size.");
         require(pageAddr == curAddr, "Invalid page address.");
 
         nodeStack[NODE_STACK_ITEM_SIZE * nodeStackLen + NODE_STACK_OFFSET_END] =
-            curOffset + pageSize;
+            curOffset +
+            pageSize;
         nodeStack[NODE_STACK_ITEM_SIZE * nodeStackLen + NODE_STACK_OFFSET_HASH] = pageHash;
-        return (pageSize, pageHash);
     }
 
     /*
       Pops the top nNodes nodes from the stack and pushes one parent node instead.
       Returns the new value of nodeStackLen.
     */
-    function constructNode(uint256[] memory nodeStack, uint256 nodeStackLen, uint256 nNodes)
-        internal pure returns (uint256) {
+    function constructNode(
+        uint256[] memory nodeStack,
+        uint256 nodeStackLen,
+        uint256 nNodes
+    ) internal pure returns (uint256) {
         require(nNodes <= nodeStackLen, "Invalid value of n_nodes in tree structure.");
         // The end of the node is the end of the last child.
         uint256 newNodeEnd = nodeStack[
-            NODE_STACK_ITEM_SIZE * (nodeStackLen - 1) + NODE_STACK_OFFSET_END];
+            NODE_STACK_ITEM_SIZE * (nodeStackLen - 1) + NODE_STACK_OFFSET_END
+        ];
         uint256 newStackLen = nodeStackLen - nNodes;
         // Compute node hash.
         uint256 nodeStart = 0x20 + newStackLen * NODE_STACK_ITEM_SIZE * 0x20;
         uint256 newNodeHash;
         assembly {
-            newNodeHash := keccak256(add(nodeStack, nodeStart), mul(
-                nNodes, /*NODE_STACK_ITEM_SIZE * 0x20*/0x40))
+            newNodeHash := keccak256(
+                add(nodeStack, nodeStart),
+                mul(
+                    nNodes,
+                    // NODE_STACK_ITEM_SIZE * 0x20 =
+                    0x40
+                )
+            )
         }
 
         nodeStack[NODE_STACK_ITEM_SIZE * newStackLen + NODE_STACK_OFFSET_END] = newNodeEnd;

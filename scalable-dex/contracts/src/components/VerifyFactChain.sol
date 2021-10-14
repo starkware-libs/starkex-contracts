@@ -6,12 +6,12 @@ import "../interfaces/IFactRegistry.sol";
 import "../libraries/Common.sol";
 
 contract VerifyFactChain is MainStorage {
-
     function verifyFact(
-        StarkExTypes.ApprovalChainData storage chain, bytes32 fact, string memory noVerifiersErrorMessage,
-        string memory invalidFactErrorMessage)
-        internal view
-    {
+        StarkExTypes.ApprovalChainData storage chain,
+        bytes32 fact,
+        string memory noVerifiersErrorMessage,
+        string memory invalidFactErrorMessage
+    ) internal view {
         address[] storage list = chain.list;
         uint256 n_entries = list.length;
         require(n_entries > 0, noVerifiersErrorMessage);

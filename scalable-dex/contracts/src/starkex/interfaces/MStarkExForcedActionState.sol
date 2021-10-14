@@ -6,11 +6,9 @@ abstract contract MStarkExForcedActionState {
         internal
         pure
         virtual
-        returns(bytes32);
+        returns (bytes32);
 
-    function clearFullWithdrawalRequest(uint256 starkKey, uint256 vaultId)
-        internal
-        virtual;
+    function clearFullWithdrawalRequest(uint256 starkKey, uint256 vaultId) internal virtual;
 
     // NOLINTNEXTLINE: external-function.
     function getFullWithdrawalRequest(uint256 starkKey, uint256 vaultId)
@@ -19,7 +17,5 @@ abstract contract MStarkExForcedActionState {
         virtual
         returns (uint256 res);
 
-    function setFullWithdrawalRequest(uint256 starkKey, uint256 vaultId)
-        internal
-        virtual;
+    function setFullWithdrawalRequest(uint256 starkKey, uint256 vaultId) internal virtual;
 }

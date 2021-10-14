@@ -25,6 +25,7 @@ abstract contract PerpetualEscapes is PerpetualStorage, MAcceptModifications, MF
     function initialize(address escapeVerifier) internal {
         escapeVerifierAddress = escapeVerifier;
     }
+
     /*
       Escape when the contract is frozen.
     */
@@ -32,10 +33,7 @@ abstract contract PerpetualEscapes is PerpetualStorage, MAcceptModifications, MF
         uint256 starkKey,
         uint256 vaultId,
         uint256 quantizedAmount
-    )
-        external
-        onlyFrozen()
-    {
+    ) external onlyFrozen {
         require(!escapesUsed[vaultId], "ESCAPE_ALREADY_USED");
 
         // Escape can be used only once.
@@ -43,7 +41,8 @@ abstract contract PerpetualEscapes is PerpetualStorage, MAcceptModifications, MF
         escapesUsedCount += 1;
 
         bytes32 claimHash = keccak256(
-            abi.encode(starkKey, quantizedAmount, sharedStateHash, vaultId));
+            abi.encode(starkKey, quantizedAmount, sharedStateHash, vaultId)
+        );
         IFactRegistry escapeVerifier = IFactRegistry(escapeVerifierAddress);
         require(escapeVerifier.isValid(claimHash), "ESCAPE_LACKS_PROOF");
 

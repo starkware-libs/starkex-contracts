@@ -19,14 +19,12 @@ import "../tokens/ERC721/IERC721Receiver.sol";
   Returns: fixed value:`bytes4(keccak256("onERC721Received(address,address,uint256,bytes)"))`.
 */
 contract ERC721Receiver is IERC721Receiver {
-    // NOLINTNEXTLINE: external-function.
     function onERC721Received(
-        address /*operator*/,  // The address which called `safeTransferFrom` function.
-        address /*from*/,  // The address which previously owned the token.
-        uint256 /*tokenId*/,  // The NFT identifier which is being transferred.
-        bytes memory /*data*/)  // Additional data with no specified format.
-        external override returns (bytes4)
-    {
+        address, // operator - The address which called `safeTransferFrom` function.
+        address, // from - The address which previously owned the token.
+        uint256, // tokenId -  The NFT identifier which is being transferred.
+        bytes memory // data - Additional data with no specified format.
+    ) external override returns (bytes4) {
         return this.onERC721Received.selector;
     }
 }

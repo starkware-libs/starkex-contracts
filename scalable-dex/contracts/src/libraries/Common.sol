@@ -39,17 +39,17 @@ library Addresses {
       Validates that the passed contract address is of a real contract,
       and that its id hash (as infered fromn identify()) matched the expected one.
     */
-    function validateContractId(address contractAddress, bytes32 expectedIdHash)
-        internal
-    {
+    function validateContractId(address contractAddress, bytes32 expectedIdHash) internal {
         require(isContract(contractAddress), "ADDRESS_NOT_CONTRACT");
         (bool success, bytes memory returndata) = contractAddress.call( // NOLINT: low-level-calls.
-            abi.encodeWithSignature("identify()"));
+            abi.encodeWithSignature("identify()")
+        );
         require(success, "FAILED_TO_IDENTIFY_CONTRACT");
         string memory realContractId = abi.decode(returndata, (string));
         require(
             keccak256(abi.encodePacked(realContractId)) == expectedIdHash,
-            "UNEXPECTED_CONTRACT_IDENTIFIER");
+            "UNEXPECTED_CONTRACT_IDENTIFIER"
+        );
     }
 
     /*
@@ -63,44 +63,12 @@ library Addresses {
         (bool success, bytes memory returndata) = tokenAddress.call(callData);
         require(success, string(returndata));
     }
-
-}
-
-library UintArray {
-    function hashSubArray(uint256[] memory array, uint256 subArrayStart, uint256 subArraySize)
-        internal pure
-        returns(bytes32 subArrayHash)
-    {
-        require(array.length >= subArrayStart + subArraySize, "ILLEGAL_SUBARRAY_DIMENSIONS");
-        uint256 startOffsetBytes = 0x20 * (1 + subArrayStart);
-        uint256 dataSizeBytes = 0x20 * subArraySize;
-        assembly {
-            subArrayHash := keccak256(add(array, startOffsetBytes), dataSizeBytes)
-        }
-    }
-
-    /*
-      Returns the address of a cell in offset within a uint256[] array.
-      This allows assigning new variable of dynamic unit256[] pointing to a sub_array
-      with a layout of serialied uint256[] (i.e. length+content).
-    */
-    function extractSerializedUintArray(uint256[] memory programOutput, uint256 offset)
-        internal pure
-        returns (uint256[] memory addr)
-    {
-        uint256 memOffset = 0x20 * (offset + 1);
-        assembly {
-            addr := add(programOutput, memOffset)
-        }
-    }
-
 }
 
 /*
   II. StarkExTypes - Common data types.
 */
 library StarkExTypes {
-
     // Structure representing a list of verifiers (validity/availability).
     // A statement is valid only if all the verifiers in the list agree on it.
     // Adding a verifier to the list is immediate - this is used for fast resolution of
@@ -113,6 +81,6 @@ library StarkExTypes {
         // Represents the time after which the verifier with the given address can be removed.
         // Removal of the verifier with address A is allowed only in the case the value
         // of unlockedForRemovalTime[A] != 0 and unlockedForRemovalTime[A] < (current time).
-        mapping (address => uint256) unlockedForRemovalTime;
+        mapping(address => uint256) unlockedForRemovalTime;
     }
 }

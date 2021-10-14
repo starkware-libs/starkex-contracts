@@ -11,9 +11,9 @@ contract TokenAssetData is MainStorage, LibConstants, MTokenAssetData {
     bytes4 internal constant ETH_SELECTOR = bytes4(keccak256("ETH()"));
     bytes4 internal constant ERC721_SELECTOR = bytes4(keccak256("ERC721Token(address,uint256)"));
     bytes4 internal constant MINTABLE_ERC20_SELECTOR =
-    bytes4(keccak256("MintableERC20Token(address)"));
+        bytes4(keccak256("MintableERC20Token(address)"));
     bytes4 internal constant MINTABLE_ERC721_SELECTOR =
-    bytes4(keccak256("MintableERC721Token(address,uint256)"));
+        bytes4(keccak256("MintableERC721Token(address,uint256)"));
 
     // The selector follows the 0x20 bytes assetInfo.length field.
     uint256 internal constant SELECTOR_OFFSET = 0x20;
@@ -30,8 +30,12 @@ contract TokenAssetData is MainStorage, LibConstants, MTokenAssetData {
       Works like bytes4 tokenSelector = abi.decode(assetInfo, (bytes4))
       but does not revert when assetInfo.length < SELECTOR_OFFSET.
     */
-    function extractTokenSelector(bytes memory assetInfo) internal pure override
-        returns (bytes4 selector) {
+    function extractTokenSelector(bytes memory assetInfo)
+        internal
+        pure
+        override
+        returns (bytes4 selector)
+    {
         assembly {
             selector := and(
                 0xffffffff00000000000000000000000000000000000000000000000000000000,
@@ -40,8 +44,7 @@ contract TokenAssetData is MainStorage, LibConstants, MTokenAssetData {
         }
     }
 
-    function getAssetInfo(uint256 assetType) public view override
-        returns (bytes memory assetInfo) {
+    function getAssetInfo(uint256 assetType) public view override returns (bytes memory assetInfo) {
         // Verify that the registration is set and valid.
         require(registeredAssetType[assetType], "ASSET_TYPE_NOT_REGISTERED");
 
@@ -72,8 +75,7 @@ contract TokenAssetData is MainStorage, LibConstants, MTokenAssetData {
     function isMintableAssetType(uint256 assetType) internal view override returns (bool) {
         bytes4 tokenSelector = extractTokenSelector(getAssetInfo(assetType));
         return
-            tokenSelector == MINTABLE_ERC20_SELECTOR ||
-            tokenSelector == MINTABLE_ERC721_SELECTOR;
+            tokenSelector == MINTABLE_ERC20_SELECTOR || tokenSelector == MINTABLE_ERC721_SELECTOR;
     }
 
     function isTokenSupported(bytes4 tokenSelector) private pure returns (bool) {
@@ -86,7 +88,10 @@ contract TokenAssetData is MainStorage, LibConstants, MTokenAssetData {
     }
 
     function extractContractAddressFromAssetInfo(bytes memory assetInfo)
-        private pure returns (address) {
+        private
+        pure
+        returns (address)
+    {
         uint256 offset = TOKEN_CONTRACT_ADDRESS_OFFSET;
         uint256 res;
         assembly {
@@ -120,17 +125,17 @@ contract TokenAssetData is MainStorage, LibConstants, MTokenAssetData {
 
     function isNonFungibleAssetInfo(bytes memory assetInfo) internal pure override returns (bool) {
         bytes4 tokenSelector = extractTokenSelector(assetInfo);
-        return
-            tokenSelector == ERC721_SELECTOR ||
-            tokenSelector == MINTABLE_ERC721_SELECTOR;
+        return tokenSelector == ERC721_SELECTOR || tokenSelector == MINTABLE_ERC721_SELECTOR;
     }
 
     function calculateNftAssetId(uint256 assetType, uint256 tokenId)
         internal
         pure
         override
-        returns(uint256 assetId) {
-        assetId = uint256(keccak256(abi.encodePacked(NFT_ASSET_ID_PREFIX, assetType, tokenId))) &
+        returns (uint256 assetId)
+    {
+        assetId =
+            uint256(keccak256(abi.encodePacked(NFT_ASSET_ID_PREFIX, assetType, tokenId))) &
             MASK_250;
     }
 
@@ -138,10 +143,12 @@ contract TokenAssetData is MainStorage, LibConstants, MTokenAssetData {
         internal
         pure
         override
-        returns(uint256 assetId) {
+        returns (uint256 assetId)
+    {
         uint256 blobHash = uint256(keccak256(mintingBlob));
-        assetId = (uint256(keccak256(abi.encodePacked(MINTABLE_PREFIX ,assetType, blobHash))) &
-            MASK_240) | MINTABLE_ASSET_ID_FLAG;
+        assetId =
+            (uint256(keccak256(abi.encodePacked(MINTABLE_PREFIX, assetType, blobHash))) &
+                MASK_240) |
+            MINTABLE_ASSET_ID_FLAG;
     }
-
 }

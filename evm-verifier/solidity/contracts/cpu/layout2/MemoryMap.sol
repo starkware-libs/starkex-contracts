@@ -1,3 +1,4 @@
+// ---------- The following code was auto-generated. PLEASE DO NOT EDIT. ----------
 // SPDX-License-Identifier: Apache-2.0.
 pragma solidity ^0.6.11;
 
@@ -63,16 +64,17 @@ contract MemoryMap {
     uint256 constant internal MM_TRACE_GENERATOR =                         0x158;
     uint256 constant internal MM_OODS_POINT =                              0x159;
     uint256 constant internal MM_INTERACTION_ELEMENTS =                    0x15a; // uint256[3]
-    uint256 constant internal MM_COEFFICIENTS =                            0x15d; // uint256[232]
-    uint256 constant internal MM_OODS_VALUES =                             0x245; // uint256[128]
-    uint256 constant internal MM_CONSTRAINT_POLY_ARGS_END =                0x2c5;
-    uint256 constant internal MM_COMPOSITION_OODS_VALUES =                 0x2c5; // uint256[2]
-    uint256 constant internal MM_OODS_EVAL_POINTS =                        0x2c7; // uint256[48]
-    uint256 constant internal MM_OODS_COEFFICIENTS =                       0x2f7; // uint256[130]
-    uint256 constant internal MM_TRACE_QUERY_RESPONSES =                   0x379; // uint256[480]
-    uint256 constant internal MM_COMPOSITION_QUERY_RESPONSES =             0x559; // uint256[96]
-    uint256 constant internal MM_LOG_N_STEPS =                             0x5b9;
-    uint256 constant internal MM_N_PUBLIC_MEM_ENTRIES =                    0x5ba;
-    uint256 constant internal MM_N_PUBLIC_MEM_PAGES =                      0x5bb;
-    uint256 constant internal MM_CONTEXT_SIZE =                            0x5bc;
+    uint256 constant internal MM_COEFFICIENTS =                            0x15d; // uint256[116]
+    uint256 constant internal MM_OODS_VALUES =                             0x1d1; // uint256[128]
+    uint256 constant internal MM_CONSTRAINT_POLY_ARGS_END =                0x251;
+    uint256 constant internal MM_COMPOSITION_OODS_VALUES =                 0x251; // uint256[2]
+    uint256 constant internal MM_OODS_EVAL_POINTS =                        0x253; // uint256[48]
+    uint256 constant internal MM_OODS_COEFFICIENTS =                       0x283; // uint256[130]
+    uint256 constant internal MM_TRACE_QUERY_RESPONSES =                   0x305; // uint256[480]
+    uint256 constant internal MM_COMPOSITION_QUERY_RESPONSES =             0x4e5; // uint256[96]
+    uint256 constant internal MM_LOG_N_STEPS =                             0x545;
+    uint256 constant internal MM_N_PUBLIC_MEM_ENTRIES =                    0x546;
+    uint256 constant internal MM_N_PUBLIC_MEM_PAGES =                      0x547;
+    uint256 constant internal MM_CONTEXT_SIZE =                            0x548;
 }
+// ---------- End of auto-generated code. ----------

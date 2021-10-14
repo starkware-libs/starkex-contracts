@@ -45,7 +45,7 @@ import "./MainStorage.sol";
   Token Administrator's private key should be kept in a cold wallet.
 */
 abstract contract TokenRegister is MainStorage, LibConstants, MGovernance, MTokenAssetData {
-    event LogTokenRegistered(uint256 assetType, bytes assetInfo);
+    event LogTokenRegistered(uint256 assetType, bytes assetInfo, uint256 quantum);
     event LogTokenAdminAdded(address tokenAdmin);
     event LogTokenAdminRemoved(address tokenAdmin);
 
@@ -58,12 +58,12 @@ abstract contract TokenRegister is MainStorage, LibConstants, MGovernance, MToke
         return tokenAdmins[testedAdmin];
     }
 
-    function registerTokenAdmin(address newAdmin) external onlyGovernance() {
+    function registerTokenAdmin(address newAdmin) external onlyGovernance {
         tokenAdmins[newAdmin] = true;
         emit LogTokenAdminAdded(newAdmin);
     }
 
-    function unregisterTokenAdmin(address oldAdmin) external onlyGovernance() {
+    function unregisterTokenAdmin(address oldAdmin) external onlyGovernance {
         tokenAdmins[oldAdmin] = false;
         emit LogTokenAdminRemoved(oldAdmin);
     }
@@ -81,7 +81,7 @@ abstract contract TokenRegister is MainStorage, LibConstants, MGovernance, MToke
         uint256 assetType,
         bytes memory assetInfo,
         uint256 quantum
-    ) public virtual onlyTokensAdmin() {
+    ) public virtual onlyTokensAdmin {
         // Make sure it is not invalid or already registered.
         require(!isAssetRegistered(assetType), "ASSET_ALREADY_REGISTERED");
         require(assetType < K_MODULUS, "INVALID_ASSET_TYPE");
@@ -104,7 +104,7 @@ abstract contract TokenRegister is MainStorage, LibConstants, MGovernance, MToke
         assetTypeToQuantum[assetType] = quantum;
 
         // Log the registration of a new token.
-        emit LogTokenRegistered(assetType, assetInfo);
+        emit LogTokenRegistered(assetType, assetInfo, quantum);
     }
 
     function registerToken(uint256 assetType, bytes calldata assetInfo) external virtual {

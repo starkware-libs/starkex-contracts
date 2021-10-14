@@ -22,19 +22,12 @@ abstract contract Governance is GovernanceStorage, MGovernance {
     /*
       Returns a string which uniquely identifies the type of the governance mechanism.
     */
-    function getGovernanceTag()
-        virtual
-        internal
-        pure
-        returns (string memory);
+    function getGovernanceTag() internal pure virtual returns (string memory);
 
     /*
       Returns the GovernanceInfoStruct associated with the governance tag.
     */
-    function contractGovernanceInfo()
-        internal
-        view
-        returns (GovernanceInfoStruct storage) {
+    function contractGovernanceInfo() internal view returns (GovernanceInfoStruct storage) {
         string memory tag = getGovernanceTag();
         GovernanceInfoStruct storage gub = governanceInfo[tag];
         require(gub.initialized, "NOT_INITIALIZED");
@@ -52,20 +45,16 @@ abstract contract Governance is GovernanceStorage, MGovernance {
       2. Modify the require part in this function, so that it will exit quietly
          when trying to re-initialize (uncomment the lines below).
     */
-    function initGovernance()
-        internal
-    {
+    function initGovernance() internal {
         string memory tag = getGovernanceTag();
         GovernanceInfoStruct storage gub = governanceInfo[tag];
         require(!gub.initialized, "ALREADY_INITIALIZED");
-        gub.initialized = true;  // to ensure addGovernor() won't fail.
+        gub.initialized = true; // to ensure addGovernor() won't fail.
         // Add the initial governer.
         addGovernor(msg.sender);
     }
 
-    function isGovernor(address testGovernor)
-        internal view override
-        returns (bool){
+    function isGovernor(address testGovernor) internal view override returns (bool) {
         GovernanceInfoStruct storage gub = contractGovernanceInfo();
         return gub.effectiveGovernors[testGovernor];
     }
@@ -73,13 +62,13 @@ abstract contract Governance is GovernanceStorage, MGovernance {
     /*
       Cancels the nomination of a governor candidate.
     */
-    function cancelNomination() internal onlyGovernance() {
+    function cancelNomination() internal onlyGovernance {
         GovernanceInfoStruct storage gub = contractGovernanceInfo();
         gub.candidateGovernor = address(0x0);
         emit LogNominationCancelled();
     }
 
-    function nominateNewGovernor(address newGovernor) internal onlyGovernance() {
+    function nominateNewGovernor(address newGovernor) internal onlyGovernance {
         GovernanceInfoStruct storage gub = contractGovernanceInfo();
         require(!isGovernor(newGovernor), "ALREADY_GOVERNOR");
         gub.candidateGovernor = newGovernor;
@@ -99,9 +88,7 @@ abstract contract Governance is GovernanceStorage, MGovernance {
         gub.effectiveGovernors[newGovernor] = true;
     }
 
-    function acceptGovernance()
-        internal
-    {
+    function acceptGovernance() internal {
         // The new governor was proposed as a candidate by the current governor.
         GovernanceInfoStruct storage gub = contractGovernanceInfo();
         require(msg.sender == gub.candidateGovernor, "ONLY_CANDIDATE_GOVERNOR");
@@ -117,10 +104,10 @@ abstract contract Governance is GovernanceStorage, MGovernance {
     /*
       Remove a governor from office.
     */
-    function removeGovernor(address governorForRemoval) internal onlyGovernance() {
+    function removeGovernor(address governorForRemoval) internal onlyGovernance {
         require(msg.sender != governorForRemoval, "GOVERNOR_SELF_REMOVE");
         GovernanceInfoStruct storage gub = contractGovernanceInfo();
-        require (isGovernor(governorForRemoval), "NOT_GOVERNOR");
+        require(isGovernor(governorForRemoval), "NOT_GOVERNOR");
         gub.effectiveGovernors[governorForRemoval] = false;
         emit LogRemovedGovernor(governorForRemoval);
     }

@@ -6,27 +6,22 @@ pragma solidity ^0.6.11;
   The contract containing the state should implement these and verify correctness.
 */
 abstract contract MAcceptModifications {
-
     function acceptDeposit(
-        uint256 starkKey,
+        uint256 ownerKey,
         uint256 vaultId,
         uint256 assetId,
         uint256 quantizedAmount
-    )
-        internal virtual;
+    ) internal virtual;
 
     function allowWithdrawal(
-        uint256 starkKey,
+        uint256 ownerKey,
         uint256 assetId,
         uint256 quantizedAmount
-    )
-        internal virtual;
+    ) internal virtual;
 
     function acceptWithdrawal(
-        uint256 starkKey,
+        uint256 ownerKey,
         uint256 assetId,
         uint256 quantizedAmount
-    )
-    internal virtual;
-
+    ) internal virtual;
 }

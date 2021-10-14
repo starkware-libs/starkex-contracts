@@ -111,14 +111,11 @@ abstract contract Deposits is
         uint256 assetType,
         uint256 vaultId,
         uint256 tokenId
-    ) external notFrozen()
-    {
+    ) external notFrozen {
         // The vaultId is not validated but should be in the allowed range supported by the
         // exchange. If not, it will be ignored by the exchange and the starkKey owner may reclaim
         // the funds by using depositCancel + depositReclaim.
 
-        // starkKey must be registered.
-        require(ethKeys[starkKey] != ZERO_ADDRESS, "INVALID_STARK_KEY");
         require(!isMintableAssetType(assetType), "MINTABLE_ASSET_TYPE");
         require(!isFungibleAssetType(assetType), "FUNGIBLE_ASSET_TYPE");
         uint256 assetId = calculateNftAssetId(assetType, tokenId);
@@ -127,8 +124,9 @@ abstract contract Deposits is
         pendingDeposits[starkKey][assetId][vaultId] = 1;
 
         // Disable the cancellationRequest timeout when users deposit into their own account.
-        if (isMsgSenderStarkKeyOwner(starkKey) &&
-                cancellationRequests[starkKey][assetId][vaultId] != 0) {
+        if (
+            isMsgSenderKeyOwner(starkKey) && cancellationRequests[starkKey][assetId][vaultId] != 0
+        ) {
             delete cancellationRequests[starkKey][assetId][vaultId];
         }
 
@@ -152,12 +150,12 @@ abstract contract Deposits is
         uint256 assetType,
         uint256 vaultId,
         uint256 quantizedAmount
-    ) public override
-    {
+    ) public override {
         deposit(starkKey, assetType, vaultId, quantizedAmount);
     }
 
-    function depositEth( // NOLINT: locked-ether.
+    // NOLINTNEXTLINE: locked-ether.
+    function depositEth(
         uint256 starkKey,
         uint256 assetType,
         uint256 vaultId
@@ -171,29 +169,24 @@ abstract contract Deposits is
         uint256 assetType,
         uint256 vaultId,
         uint256 quantizedAmount
-    ) public notFrozen()
-    {
+    ) public notFrozen {
         // The vaultId is not validated but should be in the allowed range supported by the
         // exchange. If not, it will be ignored by the exchange and the starkKey owner may reclaim
         // the funds by using depositCancel + depositReclaim.
 
         // No need to verify amount > 0, a deposit with amount = 0 can be used to undo cancellation.
-        // starkKey must be registered.
-        require(ethKeys[starkKey] != ZERO_ADDRESS, "INVALID_STARK_KEY");
         require(!isMintableAssetType(assetType), "MINTABLE_ASSET_TYPE");
         require(isFungibleAssetType(assetType), "NON_FUNGIBLE_ASSET_TYPE");
         uint256 assetId = assetType;
 
         // Update the balance.
         pendingDeposits[starkKey][assetId][vaultId] += quantizedAmount;
-        require(
-            pendingDeposits[starkKey][assetId][vaultId] >= quantizedAmount,
-            "DEPOSIT_OVERFLOW"
-        );
+        require(pendingDeposits[starkKey][assetId][vaultId] >= quantizedAmount, "DEPOSIT_OVERFLOW");
 
         // Disable the cancellationRequest timeout when users deposit into their own account.
-        if (isMsgSenderStarkKeyOwner(starkKey) &&
-                cancellationRequests[starkKey][assetId][vaultId] != 0) {
+        if (
+            isMsgSenderKeyOwner(starkKey) && cancellationRequests[starkKey][assetId][vaultId] != 0
+        ) {
             delete cancellationRequests[starkKey][assetId][vaultId];
         }
 
@@ -211,7 +204,8 @@ abstract contract Deposits is
         );
     }
 
-    function deposit( // NOLINT: locked-ether.
+    function deposit(
+        // NOLINT: locked-ether.
         uint256 starkKey,
         uint256 assetType,
         uint256 vaultId
@@ -226,7 +220,7 @@ abstract contract Deposits is
         uint256 vaultId
     )
         external
-        onlyStarkKeyOwner(starkKey)
+        onlyKeyOwner(starkKey)
     // No notFrozen modifier: This function can always be used, even when frozen.
     {
         // Start the timeout.
@@ -242,7 +236,7 @@ abstract contract Deposits is
         uint256 vaultId
     )
         external
-        onlyStarkKeyOwner(starkKey)
+        onlyKeyOwner(starkKey)
     // No notFrozen modifier: This function can always be used, even when frozen.
     {
         uint256 assetType = assetId;
@@ -279,7 +273,7 @@ abstract contract Deposits is
         uint256 tokenId
     )
         external
-        onlyStarkKeyOwner(starkKey)
+        onlyKeyOwner(starkKey)
     // No notFrozen modifier: This function can always be used, even when frozen.
     {
         // assetId is the id for the deposits/withdrawals.

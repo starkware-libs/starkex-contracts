@@ -17,11 +17,9 @@ library OnchainDataFactTreeEncoder {
       on-chain data for the fact.
     */
     function encodeFactWithOnchainData(
-        uint256[] calldata programOutput, DataAvailabilityFact memory factData
-    )
-        internal pure
-        returns (bytes32)
-    {
+        uint256[] calldata programOutput,
+        DataAvailabilityFact memory factData
+    ) internal pure returns (bytes32) {
         // The state transition fact is computed as a Merkle tree, as defined in
         // GpsOutputParser.
         //

@@ -6,7 +6,6 @@ pragma solidity ^0.6.11;
   the optional functions; to access them see {ERC20Detailed}.
 */
 interface IERC20 {
-
     function totalSupply() external view returns (uint256);
 
     function balanceOf(address account) external view returns (uint256);
@@ -17,8 +16,11 @@ interface IERC20 {
 
     function approve(address spender, uint256 amount) external returns (bool);
 
-    function transferFrom(address sender, address recipient, uint256 amount)
-     external returns (bool);
+    function transferFrom(
+        address sender,
+        address recipient,
+        uint256 amount
+    ) external returns (bool);
 
     event Transfer(address indexed from, address indexed to, uint256 value);
 

@@ -17,36 +17,22 @@ abstract contract Operator is MainStorage, MGovernance, MOperator {
     event LogOperatorAdded(address operator);
     event LogOperatorRemoved(address operator);
 
-    function initialize()
-        internal
-    {
+    function initialize() internal {
         operators[msg.sender] = true;
         emit LogOperatorAdded(msg.sender);
     }
 
-    function registerOperator(address newOperator)
-        external
-        override
-        onlyGovernance
-    {
+    function registerOperator(address newOperator) external override onlyGovernance {
         operators[newOperator] = true;
         emit LogOperatorAdded(newOperator);
     }
 
-    function unregisterOperator(address removedOperator)
-        external
-        override
-        onlyGovernance
-    {
+    function unregisterOperator(address removedOperator) external override onlyGovernance {
         operators[removedOperator] = false;
         emit LogOperatorRemoved(removedOperator);
     }
 
-    function isOperator(address testedOperator)
-        public
-        view
-        override
-        returns (bool) {
+    function isOperator(address testedOperator) public view override returns (bool) {
         return operators[testedOperator];
     }
 }

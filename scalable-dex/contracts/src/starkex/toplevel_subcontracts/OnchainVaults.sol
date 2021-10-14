@@ -18,7 +18,7 @@ contract OnchainVaults is
     TokenQuantization,
     VaultDepositWithdrawal
 {
-    function identify() external override pure returns (string memory) {
+    function identify() external pure override returns (string memory) {
         return "StarkWare_OnchainVaults_2021_1";
     }
 
@@ -26,7 +26,7 @@ contract OnchainVaults is
         revert("NOT_IMPLEMENTED");
     }
 
-    function initializerSize() external override view returns (uint256) {
+    function initializerSize() external view override returns (uint256) {
         return 0;
     }
 

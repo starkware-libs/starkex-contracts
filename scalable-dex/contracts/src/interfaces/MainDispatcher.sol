@@ -5,11 +5,12 @@ import "../components/MainStorage.sol";
 import "./MainDispatcherBase.sol";
 
 abstract contract MainDispatcher is MainStorage, MainDispatcherBase {
-
     uint256 constant SUBCONTRACT_BITS = 4;
 
-    function magicSalt() internal pure virtual returns(uint256);
-    function handlerMapSection(uint256 section) internal view virtual returns(uint256);
+    function magicSalt() internal pure virtual returns (uint256);
+
+    function handlerMapSection(uint256 section) internal view virtual returns (uint256);
+
     function expectedIdByIndex(uint256 index) internal pure virtual returns (string memory id);
 
     function validateSubContractIndex(uint256 index, address subContract) internal pure override {

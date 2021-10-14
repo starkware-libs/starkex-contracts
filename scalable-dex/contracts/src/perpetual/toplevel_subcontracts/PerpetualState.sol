@@ -47,13 +47,10 @@ contract PerpetualState is
         require(data.length == INITIALIZER_SIZE, "INCORRECT_INIT_DATA_SIZE_384");
 
         (
-            address escapeVerifierAddress,
+            address escapeVerifierAddress_,
             uint256 initialSequenceNumber,
             uint256[] memory initialState
-        ) = abi.decode(
-            data,
-            (address, uint256, uint256[])
-        );
+        ) = abi.decode(data, (address, uint256, uint256[]));
 
         initGovernance();
         Configuration.initialize(PERPETUAL_CONFIGURATION_DELAY);
@@ -66,7 +63,7 @@ contract PerpetualState is
             initialState[3]
         );
         sharedStateHash = keccak256(abi.encodePacked(initialState));
-        PerpetualEscapes.initialize(escapeVerifierAddress);
+        PerpetualEscapes.initialize(escapeVerifierAddress_);
     }
 
     /*

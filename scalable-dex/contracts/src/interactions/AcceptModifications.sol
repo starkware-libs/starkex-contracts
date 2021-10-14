@@ -17,91 +17,80 @@ abstract contract AcceptModifications is
     MTokenQuantization
 {
     event LogWithdrawalAllowed(
-        uint256 starkKey,
+        uint256 ownerKey,
         uint256 assetType,
         uint256 nonQuantizedAmount,
         uint256 quantizedAmount
     );
 
-    event LogNftWithdrawalAllowed(uint256 starkKey, uint256 assetId);
+    event LogNftWithdrawalAllowed(uint256 ownerKey, uint256 assetId);
 
-    event LogMintableWithdrawalAllowed(
-        uint256 starkKey,
-        uint256 assetId,
-        uint256 quantizedAmount
-    );
+    event LogMintableWithdrawalAllowed(uint256 ownerKey, uint256 assetId, uint256 quantizedAmount);
 
     /*
       Transfers funds from the on-chain deposit area to the off-chain area.
       Implemented in the Deposits contracts.
     */
     function acceptDeposit(
-        uint256 starkKey,
+        uint256 ownerKey,
         uint256 vaultId,
         uint256 assetId,
         uint256 quantizedAmount
     ) internal virtual override {
         // Fetch deposit.
         require(
-            pendingDeposits[starkKey][assetId][vaultId] >= quantizedAmount,
+            pendingDeposits[ownerKey][assetId][vaultId] >= quantizedAmount,
             "DEPOSIT_INSUFFICIENT"
         );
 
         // Subtract accepted quantized amount.
-        pendingDeposits[starkKey][assetId][vaultId] -= quantizedAmount;
+        pendingDeposits[ownerKey][assetId][vaultId] -= quantizedAmount;
     }
 
     /*
       Transfers funds from the off-chain area to the on-chain withdrawal area.
     */
     function allowWithdrawal(
-        uint256 starkKey,
+        uint256 ownerKey,
         uint256 assetId,
         uint256 quantizedAmount
-    )
-        internal
-        override
-    {
+    ) internal override {
         // Fetch withdrawal.
-        uint256 withdrawal = pendingWithdrawals[starkKey][assetId];
+        uint256 withdrawal = pendingWithdrawals[ownerKey][assetId];
 
         // Add accepted quantized amount.
         withdrawal += quantizedAmount;
         require(withdrawal >= quantizedAmount, "WITHDRAWAL_OVERFLOW");
 
         // Store withdrawal.
-        pendingWithdrawals[starkKey][assetId] = withdrawal;
+        pendingWithdrawals[ownerKey][assetId] = withdrawal;
 
         // Log event.
         uint256 presumedAssetType = assetId;
         if (registeredAssetType[presumedAssetType]) {
             emit LogWithdrawalAllowed(
-                starkKey,
+                ownerKey,
                 presumedAssetType,
                 fromQuantized(presumedAssetType, quantizedAmount),
                 quantizedAmount
             );
-        } else if(assetId == ((assetId & MASK_240) | MINTABLE_ASSET_ID_FLAG)) {
-            emit LogMintableWithdrawalAllowed(
-                starkKey,
-                assetId,
-                quantizedAmount
-            );
+        } else if (assetId == ((assetId & MASK_240) | MINTABLE_ASSET_ID_FLAG)) {
+            emit LogMintableWithdrawalAllowed(ownerKey, assetId, quantizedAmount);
         } else {
             // Default case is Non-Mintable ERC721 asset id.
             require(assetId == assetId & MASK_250, "INVALID_NFT_ASSET_ID");
             // In ERC721 case, assetId is not the assetType.
             require(withdrawal <= 1, "INVALID_NFT_AMOUNT");
-            emit LogNftWithdrawalAllowed(starkKey, assetId);
+            emit LogNftWithdrawalAllowed(ownerKey, assetId);
         }
     }
 
     // Verifier authorizes withdrawal.
     function acceptWithdrawal(
-        uint256 starkKey,
+        uint256 ownerKey,
         uint256 assetId,
         uint256 quantizedAmount
     ) internal virtual override {
-        allowWithdrawal(starkKey, assetId, quantizedAmount);
+        allowWithdrawal(ownerKey, assetId, quantizedAmount);
     }
 }

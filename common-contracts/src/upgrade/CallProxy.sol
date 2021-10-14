@@ -24,23 +24,59 @@ import "../libraries/Common.sol";
   The assumption is that if a different implementation is needed, it will be performed
   in an upgradeTo a new deployed CallProxy, pointing to a new implementation.
 */
+// NOLINTNEXTLINE locked-ether.
 contract CallProxy is BlockDirectCall, StorageSlots {
-
     using Addresses for address;
 
-    string public constant CALL_PROXY_VERSION = "3.0.0";
+    string public constant CALL_PROXY_VERSION = "3.1.0";
 
     // Proxy client - initialize & isFrozen.
     // NOLINTNEXTLINE: external-function.
-    function isFrozen() public pure returns(bool) {
+    function isFrozen() public pure returns (bool) {
         return false;
     }
 
+    /*
+      This function is called by the Proxy upon activating an implementation.
+      The data passed in to this function contains the implementation address,
+      and if applicable, an address of an EIC (ExternalInitializerContract) and its data.
+
+      The expected data format is as following:
+
+      Case I (no EIC):
+        data.length == 64.
+        [0 :32] implementation address
+        [32:64] Zero address.
+
+      Case II (EIC):
+        data length >= 64
+        [0 :32] implementation address
+        [32:64] EIC address
+        [64:  ] EIC init data.
+    */
     function initialize(bytes calldata data) external notCalledDirectly {
-        require(data.length == 32, "INCORRECT_DATA_SIZE");
-        address impl = abi.decode(data, (address));
+        require(data.length >= 64, "INCORRECT_DATA_SIZE");
+        (address impl, address eic) = abi.decode(data, (address, address));
         require(impl.isContract(), "ADDRESS_NOT_CONTRACT");
         setCallProxyImplementation(impl);
+        if (eic != address(0x0)) {
+            callExternalInitializer(eic, data[64:]);
+        } else {
+            require(data.length == 64, "INVALID_INIT_DATA");
+        }
+    }
+
+    function callExternalInitializer(address externalInitializerAddr, bytes calldata eicData)
+        private
+    {
+        require(externalInitializerAddr.isContract(), "EIC_NOT_A_CONTRACT");
+
+        // NOLINTNEXTLINE: low-level-calls, controlled-delegatecall.
+        (bool success, bytes memory returndata) = externalInitializerAddr.delegatecall(
+            abi.encodeWithSelector(this.initialize.selector, eicData)
+        );
+        require(success, string(returndata));
+        require(returndata.length == 0, string(returndata));
     }
 
     /*
@@ -67,10 +103,7 @@ contract CallProxy is BlockDirectCall, StorageSlots {
       An explicit isValid entry point, used to make isValid a part of the ABI and visible
       on Etherscan (and alike).
     */
-    function isValid(bytes32 fact)
-        external view
-        returns(bool)
-    {
+    function isValid(bytes32 fact) external view returns (bool) {
         return IFactRegistry(callProxyImplementation()).isValid(fact);
     }
 
@@ -86,7 +119,8 @@ contract CallProxy is BlockDirectCall, StorageSlots {
       Contract's default function. Pass execution to the implementation contract (using call).
       It returns back to the external caller whatever the implementation called code returns.
     */
-    fallback() external payable { // NOLINT locked-ether.
+    fallback() external payable {
+        // NOLINT locked-ether.
         address _implementation = callProxyImplementation();
         require(_implementation != address(0x0), "MISSING_IMPLEMENTATION");
         uint256 value = msg.value;
@@ -104,13 +138,13 @@ contract CallProxy is BlockDirectCall, StorageSlots {
             returndatacopy(0, 0, returndatasize())
 
             switch result
-                // delegatecall returns 0 on error.
-                case 0 {
-                    revert(0, returndatasize())
-                }
-                default {
-                    return(0, returndatasize())
-                }
+            // delegatecall returns 0 on error.
+            case 0 {
+                revert(0, returndatasize())
+            }
+            default {
+                return(0, returndatasize())
+            }
         }
     }
 }

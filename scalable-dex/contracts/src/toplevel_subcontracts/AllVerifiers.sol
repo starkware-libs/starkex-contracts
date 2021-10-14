@@ -16,20 +16,17 @@ contract AllVerifiers is
     AvailabilityVerifiers,
     Verifiers
 {
-    function initialize(bytes calldata /* data */)
-        external override {
+    function initialize(
+        bytes calldata /* data */
+    ) external override {
         revert("NOT_IMPLEMENTED");
     }
 
-    function initializerSize()
-        external view override
-        returns(uint256){
+    function initializerSize() external view override returns (uint256) {
         return 0;
     }
 
-    function identify()
-        external pure override
-        returns(string memory){
+    function identify() external pure override returns (string memory) {
         return "StarkWare_AllVerifiers_2020_1";
     }
 }

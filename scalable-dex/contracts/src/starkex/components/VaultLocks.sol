@@ -60,7 +60,7 @@ abstract contract VaultLocks is StarkExStorage, StarkExConstants, MGovernance, M
         address ethKey,
         uint256 assetId,
         uint256 vaultId
-    ) public override view returns (bool) {
+    ) public view override returns (bool) {
         uint256 timeRelease = getVaultWithdrawalLock(ethKey, assetId, vaultId);
         return (block.timestamp < timeRelease);
     }

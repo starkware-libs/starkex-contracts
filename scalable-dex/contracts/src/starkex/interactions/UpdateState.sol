@@ -89,7 +89,6 @@ abstract contract UpdateState is
     MOperator,
     PublicInputOffsets
 {
-
     event LogRootUpdate(
         uint256 sequenceNumber,
         uint256 batchId,
@@ -97,9 +96,7 @@ abstract contract UpdateState is
         uint256 orderRoot
     );
 
-    event LogStateTransitionFact(
-        bytes32 stateTransitionFact
-    );
+    event LogStateTransitionFact(bytes32 stateTransitionFact);
 
     event LogVaultBalanceChangeApplied(
         address ethKey,
@@ -108,43 +105,44 @@ abstract contract UpdateState is
         int256 quantizedAmountChange
     );
 
-    using UintArray for uint256[];
-
-    function updateState(
-        uint256[] calldata publicInput,
-        uint256[] calldata applicationData
-    )
+    function updateState(uint256[] calldata publicInput, uint256[] calldata applicationData)
         external
-        notFrozen()
-        onlyOperator()
         virtual
+        notFrozen
+        onlyOperator
     {
         require(
             publicInput.length >= PUB_IN_TRANSACTIONS_DATA_OFFSET,
-            "publicInput does not contain all required fields.");
+            "publicInput does not contain all required fields."
+        );
         require(
             publicInput[PUB_IN_FINAL_VAULT_ROOT_OFFSET] < K_MODULUS,
-            "New vault root >= PRIME.");
+            "New vault root >= PRIME."
+        );
         require(
             publicInput[PUB_IN_FINAL_ORDER_ROOT_OFFSET] < K_MODULUS,
-            "New order root >= PRIME.");
+            "New order root >= PRIME."
+        );
         require(
             publicInput[PUB_IN_ONCHAIN_DATA_VERSION] == onchainDataVersion,
-            "Unsupported onchain-data version.");
+            "Unsupported onchain-data version."
+        );
         require(
-            lastBatchId == 0 ||
-            applicationData[APP_DATA_PREVIOUS_BATCH_ID_OFFSET] == lastBatchId,
-            "WRONG_PREVIOUS_BATCH_ID");
+            lastBatchId == 0 || applicationData[APP_DATA_PREVIOUS_BATCH_ID_OFFSET] == lastBatchId,
+            "WRONG_PREVIOUS_BATCH_ID"
+        );
 
         // Ensure global timestamp has not expired.
         require(
             publicInput[PUB_IN_GLOBAL_EXPIRATION_TIMESTAMP_OFFSET] <
-            2**STARKEX_EXPIRATION_TIMESTAMP_BITS,
-            "Global expiration timestamp is out of range.");
+                2**STARKEX_EXPIRATION_TIMESTAMP_BITS,
+            "Global expiration timestamp is out of range."
+        );
 
         require( // NOLINT: block-timestamp.
             publicInput[PUB_IN_GLOBAL_EXPIRATION_TIMESTAMP_OFFSET] > block.timestamp / 3600,
-            "Timestamp of the current block passed the threshold for the transaction batch.");
+            "Timestamp of the current block passed the threshold for the transaction batch."
+        );
 
         bytes32 stateTransitionFact = getStateTransitionFact(publicInput);
 
@@ -154,29 +152,32 @@ abstract contract UpdateState is
             verifiersChain,
             stateTransitionFact,
             "NO_STATE_TRANSITION_VERIFIERS",
-            "NO_STATE_TRANSITION_PROOF");
+            "NO_STATE_TRANSITION_PROOF"
+        );
 
         bytes32 availabilityFact = keccak256(
             abi.encodePacked(
-            publicInput[PUB_IN_FINAL_VAULT_ROOT_OFFSET],
-            publicInput[PUB_IN_VAULT_TREE_HEIGHT_OFFSET],
-            publicInput[PUB_IN_FINAL_ORDER_ROOT_OFFSET],
-            publicInput[PUB_IN_ORDER_TREE_HEIGHT_OFFSET],
-            sequenceNumber + 1));
+                publicInput[PUB_IN_FINAL_VAULT_ROOT_OFFSET],
+                publicInput[PUB_IN_VAULT_TREE_HEIGHT_OFFSET],
+                publicInput[PUB_IN_FINAL_ORDER_ROOT_OFFSET],
+                publicInput[PUB_IN_ORDER_TREE_HEIGHT_OFFSET],
+                sequenceNumber + 1
+            )
+        );
 
         verifyFact(
             availabilityVerifiersChain,
             availabilityFact,
             "NO_AVAILABILITY_VERIFIERS",
-            "NO_AVAILABILITY_PROOF");
+            "NO_AVAILABILITY_PROOF"
+        );
 
         performUpdateState(publicInput, applicationData);
     }
 
-    function getStateTransitionFact(
-        uint256[] calldata publicInput
-    )
-        internal pure
+    function getStateTransitionFact(uint256[] calldata publicInput)
+        internal
+        pure
         returns (bytes32)
     {
         uint256 onchainDataVersionField = publicInput[PUB_IN_ONCHAIN_DATA_VERSION];
@@ -185,26 +186,26 @@ abstract contract UpdateState is
         } else if (onchainDataVersionField == ONCHAIN_DATA_VAULTS) {
             // Use a simple fact tree.
             require(
-                publicInput.length >= PUB_IN_TRANSACTIONS_DATA_OFFSET +
-                OnchainDataFactTreeEncoder.ONCHAIN_DATA_FACT_ADDITIONAL_WORDS,
-                "programOutput does not contain all required fields.");
-            return OnchainDataFactTreeEncoder.encodeFactWithOnchainData(
-                publicInput[
-                    :publicInput.length -
-                    OnchainDataFactTreeEncoder.ONCHAIN_DATA_FACT_ADDITIONAL_WORDS],
-                OnchainDataFactTreeEncoder.DataAvailabilityFact({
-                    onchainDataHash: publicInput[publicInput.length - 2],
-                    onchainDataSize: publicInput[publicInput.length - 1]
-                }));
+                publicInput.length >=
+                    PUB_IN_TRANSACTIONS_DATA_OFFSET +
+                        OnchainDataFactTreeEncoder.ONCHAIN_DATA_FACT_ADDITIONAL_WORDS,
+                "programOutput does not contain all required fields."
+            );
+            return
+                OnchainDataFactTreeEncoder.encodeFactWithOnchainData(
+                    publicInput[:publicInput.length -
+                        OnchainDataFactTreeEncoder.ONCHAIN_DATA_FACT_ADDITIONAL_WORDS],
+                    OnchainDataFactTreeEncoder.DataAvailabilityFact({
+                        onchainDataHash: publicInput[publicInput.length - 2],
+                        onchainDataSize: publicInput[publicInput.length - 1]
+                    })
+                );
         } else {
             revert("Unsupported onchain-data version.");
         }
     }
 
-    function performUpdateState(
-        uint256[] calldata publicInput,
-        uint256[] calldata applicationData
-    )
+    function performUpdateState(uint256[] calldata publicInput, uint256[] calldata applicationData)
         internal
     {
         rootUpdate(
@@ -227,10 +228,7 @@ abstract contract UpdateState is
         uint256 vaultTreeHeightSent,
         uint256 orderTreeHeightSent,
         uint256 batchId
-    )
-        internal
-        virtual
-    {
+    ) internal virtual {
         // Assert that the old state is correct.
         require(oldVaultRoot == vaultRoot, "VAULT_ROOT_INCORRECT");
         require(oldOrderRoot == orderRoot, "ORDER_ROOT_INCORRECT");
@@ -265,16 +263,25 @@ abstract contract UpdateState is
         require(nOnchainVaultUpdates < 2**64, "Invalid number of onchain vault updates.");
         require(nOnchainOrders < 2**64, "Invalid number of onchain orders.");
         require(
-            publicInput.length >= PUB_IN_TRANSACTIONS_DATA_OFFSET +
-                                PUB_IN_N_WORDS_PER_MODIFICATION * nModifications +
-                                PUB_IN_N_WORDS_PER_CONDITIONAL_TRANSFER * nCondTransfers +
-                                PUB_IN_N_WORDS_PER_ONCHAIN_VAULT_UPDATE * nOnchainVaultUpdates +
-                                PUB_IN_N_MIN_WORDS_PER_ONCHAIN_ORDER * nOnchainOrders,
-            "publicInput size is inconsistent with expected transactions.");
+            publicInput.length >=
+                PUB_IN_TRANSACTIONS_DATA_OFFSET +
+                    PUB_IN_N_WORDS_PER_MODIFICATION *
+                    nModifications +
+                    PUB_IN_N_WORDS_PER_CONDITIONAL_TRANSFER *
+                    nCondTransfers +
+                    PUB_IN_N_WORDS_PER_ONCHAIN_VAULT_UPDATE *
+                    nOnchainVaultUpdates +
+                    PUB_IN_N_MIN_WORDS_PER_ONCHAIN_ORDER *
+                    nOnchainOrders,
+            "publicInput size is inconsistent with expected transactions."
+        );
         require(
-            applicationData.length == APP_DATA_TRANSACTIONS_DATA_OFFSET +
-                                      APP_DATA_N_WORDS_PER_CONDITIONAL_TRANSFER * nCondTransfers,
-            "applicationData size is inconsistent with expected transactions.");
+            applicationData.length ==
+                APP_DATA_TRANSACTIONS_DATA_OFFSET +
+                    APP_DATA_N_WORDS_PER_CONDITIONAL_TRANSFER *
+                    nCondTransfers,
+            "applicationData size is inconsistent with expected transactions."
+        );
 
         uint256 offsetPubInput = PUB_IN_TRANSACTIONS_DATA_OFFSET;
         uint256 offsetAppData = APP_DATA_TRANSACTIONS_DATA_OFFSET;
@@ -289,16 +296,20 @@ abstract contract UpdateState is
         // Following the execution of this block, offsetPubInput and offsetAppData are incremented
         // by the number of words consumed by verifyConditionalTransfers.
         {
-        uint256 consumedPubInputWords;
-        uint256 consumedAppDataWords;
-        (consumedPubInputWords, consumedAppDataWords) = verifyConditionalTransfers(
-            publicInput[offsetPubInput:], applicationData[offsetAppData:], nCondTransfers);
+            uint256 consumedPubInputWords;
+            uint256 consumedAppDataWords;
+            (consumedPubInputWords, consumedAppDataWords) = verifyConditionalTransfers(
+                publicInput[offsetPubInput:],
+                applicationData[offsetAppData:],
+                nCondTransfers
+            );
 
-        offsetPubInput += consumedPubInputWords;
-        offsetAppData += consumedAppDataWords;
+            offsetPubInput += consumedPubInputWords;
+            offsetAppData += consumedAppDataWords;
         }
 
         // offsetPubInput is incremented by the number of words consumed by updateOnchainVaults.
+        // NOLINTNEXTLINE: reentrancy-benign.
         offsetPubInput += updateOnchainVaults(publicInput[offsetPubInput:], nOnchainVaultUpdates);
 
         // offsetPubInput is incremented by the number of words consumed by verifyOnchainOrders.
@@ -318,21 +329,21 @@ abstract contract UpdateState is
         nModifications - the number of modifications.
       Returns the number of publicInput words consumed by this function.
     */
-    function sendModifications(
-        uint256[] calldata slidingPublicInput,
-        uint256 nModifications
-    ) private returns (uint256 consumedPubInputItems) {
+    function sendModifications(uint256[] calldata slidingPublicInput, uint256 nModifications)
+        private
+        returns (uint256 consumedPubInputItems)
+    {
         uint256 offsetPubInput = 0;
 
         for (uint256 i = 0; i < nModifications; i++) {
-            uint256 starkKey = slidingPublicInput[offsetPubInput];
+            uint256 ownerKey = slidingPublicInput[offsetPubInput];
             uint256 assetId = slidingPublicInput[offsetPubInput + 1];
 
-            require(starkKey < K_MODULUS, "Stark key >= PRIME");
+            require(ownerKey < K_MODULUS, "Stark key >= PRIME");
             require(assetId < K_MODULUS, "Asset id >= PRIME");
 
             uint256 actionParams = slidingPublicInput[offsetPubInput + 2];
-            require ((actionParams >> 96) == 0, "Unsupported modification action field.");
+            require((actionParams >> 96) == 0, "Unsupported modification action field.");
 
             // Extract and unbias the balanceDiff.
             int256 balanceDiff = int256((actionParams & ((1 << 64) - 1)) - (1 << 63));
@@ -340,14 +351,14 @@ abstract contract UpdateState is
 
             if (balanceDiff > 0) {
                 // This is a deposit.
-                acceptDeposit(starkKey, vaultId, assetId, uint256(balanceDiff));
+                acceptDeposit(ownerKey, vaultId, assetId, uint256(balanceDiff));
             } else if (balanceDiff < 0) {
                 // This is a withdrawal.
-                acceptWithdrawal(starkKey, assetId, uint256(-balanceDiff));
+                acceptWithdrawal(ownerKey, assetId, uint256(-balanceDiff));
             }
 
             if ((actionParams & (1 << 95)) != 0) {
-                clearFullWithdrawalRequest(starkKey, vaultId);
+                clearFullWithdrawalRequest(ownerKey, vaultId);
             }
 
             offsetPubInput += PUB_IN_N_WORDS_PER_MODIFICATION;
@@ -379,15 +390,18 @@ abstract contract UpdateState is
             require(
                 condition ==
                     uint256(keccak256(abi.encodePacked(factRegistryAddress, condTransferFact))) &
-                    MASK_250,
-                "Condition mismatch.");
-            (bool success, bytes memory returndata) = // NOLINT: low-level-calls-loop.
-            factRegistryAddress.staticcall(
-                abi.encodeWithSignature("isValid(bytes32)",condTransferFact));
+                        MASK_250,
+                "Condition mismatch."
+            );
+            // NOLINTNEXTLINE: low-level-calls-loop.
+            (bool success, bytes memory returndata) = factRegistryAddress.staticcall(
+                abi.encodeWithSignature("isValid(bytes32)", condTransferFact)
+            );
             require(success && returndata.length == 32, "BAD_FACT_REGISTRY_CONTRACT");
             require(
                 abi.decode(returndata, (bool)),
-                "Condition for the conditional transfer was not met.");
+                "Condition for the conditional transfer was not met."
+            );
 
             offsetPubInput += PUB_IN_N_WORDS_PER_CONDITIONAL_TRANSFER;
             offsetAppData += APP_DATA_N_WORDS_PER_CONDITIONAL_TRANSFER;
@@ -438,6 +452,7 @@ abstract contract UpdateState is
 
             require(newBalance >= 0, "NEGATIVE_BALANCE");
             vaultsBalances[ethAddress][assetId][vaultId] = uint256(newBalance);
+            // NOLINTNEXTLINE: reentrancy-events.
             emit LogVaultBalanceChangeApplied(ethAddress, assetId, vaultId, balanceDiff);
 
             offsetPubInput += PUB_IN_N_WORDS_PER_ONCHAIN_VAULT_UPDATE;
@@ -451,10 +466,11 @@ abstract contract UpdateState is
         nOnchainOrders - the number of onchain orders.
       Returns the number of publicInput words consumed by this function.
     */
-    function verifyOnchainOrders(
-        uint256[] calldata slidingPublicInput,
-        uint256 nOnchainOrders
-    ) private view returns (uint256 consumedPubInputItems) {
+    function verifyOnchainOrders(uint256[] calldata slidingPublicInput, uint256 nOnchainOrders)
+        private
+        view
+        returns (uint256 consumedPubInputItems)
+    {
         MessageRegistry orderRegistry = MessageRegistry(orderRegistryAddress);
         uint256 offsetPubInput = 0;
 
@@ -470,12 +486,15 @@ abstract contract UpdateState is
             offsetPubInput += 2;
             require(offsetPubInput + blobSize <= slidingPublicInput.length, "Input out of bounds.");
             // Calculate the hash of the order blob.
-            bytes32 orderHash = slidingPublicInput.hashSubArray(offsetPubInput, blobSize);
+            bytes32 orderHash = keccak256(
+                abi.encodePacked(slidingPublicInput[offsetPubInput:offsetPubInput + blobSize])
+            );
 
             // Verify this order has been registered.
             require(
                 orderRegistry.isMessageRegistered(orderSender, address(this), orderHash),
-                "Order not registered.");
+                "Order not registered."
+            );
 
             offsetPubInput += blobSize;
         }

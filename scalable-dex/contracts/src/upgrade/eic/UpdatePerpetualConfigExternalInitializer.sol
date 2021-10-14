@@ -14,6 +14,8 @@ contract UpdatePerpetualConfigExternalInitializer is
     PerpetualStorage,
     PerpetualConstants
 {
+    event LogGlobalConfigurationApplied(bytes32 configHash);
+    event LogAssetConfigurationApplied(uint256 assetId, bytes32 configHash);
 
     function initialize(bytes calldata data) external override {
         require(data.length % 64 == 0, "NOT_WORDS_PAIRS_DATA_LENGTH_ERROR");
@@ -30,13 +32,13 @@ contract UpdatePerpetualConfigExternalInitializer is
             }
             require(uint256(configHash) < K_MODULUS, "INVALID_CONFIG_HASH");
 
-            if (configKey == GLOBAL_CONFIG_KEY){
+            if (configKey == GLOBAL_CONFIG_KEY) {
                 globalConfigurationHash = configHash; // NOLINT costly-loop.
+                emit LogGlobalConfigurationApplied(configHash);
             } else {
-                require(
-                    configKey < PERPETUAL_ASSET_ID_UPPER_BOUND,
-                    "INVALID_ASSET_ID");
+                require(configKey < PERPETUAL_ASSET_ID_UPPER_BOUND, "INVALID_ASSET_ID");
                 configurationHash[configKey] = configHash; // NOLINT costly-loop.
+                emit LogAssetConfigurationApplied(configKey, configHash);
             }
 
             offset += 64;

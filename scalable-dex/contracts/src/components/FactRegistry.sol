@@ -5,7 +5,7 @@ import "../interfaces/IQueryableFactRegistry.sol";
 
 contract FactRegistry is IQueryableFactRegistry {
     // Mapping: fact hash -> true.
-    mapping (bytes32 => bool) private verifiedFact;
+    mapping(bytes32 => bool) private verifiedFact;
 
     // Indicates whether the Fact Registry has at least one fact registered.
     bool anyFactRegistered;
@@ -13,13 +13,9 @@ contract FactRegistry is IQueryableFactRegistry {
     /*
       Checks if a fact has been verified.
     */
-    function isValid(bytes32 fact)
-        external view override
-        returns(bool)
-    {
+    function isValid(bytes32 fact) external view override returns (bool) {
         return _factCheck(fact);
     }
-
 
     /*
       This is an internal method to check if the fact is already registered.
@@ -27,18 +23,11 @@ contract FactRegistry is IQueryableFactRegistry {
       But the check is against the local fact registry,
       So for a derived referral fact registry, it's not the same.
     */
-    function _factCheck(bytes32 fact)
-        internal view
-        returns(bool)
-    {
+    function _factCheck(bytes32 fact) internal view returns (bool) {
         return verifiedFact[fact];
     }
 
-    function registerFact(
-        bytes32 factHash
-        )
-        internal
-    {
+    function registerFact(bytes32 factHash) internal {
         // This function stores the fact hash in the mapping.
         verifiedFact[factHash] = true;
 
@@ -51,11 +40,7 @@ contract FactRegistry is IQueryableFactRegistry {
     /*
       Indicates whether at least one fact was registered.
     */
-    function hasRegisteredFact()
-        external view override
-        returns(bool)
-    {
+    function hasRegisteredFact() external view override returns (bool) {
         return anyFactRegistered;
     }
-
 }

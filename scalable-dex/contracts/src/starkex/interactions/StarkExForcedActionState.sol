@@ -8,17 +8,12 @@ import "../../components/ActionHash.sol";
 /*
   StarkExchange specific action hashses.
 */
-contract StarkExForcedActionState is
-    StarkExStorage,
-    ActionHash,
-    MStarkExForcedActionState
-{
-
+contract StarkExForcedActionState is StarkExStorage, ActionHash, MStarkExForcedActionState {
     function fullWithdrawActionHash(uint256 starkKey, uint256 vaultId)
         internal
         pure
         override
-        returns(bytes32)
+        returns (bytes32)
     {
         return getActionHash("FULL_WITHDRAWAL", abi.encode(starkKey, vaultId));
     }
@@ -26,10 +21,7 @@ contract StarkExForcedActionState is
     /*
       Implemented in the FullWithdrawal contracts.
     */
-    function clearFullWithdrawalRequest(
-        uint256 starkKey,
-        uint256 vaultId
-    )
+    function clearFullWithdrawalRequest(uint256 starkKey, uint256 vaultId)
         internal
         virtual
         override
@@ -49,10 +41,7 @@ contract StarkExForcedActionState is
         res = forcedActionRequests[fullWithdrawActionHash(starkKey, vaultId)];
     }
 
-    function setFullWithdrawalRequest(uint256 starkKey, uint256 vaultId)
-        internal
-        override
-    {
+    function setFullWithdrawalRequest(uint256 starkKey, uint256 vaultId) internal override {
         // FullWithdrawal is always at premium cost, hence the `true`.
         setActionHash(fullWithdrawActionHash(starkKey, vaultId), true);
     }
