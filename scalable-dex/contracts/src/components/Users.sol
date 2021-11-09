@@ -28,7 +28,7 @@ import "../libraries/LibConstants.sol";
   The only flows that require user registration are the anti-concorship flows:
   forced actions and deposit cancellation.
 
-  User registration is performed by calling :sol:func:`registerEthAddress` with the selected 
+  User registration is performed by calling :sol:func:`registerEthAddress` with the selected
   Stark Key, representing an `x` coordinate on the Stark-friendly elliptic curve,
   and the `y` coordinate of the key on the curve (due to the nature of the curve,
   only two such possible `y` coordinates exist).
@@ -65,14 +65,14 @@ abstract contract Users is MainStorage, LibConstants {
         require(ethKey != ZERO_ADDRESS, "INVALID_ETH_ADDRESS");
         require(ethKeys[starkKey] == ZERO_ADDRESS, "STARK_KEY_UNAVAILABLE");
         require(isOnCurve(starkKey), "INVALID_STARK_KEY");
-        require(starkSignature.length == 32 * 3, "INVALID_STARK_SIGNATURE");
+        require(starkSignature.length == 32 * 3, "INVALID_STARK_SIGNATURE_LENGTH");
 
         bytes memory sig = starkSignature;
         (uint256 r, uint256 s, uint256 StarkKeyY) = abi.decode(sig, (uint256, uint256, uint256));
 
         uint256 msgHash = uint256(
             keccak256(abi.encodePacked("UserRegistration:", ethKey, starkKey))
-        ) % K_MODULUS;
+        ) % ECDSA.EC_ORDER;
 
         ECDSA.verify(msgHash, r, s, starkKey, StarkKeyY);
 

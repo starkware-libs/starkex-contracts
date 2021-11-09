@@ -51,18 +51,6 @@ library Addresses {
             "UNEXPECTED_CONTRACT_IDENTIFIER"
         );
     }
-
-    /*
-      Similar to safeTokenContractCall, but always ignores the return value.
-
-      Assumes some other method is used to detect the failures
-      (e.g. balance is checked before and after the call).
-    */
-    function uncheckedTokenContractCall(address tokenAddress, bytes memory callData) internal {
-        // NOLINTNEXTLINE: low-level-calls.
-        (bool success, bytes memory returndata) = tokenAddress.call(callData);
-        require(success, string(returndata));
-    }
 }
 
 /*

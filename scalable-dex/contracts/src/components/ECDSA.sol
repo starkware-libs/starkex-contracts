@@ -23,7 +23,7 @@ library ECDSA {
         uint256 pubX,
         uint256 pubY
     ) internal pure {
-        require(msgHash % FIELD_PRIME == msgHash, "msgHash out of range");
+        require(msgHash % EC_ORDER == msgHash, "msgHash out of range");
         require((1 <= s) && (s < EC_ORDER), "s out of range");
         uint256 w = s.invMod(EC_ORDER);
         require((1 <= r) && (r < (1 << N_ELEMENT_BITS_ECDSA)), "r out of range");

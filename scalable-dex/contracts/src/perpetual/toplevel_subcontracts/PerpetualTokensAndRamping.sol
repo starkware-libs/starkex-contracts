@@ -9,6 +9,7 @@ import "../../components/KeyGetters.sol";
 import "../../components/Users.sol";
 import "../../components/MainGovernance.sol";
 import "../../interactions/AcceptModifications.sol";
+import "../../interactions/CompositeActions.sol";
 import "../../interactions/Deposits.sol";
 import "../../interactions/TokenAssetData.sol";
 import "../../interactions/TokenQuantization.sol";
@@ -28,6 +29,7 @@ contract PerpetualTokensAndRamping is
     KeyGetters,
     Users,
     Deposits,
+    CompositeActions,
     Withdrawals
 {
     function initialize(
