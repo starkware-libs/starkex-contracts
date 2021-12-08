@@ -1,14 +1,14 @@
-pragma solidity ^0.5.2;
+// SPDX-License-Identifier: Apache-2.0.
+pragma solidity ^0.6.11;
 
-contract MGovernance {
+abstract contract MGovernance {
+    function isGovernor(address testGovernor) internal view virtual returns (bool);
+
     /*
       Allows calling the function only by a Governor.
     */
-    modifier onlyGovernance()
-    {
-        // Pure modifier declarations are not supported. Instead we provide
-        // a dummy definition.
-        revert("UNIMPLEMENTED");
+    modifier onlyGovernance() {
+        require(isGovernor(msg.sender), "ONLY_GOVERNANCE");
         _;
     }
 }

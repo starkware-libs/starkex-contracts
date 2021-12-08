@@ -1,7 +1,7 @@
-pragma solidity ^0.5.2;
+// SPDX-License-Identifier: Apache-2.0.
+pragma solidity ^0.6.11;
 
-contract ExternalInitializer {
-
+interface ExternalInitializer {
     event LogExternalInitialize(bytes data);
 
     function initialize(bytes calldata data) external;

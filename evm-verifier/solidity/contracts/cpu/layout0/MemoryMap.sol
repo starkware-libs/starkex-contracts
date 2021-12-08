@@ -1,4 +1,6 @@
-pragma solidity ^0.5.2;
+// ---------- The following code was auto-generated. PLEASE DO NOT EDIT. ----------
+// SPDX-License-Identifier: Apache-2.0.
+pragma solidity ^0.6.11;
 
 contract MemoryMap {
     /*
@@ -59,21 +61,20 @@ contract MemoryMap {
     uint256 constant internal MM_ECDSA__SIG_CONFIG_SHIFT_POINT_Y =         0x155;
     uint256 constant internal MM_ECDSA__SIG_CONFIG_BETA =                  0x156;
     uint256 constant internal MM_INITIAL_ECDSA_ADDR =                      0x157;
-    uint256 constant internal MM_INITIAL_CHECKPOINTS_ADDR =                0x158;
-    uint256 constant internal MM_FINAL_CHECKPOINTS_ADDR =                  0x159;
-    uint256 constant internal MM_TRACE_GENERATOR =                         0x15a;
-    uint256 constant internal MM_OODS_POINT =                              0x15b;
-    uint256 constant internal MM_INTERACTION_ELEMENTS =                    0x15c; // uint256[3]
-    uint256 constant internal MM_COEFFICIENTS =                            0x15f; // uint256[298]
-    uint256 constant internal MM_OODS_VALUES =                             0x289; // uint256[174]
-    uint256 constant internal MM_CONSTRAINT_POLY_ARGS_END =                0x337;
-    uint256 constant internal MM_COMPOSITION_OODS_VALUES =                 0x337; // uint256[2]
-    uint256 constant internal MM_OODS_EVAL_POINTS =                        0x339; // uint256[48]
-    uint256 constant internal MM_OODS_COEFFICIENTS =                       0x369; // uint256[176]
-    uint256 constant internal MM_TRACE_QUERY_RESPONSES =                   0x419; // uint256[1200]
-    uint256 constant internal MM_COMPOSITION_QUERY_RESPONSES =             0x8c9; // uint256[96]
-    uint256 constant internal MM_LOG_N_STEPS =                             0x929;
-    uint256 constant internal MM_N_PUBLIC_MEM_ENTRIES =                    0x92a;
-    uint256 constant internal MM_N_PUBLIC_MEM_PAGES =                      0x92b;
-    uint256 constant internal MM_CONTEXT_SIZE =                            0x92c;
+    uint256 constant internal MM_TRACE_GENERATOR =                         0x158;
+    uint256 constant internal MM_OODS_POINT =                              0x159;
+    uint256 constant internal MM_INTERACTION_ELEMENTS =                    0x15a; // uint256[3]
+    uint256 constant internal MM_COEFFICIENTS =                            0x15d; // uint256[179]
+    uint256 constant internal MM_OODS_VALUES =                             0x210; // uint256[201]
+    uint256 constant internal MM_CONSTRAINT_POLY_ARGS_END =                0x2d9;
+    uint256 constant internal MM_COMPOSITION_OODS_VALUES =                 0x2d9; // uint256[2]
+    uint256 constant internal MM_OODS_EVAL_POINTS =                        0x2db; // uint256[48]
+    uint256 constant internal MM_OODS_COEFFICIENTS =                       0x30b; // uint256[203]
+    uint256 constant internal MM_TRACE_QUERY_RESPONSES =                   0x3d6; // uint256[1200]
+    uint256 constant internal MM_COMPOSITION_QUERY_RESPONSES =             0x886; // uint256[96]
+    uint256 constant internal MM_LOG_N_STEPS =                             0x8e6;
+    uint256 constant internal MM_N_PUBLIC_MEM_ENTRIES =                    0x8e7;
+    uint256 constant internal MM_N_PUBLIC_MEM_PAGES =                      0x8e8;
+    uint256 constant internal MM_CONTEXT_SIZE =                            0x8e9;
 }
+// ---------- End of auto-generated code. ----------

@@ -1,4 +1,5 @@
-pragma solidity ^0.5.2;
+// SPDX-License-Identifier: Apache-2.0.
+pragma solidity ^0.6.11;
 
 import "./Governance.sol";
 
@@ -12,7 +13,7 @@ import "./Governance.sol";
   2. Remove other governors (:sol:func:`mainRemoveGovernor`)
   3. Add new :sol:mod:`Verifiers` and :sol:mod:`AvailabilityVerifiers`
   4. Remove :sol:mod:`Verifiers` and :sol:mod:`AvailabilityVerifiers` after a timelock allows it
-  5. Nominate Operators (see :sol:mod:`Operator`) and Token Administrators (see :sol:mod:`Tokens`)
+  5. Nominate Operators (see :sol:mod:`Operator`) and Token Administrators (see :sol:mod:`TokenRegister`)
 
   Adding governors is performed in a two step procedure:
 
@@ -33,14 +34,10 @@ import "./Governance.sol";
   must have unique names in order for the proxy to successfully delegate to them.
 */
 contract MainGovernance is Governance {
-
     // The tag is the sting key that is used in the Governance storage mapping.
     string public constant MAIN_GOVERNANCE_INFO_TAG = "StarkEx.Main.2019.GovernorsInformation";
 
-    function getGovernanceTag()
-        internal
-        view
-        returns (string memory tag) {
+    function getGovernanceTag() internal pure override returns (string memory tag) {
         tag = MAIN_GOVERNANCE_INFO_TAG;
     }
 
@@ -56,14 +53,11 @@ contract MainGovernance is Governance {
         removeGovernor(governorForRemoval);
     }
 
-    function mainAcceptGovernance()
-        external
-    {
+    function mainAcceptGovernance() external {
         acceptGovernance();
     }
 
     function mainCancelNomination() external {
         cancelNomination();
     }
-
 }

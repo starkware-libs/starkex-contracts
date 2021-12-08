@@ -1,19 +1,15 @@
-pragma solidity ^0.5.2;
+// SPDX-License-Identifier: Apache-2.0.
+pragma solidity ^0.6.11;
 
-contract MOperator {
+abstract contract MOperator {
+    function isOperator(address testedOperator) public view virtual returns (bool);
 
-    modifier onlyOperator()
-    {
-        // Pure modifier declarations are not supported. Instead we provide
-        // a dummy definition.
-        revert("UNIMPLEMENTED");
+    modifier onlyOperator() {
+        require(isOperator(msg.sender), "ONLY_OPERATOR");
         _;
     }
 
-    function registerOperator(address newOperator)
-        external;
+    function registerOperator(address newOperator) external virtual;
 
-    function unregisterOperator(address removedOperator)
-        external;
-
+    function unregisterOperator(address removedOperator) external virtual;
 }

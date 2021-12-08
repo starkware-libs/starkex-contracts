@@ -1,4 +1,5 @@
-pragma solidity ^0.5.2;
+// SPDX-License-Identifier: Apache-2.0.
+pragma solidity ^0.6.11;
 
 import "../components/GovernanceStorage.sol";
 
@@ -8,17 +9,15 @@ import "../components/GovernanceStorage.sol";
   to prevent collision hazard.
 */
 contract ProxyStorage is GovernanceStorage {
-
-    // Stores the hash of the initialization vector of the added implementation.
-    // Upon upgradeTo the implementation, the initialization vector is verified
-    // to be identical to the one submitted when adding the implementation.
-    mapping (address => bytes32) internal initializationHash;
+    // NOLINTNEXTLINE: naming-convention uninitialized-state.
+    mapping(address => bytes32) internal initializationHash_DEPRECATED;
 
     // The time after which we can switch to the implementation.
-    mapping (address => uint256) internal enabledTime;
+    // Hash(implementation, data, finalize) => time.
+    mapping(bytes32 => uint256) internal enabledTime;
 
     // A central storage of the flags whether implementation has been initialized.
     // Note - it can be used flexibly enough to accommodate multiple levels of initialization
     // (i.e. using different key salting schemes for different initialization levels).
-    mapping (bytes32 => bool) internal initialized;
+    mapping(bytes32 => bool) internal initialized;
 }

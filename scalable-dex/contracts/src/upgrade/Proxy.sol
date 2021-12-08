@@ -1,7 +1,9 @@
-pragma solidity ^0.5.2;
+// SPDX-License-Identifier: Apache-2.0.
+pragma solidity ^0.6.11;
 
 import "./ProxyGovernance.sol";
 import "./ProxyStorage.sol";
+import "./StorageSlots.sol";
 import "../libraries/Common.sol";
 
 /**
@@ -34,45 +36,53 @@ import "../libraries/Common.sol";
   backward compatible with previous implementations with respect to the storage used until that
   point.
 */
-contract Proxy is ProxyStorage, ProxyGovernance {
-
+contract Proxy is ProxyStorage, ProxyGovernance, StorageSlots {
     // Emitted when the active implementation is replaced.
-    event Upgraded(address indexed implementation);
+    event ImplementationUpgraded(address indexed implementation, bytes initializer);
 
     // Emitted when an implementation is submitted as an upgrade candidate and a time lock
     // is activated.
     event ImplementationAdded(address indexed implementation, bytes initializer, bool finalize);
 
     // Emitted when an implementation is removed from the list of upgrade candidates.
-    event ImplementationRemoved(address indexed implementation);
+    event ImplementationRemoved(address indexed implementation, bytes initializer, bool finalize);
 
     // Emitted when the implementation is finalized.
     event FinalizedImplementation(address indexed implementation);
 
-
-    // Storage slot with the address of the current implementation.
-    // The address of the slot is keccak256("StarkWare2019.implemntation-slot").
-    // We need to keep this variable stored outside of the commonly used space,
-    // so that it's not overrun by the logical implementation (the proxied contract).
-    bytes32 internal constant IMPLEMENTATION_SLOT =
-    0x177667240aeeea7e35eabe3a35e18306f336219e1386f7710a6bf8783f761b24;
-
-    // This storage slot stores the finalization flag.
-    // Once the value stored in this slot is set to non-zero
-    // the proxy blocks implementation upgrades.
-    // The current implementation is then referred to as Finalized.
-    // Web3.solidityKeccak(['string'], ["StarkWare2019.finalization-flag-slot"]).
-    bytes32 internal constant FINALIZED_STATE_SLOT =
-    0x7d433c6f837e8f93009937c466c82efbb5ba621fae36886d0cac433c5d0aa7d2;
-
-    uint256 public constant UPGRADE_ACTIVATION_DELAY = 28 days;
-
     using Addresses for address;
 
-    constructor ( )
-        public
-    {
+    string public constant PROXY_VERSION = "3.0.0";
+
+    constructor(uint256 upgradeActivationDelay) public {
         initGovernance();
+        setUpgradeActivationDelay(upgradeActivationDelay);
+    }
+
+    function setUpgradeActivationDelay(uint256 delayInSeconds) private {
+        bytes32 slot = UPGRADE_DELAY_SLOT;
+        assembly {
+            sstore(slot, delayInSeconds)
+        }
+    }
+
+    function getUpgradeActivationDelay() public view returns (uint256 delay) {
+        bytes32 slot = UPGRADE_DELAY_SLOT;
+        assembly {
+            delay := sload(slot)
+        }
+        return delay;
+    }
+
+    /*
+      Returns the address of the current implementation.
+    */
+    // NOLINTNEXTLINE external-function.
+    function implementation() public view returns (address _implementation) {
+        bytes32 slot = IMPLEMENTATION_SLOT;
+        assembly {
+            _implementation := sload(slot)
+        }
     }
 
     /*
@@ -83,13 +93,14 @@ contract Proxy is ProxyStorage, ProxyGovernance {
         address _implementation = implementation();
 
         // We can't call low level implementation before it's assigned. (i.e. ZERO).
-        if (_implementation == ZERO_ADDRESS) {
+        if (_implementation == address(0x0)) {
             return false;
         }
-        // solium-disable-next-line security/no-low-level-calls
-        // NOLINTNEXTLINE: reentrancy-events low-level-calls.
+
+        // NOLINTNEXTLINE: low-level-calls.
         (bool success, bytes memory returndata) = _implementation.delegatecall(
-            abi.encodeWithSignature("isFrozen()"));
+            abi.encodeWithSignature("isFrozen()")
+        );
         require(success, string(returndata));
         return abi.decode(returndata, (bool));
     }
@@ -98,14 +109,13 @@ contract Proxy is ProxyStorage, ProxyGovernance {
       This method blocks delegation to initialize().
       Only upgradeTo should be able to delegate call to initialize().
     */
-    function initialize(bytes calldata /*data*/)
-        external pure
-    {
+    function initialize(
+        bytes calldata /*data*/
+    ) external pure {
         revert("CANNOT_CALL_INITIALIZE");
     }
 
-    modifier notFinalized()
-    {
+    modifier notFinalized() {
         require(isNotFinalized(), "IMPLEMENTATION_FINALIZED");
         _;
     }
@@ -114,49 +124,48 @@ contract Proxy is ProxyStorage, ProxyGovernance {
       Forbids calling the function if the implementation is frozen.
       This modifier relies on the lower level (logical contract) implementation of isFrozen().
     */
-    modifier notFrozen()
-    {
+    modifier notFrozen() {
         require(!implementationIsFrozen(), "STATE_IS_FROZEN");
         _;
+    }
+
+    /*
+      This entry point serves only transactions with empty calldata. (i.e. pure value transfer tx).
+      We don't expect to receive such, thus block them.
+    */
+    receive() external payable {
+        revert("CONTRACT_NOT_EXPECTED_TO_RECEIVE");
     }
 
     /*
       Contract's default function. Delegates execution to the implementation contract.
       It returns back to the external caller whatever the implementation delegated code returns.
     */
-    function () external payable {
+    fallback() external payable {
         address _implementation = implementation();
-        require (_implementation != ZERO_ADDRESS, "MISSING_IMPLEMENTATION");
+        require(_implementation != address(0x0), "MISSING_IMPLEMENTATION");
 
-        // solium-disable-next-line security/no-inline-assembly
         assembly {
             // Copy msg.data. We take full control of memory in this inline assembly
             // block because it will not return to Solidity code. We overwrite the
             // Solidity scratch pad at memory position 0.
-            calldatacopy(0, 0, calldatasize)
+            calldatacopy(0, 0, calldatasize())
 
             // Call the implementation.
             // out and outsize are 0 for now, as we don't know the out size yet.
-            let result := delegatecall(gas, _implementation, 0, calldatasize, 0, 0)
+            let result := delegatecall(gas(), _implementation, 0, calldatasize(), 0, 0)
 
             // Copy the returned data.
-            returndatacopy(0, 0, returndatasize)
+            returndatacopy(0, 0, returndatasize())
 
             switch result
             // delegatecall returns 0 on error.
-            case 0 { revert(0, returndatasize) }
-            default { return(0, returndatasize) }
-        }
-    }
-
-    /*
-      Returns the address of the current implementation.
-    */
-    function implementation() public view returns (address _implementation) {
-        bytes32 slot = IMPLEMENTATION_SLOT;
-        // solium-disable-next-line security/no-inline-assembly
-        assembly {
-            _implementation := sload(slot)
+            case 0 {
+                revert(0, returndatasize())
+            }
+            default {
+                return(0, returndatasize())
+            }
         }
     }
 
@@ -165,7 +174,6 @@ contract Proxy is ProxyStorage, ProxyGovernance {
     */
     function setImplementation(address newImplementation) private {
         bytes32 slot = IMPLEMENTATION_SLOT;
-        // solium-disable-next-line security/no-inline-assembly
         assembly {
             sstore(slot, newImplementation)
         }
@@ -177,7 +185,6 @@ contract Proxy is ProxyStorage, ProxyGovernance {
     function isNotFinalized() public view returns (bool notFinal) {
         bytes32 slot = FINALIZED_STATE_SLOT;
         uint256 slotValue;
-        // solium-disable-next-line security/no-inline-assembly
         assembly {
             slotValue := sload(slot)
         }
@@ -189,7 +196,6 @@ contract Proxy is ProxyStorage, ProxyGovernance {
     */
     function setFinalizedFlag() private {
         bytes32 slot = FINALIZED_STATE_SLOT;
-        // solium-disable-next-line security/no-inline-assembly
         assembly {
             sstore(slot, 0x1)
         }
@@ -201,23 +207,23 @@ contract Proxy is ProxyStorage, ProxyGovernance {
       addImplementation is not blocked when frozen or finalized.
       (upgradeTo API is blocked when finalized or frozen).
     */
-    function addImplementation(address newImplementation, bytes calldata data, bool finalize)
-        external onlyGovernance {
+    function addImplementation(
+        address newImplementation,
+        bytes calldata data,
+        bool finalize
+    ) external onlyGovernance {
         require(newImplementation.isContract(), "ADDRESS_NOT_CONTRACT");
 
-        bytes32 init_hash = keccak256(abi.encode(data, finalize));
-        initializationHash[newImplementation] = init_hash;
+        bytes32 implVectorHash = keccak256(abi.encode(newImplementation, data, finalize));
 
-        // solium-disable-next-line security/no-block-members
-        uint256 activation_time = now + UPGRADE_ACTIVATION_DELAY;
+        uint256 activationTime = block.timestamp + getUpgradeActivationDelay();
 
         // First implementation should not have time-lock.
-        if (implementation() == ZERO_ADDRESS) {
-            // solium-disable-next-line security/no-block-members
-            activation_time = now;
+        if (implementation() == address(0x0)) {
+            activationTime = block.timestamp;
         }
 
-        enabledTime[newImplementation] = activation_time;
+        enabledTime[implVectorHash] = activationTime;
         emit ImplementationAdded(newImplementation, data, finalize);
     }
 
@@ -226,18 +232,18 @@ contract Proxy is ProxyStorage, ProxyGovernance {
       Note that it is possible to remove the current implementation. Doing so doesn't affect the
       current implementation, but rather revokes it as a future candidate.
     */
-    function removeImplementation(address newImplementation)
-        external onlyGovernance {
+    function removeImplementation(
+        address removedImplementation,
+        bytes calldata data,
+        bool finalize
+    ) external onlyGovernance {
+        bytes32 implVectorHash = keccak256(abi.encode(removedImplementation, data, finalize));
 
         // If we have initializer, we set the hash of it.
-        uint256 activation_time = enabledTime[newImplementation];
-
-        require(activation_time > 0, "ADDRESS_NOT_UPGRADE_CANDIDATE");
-
-        enabledTime[newImplementation] = 0;
-
-        initializationHash[newImplementation] = 0;
-        emit ImplementationRemoved(newImplementation);
+        uint256 activationTime = enabledTime[implVectorHash];
+        require(activationTime > 0, "UNKNOWN_UPGRADE_INFORMATION");
+        delete enabledTime[implVectorHash];
+        emit ImplementationRemoved(removedImplementation, data, finalize);
     }
 
     /*
@@ -258,29 +264,31 @@ contract Proxy is ProxyStorage, ProxyGovernance {
       (See comments in Governance.sol).
     */
     // NOLINTNEXTLINE: reentrancy-events timestamp.
-    function upgradeTo(address newImplementation, bytes calldata data, bool finalize)
-        external payable onlyGovernance notFinalized notFrozen {
-        uint256 activation_time = enabledTime[newImplementation];
-
-        require(activation_time > 0, "ADDRESS_NOT_UPGRADE_CANDIDATE");
-        // solium-disable-next-line security/no-block-members
+    function upgradeTo(
+        address newImplementation,
+        bytes calldata data,
+        bool finalize
+    ) external payable onlyGovernance notFinalized notFrozen {
+        bytes32 implVectorHash = keccak256(abi.encode(newImplementation, data, finalize));
+        uint256 activationTime = enabledTime[implVectorHash];
+        require(activationTime > 0, "UNKNOWN_UPGRADE_INFORMATION");
+        require(newImplementation.isContract(), "ADDRESS_NOT_CONTRACT");
         // NOLINTNEXTLINE: timestamp.
-        require(activation_time <= now, "UPGRADE_NOT_ENABLED_YET");
+        require(activationTime <= block.timestamp, "UPGRADE_NOT_ENABLED_YET");
 
-        bytes32 init_vector_hash = initializationHash[newImplementation];
-        require(init_vector_hash == keccak256(abi.encode(data, finalize)), "CHANGED_INITIALIZER");
         setImplementation(newImplementation);
 
-        // solium-disable-next-line security/no-low-level-calls
-        // NOLINTNEXTLINE: low-level-calls.
+        // NOLINTNEXTLINE: low-level-calls controlled-delegatecall.
         (bool success, bytes memory returndata) = newImplementation.delegatecall(
-            abi.encodeWithSelector(this.initialize.selector, data));
+            abi.encodeWithSelector(this.initialize.selector, data)
+        );
         require(success, string(returndata));
 
         // Verify that the new implementation is not frozen post initialization.
-        // NOLINTNEXTLINE: low-level-calls.
+        // NOLINTNEXTLINE: low-level-calls controlled-delegatecall.
         (success, returndata) = newImplementation.delegatecall(
-            abi.encodeWithSignature("isFrozen()"));
+            abi.encodeWithSignature("isFrozen()")
+        );
         require(success, "CALL_TO_ISFROZEN_REVERTED");
         require(!abi.decode(returndata, (bool)), "NEW_IMPLEMENTATION_FROZEN");
 
@@ -289,6 +297,6 @@ contract Proxy is ProxyStorage, ProxyGovernance {
             emit FinalizedImplementation(newImplementation);
         }
 
-        emit Upgraded(newImplementation);
+        emit ImplementationUpgraded(newImplementation, data);
     }
 }

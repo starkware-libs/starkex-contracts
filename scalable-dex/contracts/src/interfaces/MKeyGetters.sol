@@ -1,19 +1,20 @@
-pragma solidity ^0.5.2;
+// SPDX-License-Identifier: Apache-2.0.
+pragma solidity ^0.6.11;
 
-contract MKeyGetters {
+abstract contract MKeyGetters {
     // NOLINTNEXTLINE: external-function.
-    function getEthKey(uint256 starkKey) public view returns (address ethKey);
+    function getEthKey(uint256 ownerKey) public view virtual returns (address);
 
-    function isMsgSenderStarkKeyOwner(uint256 starkKey) internal view returns (bool);
+    function strictGetEthKey(uint256 ownerKey) internal view virtual returns (address);
+
+    function isMsgSenderKeyOwner(uint256 ownerKey) internal view virtual returns (bool);
 
     /*
-      Allows calling the function only if starkKey is registered to msg.sender.
+      Allows calling the function only if ownerKey is registered to msg.sender.
     */
-    modifier isSenderStarkKey(uint256 starkKey)
-    {
-        // Pure modifier declarations are not supported. Instead we provide
-        // a dummy definition.
-        revert("UNIMPLEMENTED");
+    modifier onlyKeyOwner(uint256 ownerKey) {
+        // Require the calling user to own the stark key.
+        require(msg.sender == strictGetEthKey(ownerKey), "MISMATCHING_STARK_ETH_KEYS");
         _;
     }
 }

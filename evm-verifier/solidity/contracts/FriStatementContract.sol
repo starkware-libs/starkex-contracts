@@ -1,6 +1,7 @@
-pragma solidity ^0.5.2;
+// SPDX-License-Identifier: Apache-2.0.
+pragma solidity ^0.6.11;
 
-import "./FactRegistry.sol";
+import "./components/FactRegistry.sol";
 import "./FriLayer.sol";
 
 contract FriStatementContract is FriLayer, FactRegistry {
@@ -24,22 +25,23 @@ contract FriStatementContract is FriLayer, FactRegistry {
         uint256[] memory friQueue,
         uint256 evaluationPoint,
         uint256 friStepSize,
-        uint256 expectedRoot) public {
-
-        require (friStepSize <= FRI_MAX_FRI_STEP, "FRI step size too large");
+        uint256 expectedRoot
+    ) public {
+        require(friStepSize <= FRI_MAX_FRI_STEP, "FRI step size too large");
         /*
           The friQueue should have of 3*nQueries + 1 elements, beginning with nQueries triplets
           of the form (query_index, FRI_value, FRI_inverse_point), and ending with a single buffer
           cell set to 0, which is accessed and read during the computation of the FRI layer.
         */
-        require (
+        require(
             friQueue.length % 3 == 1,
-            "FRI Queue must be composed of triplets plus one delimiter cell");
-        require (friQueue.length >= 4, "No query to process");
+            "FRI Queue must be composed of triplets plus one delimiter cell"
+        );
+        require(friQueue.length >= 4, "No query to process");
 
         uint256 mmFriCtxSize = FRI_CTX_SIZE;
-        uint256 nQueries = friQueue.length / 3;
-        friQueue[3*nQueries] = 0;  // NOLINT: divide-before-multiply.
+        uint256 nQueries = friQueue.length / 3; // NOLINT: divide-before-multiply.
+        friQueue[3 * nQueries] = 0;
         uint256 merkleQueuePtr;
         uint256 friQueuePtr;
         uint256 channelPtr;
@@ -58,15 +60,15 @@ contract FriStatementContract is FriLayer, FactRegistry {
         // and verify that queries are strictly incrementing.
         uint256 prevQuery = 0; // If we pass height, change to: prevQuery = 1 << height - 1;
         for (uint256 i = 0; i < nQueries; i++) {
-            require(friQueue[3*i] > prevQuery, "INVALID_QUERY_VALUE");
-            require(friQueue[3*i+1] < K_MODULUS, "INVALID_FRI_VALUE");
-            require(friQueue[3*i+2] < K_MODULUS, "INVALID_FRI_INVERSE_POINT");
-            prevQuery = friQueue[3*i];
+            require(friQueue[3 * i] > prevQuery, "INVALID_QUERY_VALUE");
+            require(friQueue[3 * i + 1] < K_MODULUS, "INVALID_FRI_VALUE");
+            require(friQueue[3 * i + 2] < K_MODULUS, "INVALID_FRI_INVERSE_POINT");
+            prevQuery = friQueue[3 * i];
         }
 
         // Verify all queries are on the same logarithmic step.
         // NOLINTNEXTLINE: divide-before-multiply.
-        require((friQueue[0] ^ friQueue[3*nQueries-3]) < friQueue[0], "INVALID_QUERIES_RANGE");
+        require((friQueue[0] ^ friQueue[3 * nQueries - 3]) < friQueue[0], "INVALID_QUERIES_RANGE");
 
         // Allocate memory queues: channelPtr, merkleQueue, friCtx, dataToHash.
         assembly {
@@ -89,11 +91,16 @@ contract FriStatementContract is FriLayer, FactRegistry {
         initFriGroups(friCtx);
 
         nQueries = computeNextLayer(
-            channelPtr, friQueuePtr, merkleQueuePtr, nQueries, evaluationPoint,
+            channelPtr,
+            friQueuePtr,
+            merkleQueuePtr,
+            nQueries,
+            evaluationPoint,
             2**friStepSize, /* friCosetSize = 2**friStepSize */
-            friCtx);
+            friCtx
+        );
 
-        verify(channelPtr, merkleQueuePtr, bytes32(expectedRoot), nQueries);
+        verifyMerkle(channelPtr, merkleQueuePtr, bytes32(expectedRoot), nQueries);
 
         bytes32 factHash;
         assembly {

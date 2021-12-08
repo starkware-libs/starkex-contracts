@@ -1,10 +1,10 @@
-pragma solidity ^0.5.2;
+// SPDX-License-Identifier: Apache-2.0.
+pragma solidity ^0.6.11;
 
 import "./IMerkleVerifier.sol";
 
 contract MerkleVerifier is IMerkleVerifier {
-
-    function getHashMask() internal pure returns(uint256) {
+    function getHashMask() internal pure returns (uint256) {
         // Default implementation.
         return 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF000000000000000000000000;
     }
@@ -19,14 +19,12 @@ contract MerkleVerifier is IMerkleVerifier {
 
       The input data is destroyed during verification.
     */
-    function verify(
+    function verifyMerkle(
         uint256 channelPtr,
         uint256 queuePtr,
         bytes32 root,
-        uint256 n)
-        internal view
-        returns (bytes32 hash)
-    {
+        uint256 n
+    ) internal view virtual override returns (bytes32 hash) {
         uint256 lhashMask = getHashMask();
         require(n <= MAX_N_MERKLE_VERIFIER_QUERIES, "TOO_MANY_MERKLE_QUERIES");
 
@@ -46,7 +44,11 @@ contract MerkleVerifier is IMerkleVerifier {
             let proofPtr := mload(channelPtr)
 
             // while(index > 1).
-            for { } gt(index, 1) { } {
+            for {
+
+            } gt(index, 1) {
+
+            } {
                 let siblingIndex := xor(index, 1)
                 // sibblingOffset := 0x20 * lsb(siblingIndex).
                 let sibblingOffset := mulmod(siblingIndex, 0x20, 0x40)

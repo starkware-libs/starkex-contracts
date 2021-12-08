@@ -1,14 +1,10 @@
-pragma solidity ^0.5.2;
+// SPDX-License-Identifier: Apache-2.0.
+pragma solidity ^0.6.11;
 
 import "./Identity.sol";
 
-contract SubContractor is Identity {
+interface SubContractor is Identity {
+    function initialize(bytes calldata data) external;
 
-    function initialize(bytes calldata data)
-        external;
-
-    function initializerSize()
-        external view
-        returns(uint256);
-
+    function initializerSize() external view returns (uint256);
 }

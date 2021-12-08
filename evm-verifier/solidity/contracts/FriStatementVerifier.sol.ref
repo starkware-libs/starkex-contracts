@@ -1,4 +1,5 @@
-pragma solidity ^0.5.2;
+// SPDX-License-Identifier: Apache-2.0.
+pragma solidity ^0.6.11;
 
 import "./MemoryMap.sol";
 import "./MemoryAccessUtils.sol";
@@ -11,9 +12,12 @@ import "../../VerifierChannel.sol";
   The first layer is computed from decommitments, the last layer is computed by evaluating the
   fully committed polynomial, and the mid-layers are provided in the proof only as hashed data.
 */
-contract FriStatementVerifier is MemoryMap, MemoryAccessUtils, VerifierChannel, HornerEvaluator {
-    event LogGas(string name, uint256 val);
-
+abstract contract FriStatementVerifier is
+    MemoryMap,
+    MemoryAccessUtils,
+    VerifierChannel,
+    HornerEvaluator
+{
     FriStatementContract friStatementContract;
 
     constructor(address friStatementContractAddress) internal {
@@ -25,8 +29,11 @@ contract FriStatementVerifier is MemoryMap, MemoryAccessUtils, VerifierChannel, 
       the last layer, computes the last FRI layer using horner evalations, then returns the hash
       of the final FriQueue.
     */
-    function computerLastLayerHash(uint256[] memory ctx, uint256 nPoints, uint256 numLayers)
-        internal view returns (bytes32 lastLayerHash) {
+    function computerLastLayerHash(
+        uint256[] memory ctx,
+        uint256 nPoints,
+        uint256 numLayers
+    ) internal view returns (bytes32 lastLayerHash) {
         uint256 friLastLayerDegBound = ctx[MM_FRI_LAST_LAYER_DEG_BOUND];
         uint256 groupOrderMinusOne = friLastLayerDegBound * ctx[MM_BLOW_UP_FACTOR] - 1;
         uint256 exponent = 1 << numLayers;
@@ -35,20 +42,23 @@ contract FriStatementVerifier is MemoryMap, MemoryAccessUtils, VerifierChannel, 
         uint256 coefsStart = ctx[MM_FRI_LAST_LAYER_PTR];
 
         for (uint256 i = 0; i < nPoints; i++) {
-            uint256 query = ctx[MM_FRI_QUEUE + 3*i] >> numLayers;
+            uint256 query = ctx[MM_FRI_QUEUE + 3 * i] >> numLayers;
             if (query == prevQuery) {
                 continue;
             }
-            ctx[MM_FRI_QUEUE + 3*curPointIndex] = query;
+            ctx[MM_FRI_QUEUE + 3 * curPointIndex] = query;
             prevQuery = query;
 
-            uint256 point = fpow(ctx[MM_FRI_QUEUE + 3*i + 2], exponent);
-            ctx[MM_FRI_QUEUE + 3*curPointIndex + 2] = point;
+            uint256 point = fpow(ctx[MM_FRI_QUEUE + 3 * i + 2], exponent);
+            ctx[MM_FRI_QUEUE + 3 * curPointIndex + 2] = point;
             // Invert point using inverse(point) == fpow(point, ord(point) - 1).
 
             point = fpow(point, groupOrderMinusOne);
-            ctx[MM_FRI_QUEUE + 3*curPointIndex + 1] = hornerEval(
-                coefsStart, point, friLastLayerDegBound);
+            ctx[MM_FRI_QUEUE + 3 * curPointIndex + 1] = hornerEval(
+                coefsStart,
+                point,
+                friLastLayerDegBound
+            );
 
             curPointIndex++;
         }
@@ -63,10 +73,7 @@ contract FriStatementVerifier is MemoryMap, MemoryAccessUtils, VerifierChannel, 
       Verifies that FRI layers consistent with the computed first and last FRI layers
       have been registered in the FriStatementContract.
     */
-    function friVerifyLayers(
-        uint256[] memory ctx)
-        internal view
-    {
+    function friVerifyLayers(uint256[] memory ctx) internal view virtual {
         uint256 channelPtr = getChannelPtr(ctx);
         uint256 nQueries = ctx[MM_N_UNIQUE_QUERIES];
 
@@ -76,8 +83,8 @@ contract FriStatementVerifier is MemoryMap, MemoryAccessUtils, VerifierChannel, 
         //
         // The values in the proof are already multiplied by MontgomeryR,
         // but the inputs from the OODS oracle need to be fixed.
-        for (uint256 i = 0; i < nQueries; i++ ) {
-            ctx[MM_FRI_QUEUE + 3*i + 1] = fmul(ctx[MM_FRI_QUEUE + 3*i + 1], K_MONTGOMERY_R);
+        for (uint256 i = 0; i < nQueries; i++) {
+            ctx[MM_FRI_QUEUE + 3 * i + 1] = fmul(ctx[MM_FRI_QUEUE + 3 * i + 1], K_MONTGOMERY_R);
         }
 
         uint256 friQueue = getPtr(ctx, MM_FRI_QUEUE);
@@ -85,7 +92,6 @@ contract FriStatementVerifier is MemoryMap, MemoryAccessUtils, VerifierChannel, 
         assembly {
             inputLayerHash := keccak256(friQueue, mul(nQueries, 0x60))
         }
-
 
         uint256[] memory friSteps = getFriSteps(ctx);
         uint256 nFriStepsLessOne = friSteps.length - 1;
@@ -103,7 +109,8 @@ contract FriStatementVerifier is MemoryMap, MemoryAccessUtils, VerifierChannel, 
             // Verify statement is registered.
             require( // NOLINT: calls-loop.
                 friStatementContract.isValid(keccak256(abi.encodePacked(dataToHash))),
-                "INVALIDATED_FRI_STATEMENT");
+                "INVALIDATED_FRI_STATEMENT"
+            );
 
             inputLayerHash = outputLayerHash;
 
@@ -119,6 +126,7 @@ contract FriStatementVerifier is MemoryMap, MemoryAccessUtils, VerifierChannel, 
 
         require(
             friStatementContract.isValid(keccak256(abi.encodePacked(dataToHash))),
-            "INVALIDATED_FRI_STATEMENT");
+            "INVALIDATED_FRI_STATEMENT"
+        );
     }
 }

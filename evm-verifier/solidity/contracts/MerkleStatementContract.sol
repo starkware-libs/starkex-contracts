@@ -1,12 +1,13 @@
-pragma solidity ^0.5.2;
+// SPDX-License-Identifier: Apache-2.0.
+pragma solidity ^0.6.11;
 
-import "./FactRegistry.sol";
+import "./components/FactRegistry.sol";
 import "./MerkleVerifier.sol";
 
 contract MerkleStatementContract is MerkleVerifier, FactRegistry {
     /*
-      This function recieves an initial merkle queue (consists of indices of leaves in the merkle
-      in addition to their values) and a merkle view (contains the values of all the nodes
+      This function receives an initial Merkle queue (consists of indices of leaves in the Merkle
+      in addition to their values) and a Merkle view (contains the values of all the nodes
       required to be able to validate the queue). In case of success it registers the Merkle fact,
       which is the hash of the queue together with the resulting root.
     */
@@ -16,13 +17,13 @@ contract MerkleStatementContract is MerkleVerifier, FactRegistry {
         uint256[] memory initialMerkleQueue,
         uint256 height,
         uint256 expectedRoot
-        )
-        public
-    {
+    ) public {
         require(height < 200, "Height must be < 200.");
         require(
             initialMerkleQueue.length <= MAX_N_MERKLE_VERIFIER_QUERIES * 2,
-            "TOO_MANY_MERKLE_QUERIES");
+            "TOO_MANY_MERKLE_QUERIES"
+        );
+        require(initialMerkleQueue.length % 2 == 0, "ODD_MERKLE_QUEUE_SIZE");
 
         uint256 merkleQueuePtr;
         uint256 channelPtr;
@@ -41,7 +42,7 @@ contract MerkleStatementContract is MerkleVerifier, FactRegistry {
             // Skip 0x20 bytes length at the beginning of the initialMerkleQueue.
             merkleQueuePtr := add(initialMerkleQueue, 0x20)
             // Get number of queries.
-            nQueries := div(mload(initialMerkleQueue), 0x2)
+            nQueries := div(mload(initialMerkleQueue), 0x2) //NOLINT: divide-before-multiply.
             // Get a pointer to the end of initialMerkleQueue.
             let initialMerkleQueueEndPtr := add(merkleQueuePtr, mul(nQueries, 0x40))
             // Let dataToHashPtr point to a free memory.
@@ -53,7 +54,11 @@ contract MerkleStatementContract is MerkleVerifier, FactRegistry {
 
             // First index needs to be >= 2**height.
             let idxLowerLimit := shl(height, 1)
-            for { } lt(merkleQueuePtr, initialMerkleQueueEndPtr) { } {
+            for {
+
+            } lt(merkleQueuePtr, initialMerkleQueueEndPtr) {
+
+            } {
                 let curIdx := mload(merkleQueuePtr)
                 // badInput |= curIdx < IdxLowerLimit.
                 badInput := or(badInput, lt(curIdx, idxLowerLimit))
@@ -82,7 +87,7 @@ contract MerkleStatementContract is MerkleVerifier, FactRegistry {
             mstore(0x40, add(dataToHashPtr, 0x20))
         }
         require(badInput == 0, "INVALID_MERKLE_INDICES");
-        bytes32 resRoot = verify(channelPtr, merkleQueuePtr, bytes32(expectedRoot), nQueries);
+        bytes32 resRoot = verifyMerkle(channelPtr, merkleQueuePtr, bytes32(expectedRoot), nQueries);
         bytes32 factHash;
         assembly {
             // Append the resulted root (should be the return value of verify) to dataToHashPtr.

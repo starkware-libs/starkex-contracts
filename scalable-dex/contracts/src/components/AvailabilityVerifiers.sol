@@ -1,4 +1,5 @@
-pragma solidity ^0.5.2;
+// SPDX-License-Identifier: Apache-2.0.
+pragma solidity ^0.6.11;
 
 import "../interfaces/MApprovalChain.sol";
 import "../libraries/LibConstants.sol";
@@ -29,36 +30,28 @@ import "./MainStorage.sol";
   The removal delay ensures that a user concerned about the soundness of the system has ample time
   to leave the exchange.
 */
-contract AvailabilityVerifiers is MainStorage, LibConstants, MApprovalChain {
+abstract contract AvailabilityVerifiers is MainStorage, LibConstants, MApprovalChain {
     function getRegisteredAvailabilityVerifiers()
-        external view
+        external
+        view
         returns (address[] memory _verifers)
     {
         return availabilityVerifiersChain.list;
     }
 
-    function isAvailabilityVerifier(address verifierAddress)
-        external view
-        returns (bool)
-    {
+    function isAvailabilityVerifier(address verifierAddress) external view returns (bool) {
         return findEntry(availabilityVerifiersChain.list, verifierAddress) != ENTRY_NOT_FOUND;
     }
 
-    function registerAvailabilityVerifier(address verifier, string calldata identifier)
-        external
-    {
+    function registerAvailabilityVerifier(address verifier, string calldata identifier) external {
         addEntry(availabilityVerifiersChain, verifier, MAX_VERIFIER_COUNT, identifier);
     }
 
-    function announceAvailabilityVerifierRemovalIntent(address verifier)
-        external
-    {
+    function announceAvailabilityVerifierRemovalIntent(address verifier) external {
         announceRemovalIntent(availabilityVerifiersChain, verifier, VERIFIER_REMOVAL_DELAY);
     }
 
-    function removeAvailabilityVerifier(address verifier)
-        external
-    {
+    function removeAvailabilityVerifier(address verifier) external {
         removeEntry(availabilityVerifiersChain, verifier);
     }
 }

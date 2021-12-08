@@ -1,7 +1,9 @@
-pragma solidity ^0.5.2;
+// SPDX-License-Identifier: Apache-2.0.
+pragma solidity ^0.6.11;
 
 import "../components/MainStorage.sol";
 import "../interfaces/MTokenAssetData.sol";
+import "../libraries/Common.sol";
 import "../libraries/LibConstants.sol";
 
 contract TokenAssetData is MainStorage, LibConstants, MTokenAssetData {
@@ -9,9 +11,9 @@ contract TokenAssetData is MainStorage, LibConstants, MTokenAssetData {
     bytes4 internal constant ETH_SELECTOR = bytes4(keccak256("ETH()"));
     bytes4 internal constant ERC721_SELECTOR = bytes4(keccak256("ERC721Token(address,uint256)"));
     bytes4 internal constant MINTABLE_ERC20_SELECTOR =
-    bytes4(keccak256("MintableERC20Token(address)"));
+        bytes4(keccak256("MintableERC20Token(address)"));
     bytes4 internal constant MINTABLE_ERC721_SELECTOR =
-    bytes4(keccak256("MintableERC721Token(address,uint256)"));
+        bytes4(keccak256("MintableERC721Token(address,uint256)"));
 
     // The selector follows the 0x20 bytes assetInfo.length field.
     uint256 internal constant SELECTOR_OFFSET = 0x20;
@@ -20,15 +22,20 @@ contract TokenAssetData is MainStorage, LibConstants, MTokenAssetData {
     string internal constant NFT_ASSET_ID_PREFIX = "NFT:";
     string internal constant MINTABLE_PREFIX = "MINTABLE:";
 
+    using Addresses for address;
+
     /*
       Extract the tokenSelector from assetInfo.
 
       Works like bytes4 tokenSelector = abi.decode(assetInfo, (bytes4))
       but does not revert when assetInfo.length < SELECTOR_OFFSET.
     */
-    function extractTokenSelector(bytes memory assetInfo) internal pure
-        returns (bytes4 selector) {
-        // solium-disable-next-line security/no-inline-assembly
+    function extractTokenSelector(bytes memory assetInfo)
+        internal
+        pure
+        override
+        returns (bytes4 selector)
+    {
         assembly {
             selector := and(
                 0xffffffff00000000000000000000000000000000000000000000000000000000,
@@ -37,7 +44,7 @@ contract TokenAssetData is MainStorage, LibConstants, MTokenAssetData {
         }
     }
 
-    function getAssetInfo(uint256 assetType) public view returns (bytes memory assetInfo) {
+    function getAssetInfo(uint256 assetType) public view override returns (bytes memory assetInfo) {
         // Verify that the registration is set and valid.
         require(registeredAssetType[assetType], "ASSET_TYPE_NOT_REGISTERED");
 
@@ -45,43 +52,103 @@ contract TokenAssetData is MainStorage, LibConstants, MTokenAssetData {
         assetInfo = assetTypeToAssetInfo[assetType];
     }
 
-    function isEther(uint256 assetType) internal view returns (bool) {
+    function isEther(uint256 assetType) internal view override returns (bool) {
         return extractTokenSelector(getAssetInfo(assetType)) == ETH_SELECTOR;
     }
 
-    function isMintableAssetType(uint256 assetType) internal view returns (bool) {
+    function isERC20(uint256 assetType) internal view override returns (bool) {
+        return extractTokenSelector(getAssetInfo(assetType)) == ERC20_SELECTOR;
+    }
+
+    function isERC721(uint256 assetType) internal view override returns (bool) {
+        return extractTokenSelector(getAssetInfo(assetType)) == ERC721_SELECTOR;
+    }
+
+    function isFungibleAssetType(uint256 assetType) internal view override returns (bool) {
         bytes4 tokenSelector = extractTokenSelector(getAssetInfo(assetType));
         return
+            tokenSelector == ETH_SELECTOR ||
+            tokenSelector == ERC20_SELECTOR ||
+            tokenSelector == MINTABLE_ERC20_SELECTOR;
+    }
+
+    function isMintableAssetType(uint256 assetType) internal view override returns (bool) {
+        bytes4 tokenSelector = extractTokenSelector(getAssetInfo(assetType));
+        return
+            tokenSelector == MINTABLE_ERC20_SELECTOR || tokenSelector == MINTABLE_ERC721_SELECTOR;
+    }
+
+    function isTokenSupported(bytes4 tokenSelector) private pure returns (bool) {
+        return
+            tokenSelector == ETH_SELECTOR ||
+            tokenSelector == ERC20_SELECTOR ||
+            tokenSelector == ERC721_SELECTOR ||
             tokenSelector == MINTABLE_ERC20_SELECTOR ||
             tokenSelector == MINTABLE_ERC721_SELECTOR;
     }
 
-    function extractContractAddress(bytes memory assetInfo)
-        internal pure returns (address _contract) {
+    function extractContractAddressFromAssetInfo(bytes memory assetInfo)
+        private
+        pure
+        returns (address)
+    {
         uint256 offset = TOKEN_CONTRACT_ADDRESS_OFFSET;
         uint256 res;
-        // solium-disable-next-line security/no-inline-assembly
         assembly {
             res := mload(add(assetInfo, offset))
         }
-        _contract = address(res);
+        return address(res);
+    }
+
+    function extractContractAddress(uint256 assetType) internal view override returns (address) {
+        return extractContractAddressFromAssetInfo(getAssetInfo(assetType));
+    }
+
+    function verifyAssetInfo(bytes memory assetInfo) internal view override {
+        bytes4 tokenSelector = extractTokenSelector(assetInfo);
+
+        // Ensure the selector is of an asset type we know.
+        require(isTokenSupported(tokenSelector), "UNSUPPORTED_TOKEN_TYPE");
+
+        if (tokenSelector == ETH_SELECTOR) {
+            // Assset info for ETH assetType is only a selector, i.e. 4 bytes length.
+            require(assetInfo.length == 4, "INVALID_ASSET_STRING");
+        } else {
+            // Assset info for other asset types are a selector + uint256 concatanation.
+            // We pass the address as a uint256 (zero padded),
+            // thus its length is 0x04 + 0x20 = 0x24.
+            require(assetInfo.length == 0x24, "INVALID_ASSET_STRING");
+            address tokenAddress = extractContractAddressFromAssetInfo(assetInfo);
+            require(tokenAddress.isContract(), "BAD_TOKEN_ADDRESS");
+        }
+    }
+
+    function isNonFungibleAssetInfo(bytes memory assetInfo) internal pure override returns (bool) {
+        bytes4 tokenSelector = extractTokenSelector(assetInfo);
+        return tokenSelector == ERC721_SELECTOR || tokenSelector == MINTABLE_ERC721_SELECTOR;
     }
 
     function calculateNftAssetId(uint256 assetType, uint256 tokenId)
         internal
         pure
-        returns(uint256 assetId) {
-        assetId = uint256(keccak256(abi.encodePacked(NFT_ASSET_ID_PREFIX, assetType, tokenId))) &
+        override
+        returns (uint256 assetId)
+    {
+        assetId =
+            uint256(keccak256(abi.encodePacked(NFT_ASSET_ID_PREFIX, assetType, tokenId))) &
             MASK_250;
     }
 
     function calculateMintableAssetId(uint256 assetType, bytes memory mintingBlob)
         internal
         pure
-        returns(uint256 assetId) {
+        override
+        returns (uint256 assetId)
+    {
         uint256 blobHash = uint256(keccak256(mintingBlob));
-        assetId = (uint256(keccak256(abi.encodePacked(MINTABLE_PREFIX ,assetType, blobHash)))
-            & MASK_240) | MINTABLE_ASSET_ID_FLAG;
+        assetId =
+            (uint256(keccak256(abi.encodePacked(MINTABLE_PREFIX, assetType, blobHash))) &
+                MASK_240) |
+            MINTABLE_ASSET_ID_FLAG;
     }
-
 }

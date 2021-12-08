@@ -1,4 +1,5 @@
-pragma solidity ^0.5.2;
+// SPDX-License-Identifier: Apache-2.0.
+pragma solidity ^0.6.11;
 
 import "../components/Governance.sol";
 
@@ -33,14 +34,10 @@ import "../components/Governance.sol";
   and a specific tag (key) to allow unique state storage.
 */
 contract ProxyGovernance is Governance {
-
     // The tag is the string key that is used in the Governance storage mapping.
     string public constant PROXY_GOVERNANCE_TAG = "StarkEx.Proxy.2019.GovernorsInformation";
 
-    function getGovernanceTag()
-        internal
-        view
-        returns (string memory tag) {
+    function getGovernanceTag() internal pure override returns (string memory tag) {
         tag = PROXY_GOVERNANCE_TAG;
     }
 
@@ -56,9 +53,7 @@ contract ProxyGovernance is Governance {
         removeGovernor(governorForRemoval);
     }
 
-    function proxyAcceptGovernance()
-        external
-    {
+    function proxyAcceptGovernance() external {
         acceptGovernance();
     }
 

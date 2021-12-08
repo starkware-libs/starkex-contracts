@@ -1,4 +1,5 @@
-pragma solidity ^0.5.2;
+// SPDX-License-Identifier: Apache-2.0.
+pragma solidity ^0.6.11;
 
 /*
   Common Utility librarries.
@@ -7,7 +8,6 @@ pragma solidity ^0.5.2;
 library Addresses {
     function isContract(address account) internal view returns (bool) {
         uint256 size;
-        // solium-disable-next-line security/no-inline-assembly
         assembly {
             size := extcodesize(account)
         }
@@ -15,8 +15,7 @@ library Addresses {
     }
 
     function performEthTransfer(address recipient, uint256 amount) internal {
-        // solium-disable-next-line security/no-call-value
-        (bool success, ) = recipient.call.value(amount)(""); // NOLINT: low-level-calls.
+        (bool success, ) = recipient.call{value: amount}(""); // NOLINT: low-level-calls.
         require(success, "ETH_TRANSFER_FAILED");
     }
 
@@ -27,14 +26,30 @@ library Addresses {
     */
     function safeTokenContractCall(address tokenAddress, bytes memory callData) internal {
         require(isContract(tokenAddress), "BAD_TOKEN_ADDRESS");
-        // solium-disable-next-line security/no-low-level-calls
         // NOLINTNEXTLINE: low-level-calls.
-        (bool success, bytes memory returndata) = address(tokenAddress).call(callData);
+        (bool success, bytes memory returndata) = tokenAddress.call(callData);
         require(success, string(returndata));
 
         if (returndata.length > 0) {
             require(abi.decode(returndata, (bool)), "TOKEN_OPERATION_FAILED");
         }
+    }
+
+    /*
+      Validates that the passed contract address is of a real contract,
+      and that its id hash (as infered fromn identify()) matched the expected one.
+    */
+    function validateContractId(address contractAddress, bytes32 expectedIdHash) internal {
+        require(isContract(contractAddress), "ADDRESS_NOT_CONTRACT");
+        (bool success, bytes memory returndata) = contractAddress.call( // NOLINT: low-level-calls.
+            abi.encodeWithSignature("identify()")
+        );
+        require(success, "FAILED_TO_IDENTIFY_CONTRACT");
+        string memory realContractId = abi.decode(returndata, (string));
+        require(
+            keccak256(abi.encodePacked(realContractId)) == expectedIdHash,
+            "UNEXPECTED_CONTRACT_IDENTIFIER"
+        );
     }
 }
 
@@ -42,7 +57,6 @@ library Addresses {
   II. StarkExTypes - Common data types.
 */
 library StarkExTypes {
-
     // Structure representing a list of verifiers (validity/availability).
     // A statement is valid only if all the verifiers in the list agree on it.
     // Adding a verifier to the list is immediate - this is used for fast resolution of
@@ -55,7 +69,6 @@ library StarkExTypes {
         // Represents the time after which the verifier with the given address can be removed.
         // Removal of the verifier with address A is allowed only in the case the value
         // of unlockedForRemovalTime[A] != 0 and unlockedForRemovalTime[A] < (current time).
-        mapping (address => uint256) unlockedForRemovalTime;
+        mapping(address => uint256) unlockedForRemovalTime;
     }
-
 }

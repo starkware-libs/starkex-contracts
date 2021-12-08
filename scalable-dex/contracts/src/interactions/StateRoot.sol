@@ -1,20 +1,17 @@
-pragma solidity ^0.5.2;
+// SPDX-License-Identifier: Apache-2.0.
+pragma solidity ^0.6.11;
 
 import "../interfaces/MStateRoot.sol";
 import "../components/MainStorage.sol";
 
-contract StateRoot is MainStorage, MStateRoot
-{
-
-    function initialize (
+contract StateRoot is MainStorage, MStateRoot {
+    function initialize(
         uint256 initialSequenceNumber,
         uint256 initialVaultRoot,
         uint256 initialOrderRoot,
         uint256 initialVaultTreeHeight,
         uint256 initialOrderTreeHeight
-    )
-        internal
-    {
+    ) internal {
         sequenceNumber = initialSequenceNumber;
         vaultRoot = initialVaultRoot;
         orderRoot = initialOrderRoot;
@@ -22,43 +19,27 @@ contract StateRoot is MainStorage, MStateRoot
         orderTreeHeight = initialOrderTreeHeight;
     }
 
-    function getVaultRoot()
-        public view
-        returns (uint256 root)
-    {
+    function getVaultRoot() public view override returns (uint256 root) {
         root = vaultRoot;
     }
 
-    function getVaultTreeHeight()
-        public view
-        returns (uint256 height) {
+    function getVaultTreeHeight() public view override returns (uint256 height) {
         height = vaultTreeHeight;
     }
 
-    function getOrderRoot()
-        external view
-        returns (uint256 root)
-    {
+    function getOrderRoot() external view returns (uint256 root) {
         root = orderRoot;
     }
 
-    function getOrderTreeHeight()
-        external view
-        returns (uint256 height) {
+    function getOrderTreeHeight() external view returns (uint256 height) {
         height = orderTreeHeight;
     }
 
-    function getSequenceNumber()
-        external view
-        returns (uint256 seq)
-    {
+    function getSequenceNumber() external view returns (uint256 seq) {
         seq = sequenceNumber;
     }
 
-    function getLastBatchId()
-        external view
-        returns (uint256 batchId)
-    {
+    function getLastBatchId() external view returns (uint256 batchId) {
         batchId = lastBatchId;
     }
 }

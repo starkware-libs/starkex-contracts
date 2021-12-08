@@ -1,11 +1,8 @@
-pragma solidity ^0.5.2;
+// SPDX-License-Identifier: Apache-2.0.
+pragma solidity ^0.6.11;
 
-contract MStateRoot {
-    function getVaultRoot() // NOLINT: external-function.
-        public view
-        returns (uint256 root);
+abstract contract MStateRoot {
+    function getVaultRoot() public view virtual returns (uint256 root);
 
-    function getVaultTreeHeight() // NOLINT: external-function.
-        public view
-        returns (uint256 height);
+    function getVaultTreeHeight() public view virtual returns (uint256 height);
 }

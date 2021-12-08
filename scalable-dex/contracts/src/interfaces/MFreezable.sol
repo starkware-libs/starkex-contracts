@@ -1,39 +1,32 @@
-pragma solidity ^0.5.2;
+// SPDX-License-Identifier: Apache-2.0.
+pragma solidity ^0.6.11;
 
-contract MFreezable {
+abstract contract MFreezable {
+    /*
+      Returns true if the exchange is frozen.
+    */
+    function isFrozen() public view virtual returns (bool); // NOLINT: external-function.
+
     /*
       Forbids calling the function if the exchange is frozen.
     */
-    modifier notFrozen()
-    {
-        // Pure modifier declarations are not supported. Instead we provide
-        // a dummy definition.
-        revert("UNIMPLEMENTED");
+    modifier notFrozen() {
+        require(!isFrozen(), "STATE_IS_FROZEN");
         _;
     }
+
+    function validateFreezeRequest(uint256 requestTime) internal virtual;
 
     /*
       Allows calling the function only if the exchange is frozen.
     */
-    modifier onlyFrozen()
-    {
-        // Pure modifier declarations are not supported. Instead we provide
-        // a dummy definition.
-        revert("UNIMPLEMENTED");
+    modifier onlyFrozen() {
+        require(isFrozen(), "STATE_NOT_FROZEN");
         _;
     }
 
     /*
       Freezes the exchange.
     */
-    function freeze()
-        internal;
-
-    /*
-      Returns true if the exchange is frozen.
-    */
-    function isFrozen()
-        external view
-        returns (bool);
-
+    function freeze() internal virtual;
 }
