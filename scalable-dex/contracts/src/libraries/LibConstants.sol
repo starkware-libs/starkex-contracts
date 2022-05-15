@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0.
-pragma solidity ^0.6.11;
+pragma solidity ^0.6.12;
 
 contract LibConstants {
     // Durations for time locked mechanisms (in seconds).
@@ -40,4 +40,7 @@ contract LibConstants {
 
     uint256 constant QUANTUM_UPPER_BOUND = 2**128;
     uint256 internal constant MINTABLE_ASSET_ID_FLAG = 1 << 250;
+
+    // The 64th bit (indexed 63, counting from 0) is a flag indicating a rollup vault id.
+    uint256 constant ROLLUP_VAULTS_BIT = 63;
 }

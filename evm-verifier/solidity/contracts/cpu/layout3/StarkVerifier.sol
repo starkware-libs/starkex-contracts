@@ -1,1 +1,1 @@
-../../StarkVerifier.sol.ref
+../../StarkVerifier.sol

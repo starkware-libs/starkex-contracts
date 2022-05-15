@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0.
-pragma solidity ^0.6.11;
+pragma solidity ^0.6.12;
 
 import "../upgrade/ProxyStorage.sol";
 import "../libraries/Common.sol";
@@ -43,9 +43,9 @@ contract MainStorage is ProxyStorage {
     // State sequence number.
     uint256 sequenceNumber; // NOLINT: constable-states uninitialized-state.
 
-    // Vaults Tree Root & Height.
-    uint256 vaultRoot; // NOLINT: constable-states uninitialized-state.
-    uint256 vaultTreeHeight; // NOLINT: constable-states uninitialized-state.
+    // Validium Vaults Tree Root & Height.
+    uint256 validiumVaultRoot; // NOLINT: constable-states uninitialized-state.
+    uint256 validiumTreeHeight; // NOLINT: constable-states uninitialized-state.
 
     // Order Tree Root & Height.
     uint256 orderRoot; // NOLINT: constable-states uninitialized-state.
@@ -58,7 +58,7 @@ contract MainStorage is ProxyStorage {
     mapping(address => bool) userAdmins_DEPRECATED; // NOLINT: naming-convention.
 
     // True if and only if the address is an operator (allowed to update state).
-    mapping(address => bool) operators;
+    mapping(address => bool) operators; // NOLINT: uninitialized-state.
 
     // Mapping of contract ID to asset data.
     mapping(uint256 => bytes) assetTypeToAssetInfo; // NOLINT: uninitialized-state.
@@ -89,7 +89,7 @@ contract MainStorage is ProxyStorage {
     // ---- END OF MAIN STORAGE AS DEPLOYED IN STARKEX2.0 ----
 
     // Onchain-data version configured for the system.
-    uint256 onchainDataVersion; // NOLINT: constable-states uninitialized-state.
+    uint256 onchainDataVersion_DEPRECATED; // NOLINT: naming-convention constable-states.
 
     // Counter of forced action request in block. The key is the block number.
     mapping(uint256 => uint256) forcedRequestsInBlock;
@@ -103,10 +103,18 @@ contract MainStorage is ProxyStorage {
 
     // Append only list of requested forced action hashes.
     bytes32[] actionHashList;
+    // ---- END OF MAIN STORAGE AS DEPLOYED IN STARKEX3.0 ----
+    // ---- END OF MAIN STORAGE AS DEPLOYED IN STARKEX4.0 ----
+
+    // Rollup Vaults Tree Root & Height.
+    uint256 rollupVaultRoot; // NOLINT: constable-states uninitialized-state.
+    uint256 rollupTreeHeight; // NOLINT: constable-states uninitialized-state.
+
+    uint256 globalConfigCode; // NOLINT: constable-states uninitialized-state.
 
     // Reserved storage space for Extensibility.
     // Every added MUST be added above the end gap, and the __endGap size must be reduced
     // accordingly.
     // NOLINTNEXTLINE: naming-convention.
-    uint256[LAYOUT_LENGTH - 37] private __endGap; // __endGap complements layout to LAYOUT_LENGTH.
+    uint256[LAYOUT_LENGTH - 40] private __endGap; // __endGap complements layout to LAYOUT_LENGTH.
 }

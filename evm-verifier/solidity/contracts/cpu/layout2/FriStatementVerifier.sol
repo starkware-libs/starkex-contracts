@@ -1,1 +1,1 @@
-../../FriStatementVerifier.sol.ref
+../../FriStatementVerifier.sol

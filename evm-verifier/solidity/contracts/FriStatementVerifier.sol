@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0.
-pragma solidity ^0.6.11;
+pragma solidity ^0.6.12;
 
 import "./MemoryMap.sol";
 import "./MemoryAccessUtils.sol";
@@ -26,23 +26,23 @@ abstract contract FriStatementVerifier is
 
     /*
       Fast-forwards the queries and invPoints of the friQueue from before the first layer to after
-      the last layer, computes the last FRI layer using horner evalations, then returns the hash
+      the last layer, computes the last FRI layer using horner evaluations, then returns the hash
       of the final FriQueue.
     */
-    function computerLastLayerHash(
+    function computeLastLayerHash(
         uint256[] memory ctx,
         uint256 nPoints,
-        uint256 numLayers
+        uint256 sumOfStepSizes
     ) internal view returns (bytes32 lastLayerHash) {
         uint256 friLastLayerDegBound = ctx[MM_FRI_LAST_LAYER_DEG_BOUND];
         uint256 groupOrderMinusOne = friLastLayerDegBound * ctx[MM_BLOW_UP_FACTOR] - 1;
-        uint256 exponent = 1 << numLayers;
+        uint256 exponent = 1 << sumOfStepSizes;
         uint256 curPointIndex = 0;
         uint256 prevQuery = 0;
         uint256 coefsStart = ctx[MM_FRI_LAST_LAYER_PTR];
 
         for (uint256 i = 0; i < nPoints; i++) {
-            uint256 query = ctx[MM_FRI_QUEUE + 3 * i] >> numLayers;
+            uint256 query = ctx[MM_FRI_QUEUE + 3 * i] >> sumOfStepSizes;
             if (query == prevQuery) {
                 continue;
             }
@@ -93,15 +93,15 @@ abstract contract FriStatementVerifier is
             inputLayerHash := keccak256(friQueue, mul(nQueries, 0x60))
         }
 
-        uint256[] memory friSteps = getFriSteps(ctx);
-        uint256 nFriStepsLessOne = friSteps.length - 1;
+        uint256[] memory friStepSizes = getFriStepSizes(ctx);
+        uint256 nFriInnerLayers = friStepSizes.length - 1;
         uint256 friStep = 1;
-        uint256 sumSteps = friSteps[1];
+        uint256 sumOfStepSizes = friStepSizes[1];
         uint256[5] memory dataToHash;
-        while (friStep < nFriStepsLessOne) {
+        while (friStep < nFriInnerLayers) {
             uint256 outputLayerHash = uint256(readBytes(channelPtr, true));
             dataToHash[0] = ctx[MM_FRI_EVAL_POINTS + friStep];
-            dataToHash[1] = friSteps[friStep];
+            dataToHash[1] = friStepSizes[friStep];
             dataToHash[2] = inputLayerHash;
             dataToHash[3] = outputLayerHash;
             dataToHash[4] = ctx[MM_FRI_COMMITMENTS + friStep - 1];
@@ -115,13 +115,13 @@ abstract contract FriStatementVerifier is
             inputLayerHash = outputLayerHash;
 
             friStep++;
-            sumSteps += friSteps[friStep];
+            sumOfStepSizes += friStepSizes[friStep];
         }
 
         dataToHash[0] = ctx[MM_FRI_EVAL_POINTS + friStep];
-        dataToHash[1] = friSteps[friStep];
+        dataToHash[1] = friStepSizes[friStep];
         dataToHash[2] = inputLayerHash;
-        dataToHash[3] = uint256(computerLastLayerHash(ctx, nQueries, sumSteps));
+        dataToHash[3] = uint256(computeLastLayerHash(ctx, nQueries, sumOfStepSizes));
         dataToHash[4] = ctx[MM_FRI_COMMITMENTS + friStep - 1];
 
         require(

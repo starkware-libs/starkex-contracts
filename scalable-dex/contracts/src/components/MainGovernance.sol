@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0.
-pragma solidity ^0.6.11;
+pragma solidity ^0.6.12;
 
 import "./Governance.sol";
+import "./GovernanceStorage.sol";
 
 /**
   The StarkEx contract is governed by one or more Governors of which the initial one is the
@@ -28,36 +29,39 @@ import "./Governance.sol";
 */
 /*
   Implements Governance for the StarkDex main contract.
-  The wrapper methods (e.g. mainIsGovernor wrapping isGovernor) are needed to give
+  The wrapper methods (e.g. mainIsGovernor wrapping _isGovernor) are needed to give
   the method unique names.
   Both Proxy and StarkExchange inherit from Governance. Thus, the logical contract method names
   must have unique names in order for the proxy to successfully delegate to them.
 */
-contract MainGovernance is Governance {
+contract MainGovernance is GovernanceStorage, Governance {
     // The tag is the sting key that is used in the Governance storage mapping.
     string public constant MAIN_GOVERNANCE_INFO_TAG = "StarkEx.Main.2019.GovernorsInformation";
 
-    function getGovernanceTag() internal pure override returns (string memory tag) {
-        tag = MAIN_GOVERNANCE_INFO_TAG;
+    /*
+      Returns the GovernanceInfoStruct associated with the governance tag.
+    */
+    function getGovernanceInfo() internal view override returns (GovernanceInfoStruct storage) {
+        return governanceInfo[MAIN_GOVERNANCE_INFO_TAG];
     }
 
     function mainIsGovernor(address testGovernor) external view returns (bool) {
-        return isGovernor(testGovernor);
+        return _isGovernor(testGovernor);
     }
 
     function mainNominateNewGovernor(address newGovernor) external {
-        nominateNewGovernor(newGovernor);
+        _nominateNewGovernor(newGovernor);
     }
 
     function mainRemoveGovernor(address governorForRemoval) external {
-        removeGovernor(governorForRemoval);
+        _removeGovernor(governorForRemoval);
     }
 
     function mainAcceptGovernance() external {
-        acceptGovernance();
+        _acceptGovernance();
     }
 
     function mainCancelNomination() external {
-        cancelNomination();
+        _cancelNomination();
     }
 }

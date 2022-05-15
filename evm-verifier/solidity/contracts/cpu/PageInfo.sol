@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0.
-pragma solidity ^0.6.11;
+pragma solidity ^0.6.12;
 
 contract PageInfo {
     uint256 public constant PAGE_INFO_SIZE = 3;

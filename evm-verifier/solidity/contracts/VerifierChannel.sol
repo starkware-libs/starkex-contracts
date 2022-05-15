@@ -1,17 +1,18 @@
 // SPDX-License-Identifier: Apache-2.0.
-pragma solidity ^0.6.11;
+pragma solidity ^0.6.12;
 
 import "./Prng.sol";
 
-contract VerifierChannel is Prng {
-    /*
-      We store the state of the channel in uint256[3] as follows:
-        [0] proof pointer.
-        [1] prng digest.
-        [2] prng counter.
-    */
-    uint256 private constant CHANNEL_STATE_SIZE = 3;
+/*
+  Implements the communication channel from the verifier to the prover in the non-interactive case
+  (See the BCS16 paper for more details).
 
+  The state of the channel is stored in a uint256[3] as follows:
+    [0] proof pointer.
+    [1] prng digest.
+    [2] prng counter.
+*/
+contract VerifierChannel is Prng {
     event LogValue(bytes32 val);
 
     event SendRandomnessEvent(uint256 val);
@@ -37,6 +38,12 @@ contract VerifierChannel is Prng {
         initPrng(getPrngPtr(channelPtr), publicInputHash);
     }
 
+    /*
+      Sends a field element through the verifier channel.
+
+      Note that the logic of this function is inlined in many places throughout the code to reduce
+      gas costs.
+    */
     function sendFieldElements(
         uint256 channelPtr,
         uint256 nElements,
@@ -44,9 +51,8 @@ contract VerifierChannel is Prng {
     ) internal pure {
         require(nElements < 0x1000000, "Overflow protection failed.");
         assembly {
-            let PRIME := 0x800000000000011000000000000000000000000000000000000000000000001
-            let PRIME_MON_R_INV := 0x40000000000001100000000000012100000000000000000000000000000000
-            let PRIME_MASK := 0x0fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+            // 31 * PRIME.
+            let BOUND := 0xf80000000000020f00000000000000000000000000000000000000000000001f
             let digestPtr := add(channelPtr, 0x20)
             let counterPtr := add(channelPtr, 0x40)
 
@@ -58,20 +64,20 @@ contract VerifierChannel is Prng {
             } {
                 // *targetPtr = getRandomFieldElement(getPrngPtr(channelPtr));
 
-                let fieldElement := PRIME
-                // while (fieldElement >= PRIME).
+                let fieldElement := BOUND
+                // while (fieldElement >= 31 * K_MODULUS).
                 for {
 
-                } iszero(lt(fieldElement, PRIME)) {
+                } iszero(lt(fieldElement, BOUND)) {
 
                 } {
                     // keccak256(abi.encodePacked(digest, counter));
-                    fieldElement := and(keccak256(digestPtr, 0x40), PRIME_MASK)
+                    fieldElement := keccak256(digestPtr, 0x40)
                     // *counterPtr += 1;
                     mstore(counterPtr, add(mload(counterPtr), 1))
                 }
                 // *targetPtr = fromMontgomery(fieldElement);
-                mstore(targetPtr, mulmod(fieldElement, PRIME_MON_R_INV, PRIME))
+                mstore(targetPtr, mulmod(fieldElement, K_MONTGOMERY_R_INV, K_MODULUS))
                 // emit ReadFieldElementEvent(fieldElement);
                 // log1(targetPtr, 0x20, 0x4bfcc54f35095697be2d635fb0706801e13637312eff0cedcdfc254b3b8c385e);
             }
@@ -81,10 +87,10 @@ contract VerifierChannel is Prng {
     /*
       Sends random queries and returns an array of queries sorted in ascending order.
       Generates count queries in the range [0, mask] and returns the number of unique queries.
-      Note that mask is of the form 2^k-1 (for some k).
+      Note that mask is of the form 2^k-1 (for some k <= 64).
 
-      Note that queriesOutPtr may be (and is) inteleaved with other arrays. The stride parameter
-      is passed to indicate the distance between every two entries to the queries array, i.e.
+      Note that queriesOutPtr may be (and is) interleaved with other arrays. The stride parameter
+      is passed to indicate the distance between every two entries in the queries array, i.e.
       stride = 0x20*(number of interleaved arrays).
     */
     function sendRandomQueries(
@@ -94,6 +100,8 @@ contract VerifierChannel is Prng {
         uint256 queriesOutPtr,
         uint256 stride
     ) internal pure returns (uint256) {
+        require(mask < 2**64, "mask must be < 2**64.");
+
         uint256 val;
         uint256 shift = 0;
         uint256 endPtr = queriesOutPtr;
@@ -104,12 +112,13 @@ contract VerifierChannel is Prng {
             }
             shift -= 0x40;
             uint256 queryIdx = (val >> shift) & mask;
-            // emit sendRandomnessEvent(queryIdx);
-
             uint256 ptr = endPtr;
-            uint256 curr;
-            // Insert new queryIdx in the correct place like insertion sort.
 
+            // Initialize 'curr' to -1 to make sure the condition 'queryIdx != curr' is satisfied
+            // on the first iteration.
+            uint256 curr = uint256(-1);
+
+            // Insert new queryIdx in the correct place like insertion sort.
             while (ptr > queriesOutPtr) {
                 assembly {
                     curr := mload(sub(ptr, stride))
@@ -154,12 +163,15 @@ contract VerifierChannel is Prng {
             mstore(channelPtr, add(proofPtr, 0x20))
         }
         if (mix) {
-            // inline: Prng.mixSeedWithBytes(getPrngPtr(channelPtr), abi.encodePacked(val));
+            // Mix the bytes that were read into the state of the channel.
             assembly {
                 let digestPtr := add(channelPtr, 0x20)
                 let counterPtr := add(digestPtr, 0x20)
+
+                // digest += 1.
+                mstore(digestPtr, add(mload(digestPtr), 1))
                 mstore(counterPtr, val)
-                // prng.digest := keccak256(digest||val), nonce was written earlier.
+                // prng.digest := keccak256(digest + 1||val), nonce was written earlier.
                 mstore(digestPtr, keccak256(digestPtr, 0x40))
                 // prng.counter := 0.
                 mstore(counterPtr, 0)
@@ -176,9 +188,17 @@ contract VerifierChannel is Prng {
         return val;
     }
 
+    /*
+      Reads a field element from the verifier channel (that is, the proof in the non-interactive
+      case).
+      The field elements on the channel are in Montgomery form and this function converts
+      them to the standard representation.
+
+      Note that the logic of this function is inlined in many places throughout the code to reduce
+      gas costs.
+    */
     function readFieldElement(uint256 channelPtr, bool mix) internal pure returns (uint256) {
         uint256 val = fromMontgomery(uint256(readBytes(channelPtr, mix)));
-        // emit ReadFieldElementEvent(val);
 
         return val;
     }
@@ -190,7 +210,8 @@ contract VerifierChannel is Prng {
 
         uint256 proofOfWorkDigest;
         assembly {
-            // [0:29] := 0123456789abcded || digest || workBits.
+            // [0:0x29) := 0123456789abcded || digest     || workBits.
+            //             8 bytes          || 0x20 bytes || 1 byte.
             mstore(0, 0x0123456789abcded000000000000000000000000000000000000000000000000)
             let digest := mload(add(channelPtr, 0x20))
             mstore(0x8, digest)
@@ -202,8 +223,8 @@ contract VerifierChannel is Prng {
             // proofOfWorkDigest:= keccak256(keccak256(0123456789abcded || digest || workBits) || nonce).
             proofOfWorkDigest := keccak256(0, 0x28)
 
-            mstore(0, digest)
-            // prng.digest := keccak256(digest||nonce), nonce was written earlier.
+            mstore(0, add(digest, 1))
+            // prng.digest := keccak256(digest + 1||nonce), nonce was written earlier.
             mstore(add(channelPtr, 0x20), keccak256(0, 0x28))
             // prng.counter := 0.
             mstore(add(channelPtr, 0x40), 0)

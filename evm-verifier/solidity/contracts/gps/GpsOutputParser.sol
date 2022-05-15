@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0.
-pragma solidity ^0.6.11;
+pragma solidity ^0.6.12;
 
 import "../components/FactRegistry.sol";
 import "../cpu/CpuPublicInputOffsetsBase.sol";
@@ -45,7 +45,7 @@ contract GpsOutputParser is CpuPublicInputOffsetsBase, FactRegistry {
 
       The fact of each task is stored as a (non-binary) Merkle tree.
       Each non-leaf node is 1 + the hash of (node0, end0, node1, end1, ...)
-      where node* are its children and end* is the the total number of data words up to and
+      where node* are its children and end* is the total number of data words up to and
       including that node and its children (including the previous sibling nodes).
       We add 1 to the result of the hash to distinguish it from a leaf node.
       Leaf nodes are the hash of their data.
@@ -83,9 +83,10 @@ contract GpsOutputParser is CpuPublicInputOffsetsBase, FactRegistry {
 
         uint256 taskMetadataOffset = METADATA_TASKS_OFFSET;
 
-        // Skip the 3 first output cells which contain the number of tasks and the size and
-        // program hash of the first task. curAddr points to the output of the first task.
-        uint256 curAddr = outputStartAddress + 3;
+        // Skip the 5 first output cells which contain the bootloader config, the number of tasks
+        // and the size and program hash of the first task. curAddr points to the output of the
+        // first task.
+        uint256 curAddr = outputStartAddress + 5;
 
         // Skip the main page.
         uint256 curPage = FIRST_CONTINUOUS_PAGE_INDEX;

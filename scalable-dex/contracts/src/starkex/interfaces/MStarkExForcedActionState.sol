@@ -1,21 +1,21 @@
 // SPDX-License-Identifier: Apache-2.0.
-pragma solidity ^0.6.11;
+pragma solidity ^0.6.12;
 
 abstract contract MStarkExForcedActionState {
-    function fullWithdrawActionHash(uint256 starkKey, uint256 vaultId)
+    function fullWithdrawActionHash(uint256 ownerKey, uint256 vaultId)
         internal
         pure
         virtual
         returns (bytes32);
 
-    function clearFullWithdrawalRequest(uint256 starkKey, uint256 vaultId) internal virtual;
+    function clearFullWithdrawalRequest(uint256 ownerKey, uint256 vaultId) internal virtual;
 
     // NOLINTNEXTLINE: external-function.
-    function getFullWithdrawalRequest(uint256 starkKey, uint256 vaultId)
+    function getFullWithdrawalRequest(uint256 ownerKey, uint256 vaultId)
         public
         view
         virtual
-        returns (uint256 res);
+        returns (uint256);
 
-    function setFullWithdrawalRequest(uint256 starkKey, uint256 vaultId) internal virtual;
+    function setFullWithdrawalRequest(uint256 ownerKey, uint256 vaultId) internal virtual;
 }

@@ -1,6 +1,6 @@
 // ---------- The following code was auto-generated. PLEASE DO NOT EDIT. ----------
 // SPDX-License-Identifier: Apache-2.0.
-pragma solidity ^0.6.11;
+pragma solidity ^0.6.12;
 
 import "../../PrimeFieldElement0.sol";
 

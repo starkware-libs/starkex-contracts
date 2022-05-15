@@ -1,18 +1,18 @@
 // ---------- The following code was auto-generated. PLEASE DO NOT EDIT. ----------
 // SPDX-License-Identifier: Apache-2.0.
-pragma solidity ^0.6.11;
+pragma solidity ^0.6.12;
 
 contract MemoryMap {
     /*
-      We store the state of the verifer in a contiguous chunk of memory.
+      We store the state of the verifier in a contiguous chunk of memory.
       The offsets of the different fields are listed below.
       E.g. The offset of the i'th hash is [mm_hashes + i].
     */
-    uint256 constant internal CHANNEL_STATE_SIZE = 3;
-    uint256 constant internal MAX_N_QUERIES =  48;
+    uint256 constant internal MAX_N_QUERIES = 48;
     uint256 constant internal FRI_QUEUE_SIZE = MAX_N_QUERIES;
 
-    uint256 constant internal MAX_SUPPORTED_MAX_FRI_STEP = 4;
+    uint256 constant internal MAX_FRI_STEPS = 10;
+    uint256 constant internal MAX_SUPPORTED_FRI_STEP_SIZE = 4;
 
     uint256 constant internal MM_EVAL_DOMAIN_SIZE =                          0x0;
     uint256 constant internal MM_BLOW_UP_FACTOR =                            0x1;
@@ -28,7 +28,7 @@ contract MemoryMap {
     uint256 constant internal MM_FRI_QUEUE =                                0x6d; // uint256[144]
     uint256 constant internal MM_FRI_QUERIES_DELIMITER =                    0xfd;
     uint256 constant internal MM_FRI_CTX =                                  0xfe; // uint256[40]
-    uint256 constant internal MM_FRI_STEPS_PTR =                           0x126;
+    uint256 constant internal MM_FRI_STEP_SIZES_PTR =                      0x126;
     uint256 constant internal MM_FRI_EVAL_POINTS =                         0x127; // uint256[10]
     uint256 constant internal MM_FRI_COMMITMENTS =                         0x131; // uint256[10]
     uint256 constant internal MM_FRI_LAST_LAYER_DEG_BOUND =                0x13b;

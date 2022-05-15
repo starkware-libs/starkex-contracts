@@ -1,1 +1,1 @@
-../../Fri.sol.ref
+../../Fri.sol

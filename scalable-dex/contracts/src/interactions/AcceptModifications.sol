@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0.
-pragma solidity ^0.6.11;
+pragma solidity ^0.6.12;
 
 import "../libraries/LibConstants.sol";
 import "../interfaces/MAcceptModifications.sol";
@@ -24,6 +24,8 @@ abstract contract AcceptModifications is
     );
 
     event LogNftWithdrawalAllowed(uint256 ownerKey, uint256 assetId);
+
+    event LogAssetWithdrawalAllowed(uint256 ownerKey, uint256 assetId, uint256 quantizedAmount);
 
     event LogMintableWithdrawalAllowed(uint256 ownerKey, uint256 assetId, uint256 quantizedAmount);
 
@@ -77,11 +79,16 @@ abstract contract AcceptModifications is
         } else if (assetId == ((assetId & MASK_240) | MINTABLE_ASSET_ID_FLAG)) {
             emit LogMintableWithdrawalAllowed(ownerKey, assetId, quantizedAmount);
         } else {
-            // Default case is Non-Mintable ERC721 asset id.
-            require(assetId == assetId & MASK_250, "INVALID_NFT_ASSET_ID");
-            // In ERC721 case, assetId is not the assetType.
-            require(withdrawal <= 1, "INVALID_NFT_AMOUNT");
-            emit LogNftWithdrawalAllowed(ownerKey, assetId);
+            // Default case is Non-Mintable ERC721 or ERC1155 asset id.
+            // In ERC721 and ERC1155 cases, assetId is not the assetType.
+            require(assetId == assetId & MASK_250, "INVALID_ASSET_ID");
+            // If withdrawal amount is 1, the asset could be either NFT or SFT. In that case, both
+            // NFT and general events will be emitted so that the listened for event is captured.
+            // When withdrawal is greater than 1, it must be SFT and only one event will be emitted.
+            if (withdrawal <= 1) {
+                emit LogNftWithdrawalAllowed(ownerKey, assetId);
+            }
+            emit LogAssetWithdrawalAllowed(ownerKey, assetId, quantizedAmount);
         }
     }
 

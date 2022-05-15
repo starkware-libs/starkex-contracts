@@ -1,12 +1,13 @@
 // SPDX-License-Identifier: Apache-2.0.
-pragma solidity ^0.6.11;
+pragma solidity ^0.6.12;
 
 import "../../interfaces/IFactRegistry.sol";
 
 /*
   An escapeVerifier is a fact registry contract for claims of the form:
-  (starkKey, assetId, quantizedAmount) is the leaf in index vaultId of a Merkle tree with
+  (starkKey, assetId, quantizedAmount) is the leaf in index leafIndex of a vaults Merkle tree with
   specific height and root.
+  The leaf index can be deduced from vaultId, see :sol:mod:`Escapes` for details.
 */
 contract EscapeVerifier is IFactRegistry {
     // Note that those values are hardcoded in the assembly.
@@ -39,8 +40,8 @@ contract EscapeVerifier is IFactRegistry {
 
       The following table describes the expected `escapeProof` format. Note that unlike a standard
       Merkle proof, the `escapeProof` contains both the nodes along the Merkle path and their
-      siblings. The proof ends with the expected root and the ID of the vault for which the proof is
-      submitted (which implies the location of the nodes within the Merkle tree).
+      siblings. The proof ends with the expected root and the leaf index of the vault for which the
+      proof is submitted (which implies the location of the nodes within the Merkle tree).
 
           +-------------------------------+---------------------------+-----------+
           | starkKey (252)                | assetId (252)             | zeros (8) |
@@ -53,13 +54,13 @@ contract EscapeVerifier is IFactRegistry {
           +-------------------------------+---------------------------+-----------+
           | left_node_n (252)             | right_node_n (252)        | zeros (8) |
           +-------------------------------+-----------+---------------+-----------+
-          | root (252)                    | zeros (4) | vaultId (248) | zeros (8) |
+          | root (252)                    | zeros(4) | leafIndex(248) | zeros (8) |
           +-------------------------------+-----------+---------------+-----------+
 
       If the proof is accepted, this is registered under the following claim hash that may later
       be queried for validity:
 
-        `claimHash = keccak256(starkKey, assetId, quantizedAmount, vaultRoot, treeHeight, vaultId)`
+       `claimHash = keccak256(starkKey, assetId, quantizedAmount, vaultRoot, treeHeight, leafIndex)`
 
       For information about when this module is to be used, see :sol:mod:`Escapes`.
 
@@ -99,7 +100,7 @@ contract EscapeVerifier is IFactRegistry {
       to ensure we indeed verify a coherent authentication path:
 
           hash((left_node_{i-1}, right_node_{i-1})) ==
-            (vaultId & (1<<i)) == 0 ? left_node_i : right_node_i.
+            (leafIndex & (1<<i)) == 0 ? left_node_i : right_node_i.
     */
     function verifyEscape(uint256[] calldata escapeProof) external {
         uint256 proofLength = escapeProof.length;
@@ -117,16 +118,16 @@ contract EscapeVerifier is IFactRegistry {
         // Ensure proofs are always a series of word pairs.
         require((proofLength & 1) == 0, "Proof length must be even.");
 
-        // Each hash takes 2 256bit words and the last two words are the root and vaultId.
+        // Each hash takes 2 256bit words and the last two words are the root and leafIndex.
         uint256 nHashes = (proofLength - 2) / 2; // NOLINT: divide-before-multiply.
 
         // We use 2 hashes to compute the leaf.
         uint256 height = nHashes - 2;
 
-        // Note that it is important to limit the range of vault id, to make sure
+        // Note that it is important to limit the range of leaf index, to make sure
         // we use the node = Merkle_root in the last iteration of the loop below.
-        uint256 vaultId = escapeProof[proofLength - 1] >> 8;
-        require(vaultId < 2**height, "vaultId not in tree.");
+        uint256 leafIndex = escapeProof[proofLength - 1] >> 8;
+        require(leafIndex < 2**height, "leafIndex not in tree.");
 
         uint256 rowSize = (2 * nHashes) * 0x20;
         uint256[] memory proof = escapeProof;
@@ -160,7 +161,7 @@ contract EscapeVerifier is IFactRegistry {
             }
 
             // hash(starkKey, assetId) is on the left of the second hash.
-            let nodeSelectors := shl(1, vaultId)
+            let nodeSelectors := shl(1, leafIndex)
 
             // Allocate EC points table with dimensions N_TABLES by N_HASHES.
             let table := mload(0x40)
@@ -324,10 +325,10 @@ contract EscapeVerifier is IFactRegistry {
             )
             mstore(0x60, shr(4, mload(add(proof, rowSize)))) // vaultRoot
             mstore(0x80, height)
-            mstore(0xa0, vaultId)
+            mstore(0xa0, leafIndex)
 
             // claimHash := keccak256(
-            //      starkKey, assetId, quantizedAmount, vaultRoot, height, vaultId).
+            //      starkKey, assetId, quantizedAmount, vaultRoot, height, leafIndex).
             // storage[claimHash] := 1.
             sstore(keccak256(0, 0xc0), 1)
         }
@@ -335,7 +336,7 @@ contract EscapeVerifier is IFactRegistry {
 
     /*
       Checks the validity status of the claim corresponding to:
-      keccak256(abi.encode(starkKey, assetId, quantizedAmount, root, height, vaultId)).
+      keccak256(abi.encode(starkKey, assetId, quantizedAmount, root, height, leafIndex)).
     */
     function isValid(bytes32 hash) external view override returns (bool val) {
         assembly {

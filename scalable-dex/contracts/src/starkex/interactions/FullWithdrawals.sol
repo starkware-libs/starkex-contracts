@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: Apache-2.0.
-pragma solidity ^0.6.11;
+pragma solidity ^0.6.12;
 
-import "../components/StarkExStorage.sol";
 import "../interfaces/MStarkExForcedActionState.sol";
-import "../StarkExConstants.sol";
+import "../../interactions/StateRoot.sol";
 import "../../interfaces/MFreezable.sol";
 import "../../interfaces/MKeyGetters.sol";
+import "../../libraries/LibConstants.sol";
 
 /**
   At any point in time, a user may opt to perform a full withdrawal request for a given off-chain
@@ -24,7 +24,7 @@ import "../../interfaces/MKeyGetters.sol";
   4. Upon acceptance of the proof above, the contract adds the withdrawn amount to an on-chain pending withdrawals account under the stark key of the vault owner and the appropriate asset ID. At the same time, the full withdrawal request is cleared.
   5. The user may then withdraw this amount from the pending withdrawals account by calling the normal withdraw function (see :sol:mod:`Withdrawals`) to transfer the funds to the users Eth or ERC20 account (depending on the token type).
 
-  If a user requests a full withdrawal for a vault that is not associated with the StarkKey of the
+  If a user requests a full withdrawal for a vault that is not associated with the ownerKey of the
   user, the exchange may prove this and the full withdrawal request is cleared without any effect on
   the vault (and no funds will be released on-chain for withdrawal).
 
@@ -36,35 +36,46 @@ import "../../interfaces/MKeyGetters.sol";
 
 */
 abstract contract FullWithdrawals is
-    StarkExStorage,
-    StarkExConstants,
+    StateRoot,
+    LibConstants,
     MStarkExForcedActionState,
     MFreezable,
     MKeyGetters
 {
-    event LogFullWithdrawalRequest(uint256 starkKey, uint256 vaultId);
+    event LogFullWithdrawalRequest(uint256 ownerKey, uint256 vaultId);
 
-    function fullWithdrawalRequest(uint256 starkKey, uint256 vaultId)
-        external
-        notFrozen
-        onlyKeyOwner(starkKey)
-    {
-        // Verify vault ID in range.
-        require(vaultId < STARKEX_VAULT_ID_UPPER_BOUND, "OUT_OF_RANGE_VAULT_ID");
-
-        // Start timer on escape request.
-        setFullWithdrawalRequest(starkKey, vaultId);
-
-        // Log request.
-        emit LogFullWithdrawalRequest(starkKey, vaultId);
+    function isVaultInRange(uint256 vaultId) private view returns (bool) {
+        // Retruns true if vaultId is in the validium vaults tree.
+        if (vaultId < 2**getValidiumTreeHeight()) {
+            return true;
+        }
+        // Return true iff vaultId is in the rollup vaults tree.
+        uint256 rollupLowerBound = 2**ROLLUP_VAULTS_BIT;
+        uint256 rollupUpperBound = rollupLowerBound + 2**getRollupTreeHeight();
+        return (rollupLowerBound <= vaultId && vaultId < rollupUpperBound);
     }
 
-    function freezeRequest(uint256 starkKey, uint256 vaultId) external notFrozen {
+    function fullWithdrawalRequest(uint256 ownerKey, uint256 vaultId)
+        external
+        notFrozen
+        onlyKeyOwner(ownerKey)
+    {
+        // Verify vault ID in range.
+        require(isVaultInRange(vaultId), "OUT_OF_RANGE_VAULT_ID");
+
+        // Start timer on escape request.
+        setFullWithdrawalRequest(ownerKey, vaultId);
+
+        // Log request.
+        emit LogFullWithdrawalRequest(ownerKey, vaultId);
+    }
+
+    function freezeRequest(uint256 ownerKey, uint256 vaultId) external notFrozen {
         // Verify vaultId in range.
-        require(vaultId < STARKEX_VAULT_ID_UPPER_BOUND, "OUT_OF_RANGE_VAULT_ID");
+        require(isVaultInRange(vaultId), "OUT_OF_RANGE_VAULT_ID");
 
         // Load request time.
-        uint256 requestTime = getFullWithdrawalRequest(starkKey, vaultId);
+        uint256 requestTime = getFullWithdrawalRequest(ownerKey, vaultId);
 
         validateFreezeRequest(requestTime);
         freeze();

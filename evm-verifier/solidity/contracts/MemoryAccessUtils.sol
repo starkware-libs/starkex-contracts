@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0.
-pragma solidity ^0.6.11;
+pragma solidity ^0.6.12;
 
 import "./MemoryMap.sol";
 
@@ -43,10 +43,14 @@ contract MemoryAccessUtils is MemoryMap {
         return getPtr(ctx, MM_MERKLE_QUEUE);
     }
 
-    function getFriSteps(uint256[] memory ctx) internal pure returns (uint256[] memory friSteps) {
-        uint256 friStepsPtr = getPtr(ctx, MM_FRI_STEPS_PTR);
+    function getFriStepSizes(uint256[] memory ctx)
+        internal
+        pure
+        returns (uint256[] memory friStepSizes)
+    {
+        uint256 friStepSizesPtr = getPtr(ctx, MM_FRI_STEP_SIZES_PTR);
         assembly {
-            friSteps := mload(friStepsPtr)
+            friStepSizes := mload(friStepSizesPtr)
         }
     }
 }

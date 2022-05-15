@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0.
-pragma solidity ^0.6.11;
+pragma solidity ^0.6.12;
 
 import "./MemoryMap.sol";
 import "./MemoryAccessUtils.sol";
@@ -43,8 +43,8 @@ contract Fri is MemoryMap, MemoryAccessUtils, HornerEvaluator, FriLayer {
     function friVerifyLayers(uint256[] memory ctx) internal view virtual {
         uint256 friCtx = getPtr(ctx, MM_FRI_CTX);
         require(
-            MAX_SUPPORTED_MAX_FRI_STEP == FRI_MAX_FRI_STEP,
-            "Incosistent MAX_FRI_STEP between MemoryMap.sol and FriLayer.sol"
+            MAX_SUPPORTED_FRI_STEP_SIZE == FRI_MAX_STEP_SIZE,
+            "MAX_STEP_SIZE is inconsistent in MemoryMap.sol and FriLayer.sol"
         );
         initFriGroups(friCtx);
         // emit LogGas("FRI offset precomputation", gasleft());
@@ -69,10 +69,10 @@ contract Fri is MemoryMap, MemoryAccessUtils, HornerEvaluator, FriLayer {
 
         uint256 friQueue = getPtr(ctx, MM_FRI_QUEUE);
 
-        uint256[] memory friSteps = getFriSteps(ctx);
-        uint256 nFriSteps = friSteps.length;
+        uint256[] memory friStepSizes = getFriStepSizes(ctx);
+        uint256 nFriSteps = friStepSizes.length;
         while (friStep < nFriSteps) {
-            uint256 friCosetSize = 2**friSteps[friStep];
+            uint256 friCosetSize = 2**friStepSizes[friStep];
 
             nLiveQueries = computeNextLayer(
                 channelPtr,

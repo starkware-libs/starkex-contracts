@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0.
-pragma solidity ^0.6.11;
+pragma solidity ^0.6.12;
 
 import "../components/FactRegistry.sol";
 import "../interfaces/IAvailabilityVerifier.sol";
@@ -40,7 +40,7 @@ contract Committee is FactRegistry, IAvailabilityVerifier, Identity {
     ///
     /// @param claimHash The hash of the claim the committee is signing on.
     /// The format is keccak256(abi.encodePacked(
-    ///    newVaultRoot, vaultTreeHeight, newOrderRoot, orderTreeHeight sequenceNumber))
+    ///    newValidiumVaultRoot, validiumTreeHeight, newOrderRoot, orderTreeHeight sequenceNumber))
     /// @param availabilityProofs Concatenated ec signatures by committee members.
     function verifyAvailabilityProof(bytes32 claimHash, bytes calldata availabilityProofs)
         external

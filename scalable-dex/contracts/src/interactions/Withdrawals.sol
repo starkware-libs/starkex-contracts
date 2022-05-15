@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0.
-pragma solidity ^0.6.11;
+pragma solidity ^0.6.12;
 
 import "../interfaces/MAcceptModifications.sol";
 import "../interfaces/MTokenQuantization.sol";
@@ -73,6 +73,16 @@ abstract contract Withdrawals is
         address recipient
     );
 
+    event LogWithdrawalWithTokenIdPerformed(
+        uint256 ownerKey,
+        uint256 assetType,
+        uint256 tokenId,
+        uint256 assetId,
+        uint256 nonQuantizedAmount,
+        uint256 quantizedAmount,
+        address recipient
+    );
+
     event LogMintWithdrawalPerformed(
         uint256 ownerKey,
         uint256 assetType,
@@ -84,10 +94,10 @@ abstract contract Withdrawals is
     function getWithdrawalBalance(uint256 ownerKey, uint256 assetId)
         external
         view
-        returns (uint256 balance)
+        returns (uint256)
     {
         uint256 presumedAssetType = assetId;
-        balance = fromQuantized(presumedAssetType, pendingWithdrawals[ownerKey][assetId]);
+        return fromQuantized(presumedAssetType, pendingWithdrawals[ownerKey][assetId]);
     }
 
     /*
@@ -116,7 +126,40 @@ abstract contract Withdrawals is
     }
 
     /*
-      Allows withdrawal of an NFT to its owner account.
+      Allows withdrawal of tokens to their owner's account.
+      Note: this function can be called by anyone.
+      This function can be called normally while frozen.
+    */
+    function withdrawWithTokenId(
+        uint256 ownerKey,
+        uint256 assetType,
+        uint256 tokenId // No notFrozen modifier: This function can always be used, even when frozen.
+    ) public {
+        require(isAssetTypeWithTokenId(assetType), "INVALID_ASSET_TYPE");
+        uint256 assetId = calculateAssetIdWithTokenId(assetType, tokenId);
+        address recipient = strictGetEthKey(ownerKey);
+
+        uint256 quantizedAmount = pendingWithdrawals[ownerKey][assetId];
+        pendingWithdrawals[ownerKey][assetId] = 0;
+
+        // Transfer funds.
+        transferOutWithTokenId(recipient, assetType, tokenId, quantizedAmount);
+        if (isERC721(assetType)) {
+            emit LogNftWithdrawalPerformed(ownerKey, assetType, tokenId, assetId, recipient);
+        }
+        emit LogWithdrawalWithTokenIdPerformed(
+            ownerKey,
+            assetType,
+            tokenId,
+            assetId,
+            fromQuantized(assetType, quantizedAmount),
+            quantizedAmount,
+            recipient
+        );
+    }
+
+    /*
+      Allows withdrawal of an NFT to its owner's account.
       Note: this function can be called by anyone.
       This function can be called normally while frozen.
     */
@@ -125,17 +168,7 @@ abstract contract Withdrawals is
         uint256 assetType,
         uint256 tokenId // No notFrozen modifier: This function can always be used, even when frozen.
     ) external {
-        address recipient = strictGetEthKey(ownerKey);
-        // Calculate assetId.
-        uint256 assetId = calculateNftAssetId(assetType, tokenId);
-        require(!isMintableAssetType(assetType), "MINTABLE_ASSET_TYPE");
-        require(!isFungibleAssetType(assetType), "FUNGIBLE_ASSET_TYPE");
-        require(pendingWithdrawals[ownerKey][assetId] == 1, "ILLEGAL_NFT_BALANCE");
-        pendingWithdrawals[ownerKey][assetId] = 0;
-
-        // Transfer funds.
-        transferOutNft(recipient, assetType, tokenId);
-        emit LogNftWithdrawalPerformed(ownerKey, assetType, tokenId, assetId, recipient);
+        withdrawWithTokenId(ownerKey, assetType, tokenId);
     }
 
     function withdrawAndMint(

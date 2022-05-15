@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0.
-pragma solidity ^0.6.11;
+pragma solidity ^0.6.12;
 
 import "../components/Governance.sol";
+import "../components/GovernanceStorage.sol";
 
 /**
   The Proxy contract is governed by one or more Governors of which the initial one is the
@@ -33,31 +34,34 @@ import "../components/Governance.sol";
   which is needed so that it can have non-colliding function names,
   and a specific tag (key) to allow unique state storage.
 */
-contract ProxyGovernance is Governance {
+contract ProxyGovernance is GovernanceStorage, Governance {
     // The tag is the string key that is used in the Governance storage mapping.
     string public constant PROXY_GOVERNANCE_TAG = "StarkEx.Proxy.2019.GovernorsInformation";
 
-    function getGovernanceTag() internal pure override returns (string memory tag) {
-        tag = PROXY_GOVERNANCE_TAG;
+    /*
+      Returns the GovernanceInfoStruct associated with the governance tag.
+    */
+    function getGovernanceInfo() internal view override returns (GovernanceInfoStruct storage) {
+        return governanceInfo[PROXY_GOVERNANCE_TAG];
     }
 
     function proxyIsGovernor(address testGovernor) external view returns (bool) {
-        return isGovernor(testGovernor);
+        return _isGovernor(testGovernor);
     }
 
     function proxyNominateNewGovernor(address newGovernor) external {
-        nominateNewGovernor(newGovernor);
+        _nominateNewGovernor(newGovernor);
     }
 
     function proxyRemoveGovernor(address governorForRemoval) external {
-        removeGovernor(governorForRemoval);
+        _removeGovernor(governorForRemoval);
     }
 
     function proxyAcceptGovernance() external {
-        acceptGovernance();
+        _acceptGovernance();
     }
 
     function proxyCancelNomination() external {
-        cancelNomination();
+        _cancelNomination();
     }
 }

@@ -12,9 +12,9 @@ derivates trading (StarkPerpetual).
 
 ## Contracts
 
-1. StarkExchange - The main exchange contract holding the StarkEx spot trading exchage state and
+1. StarkExchange - The main exchange contract holding the StarkEx spot trading exchange state and
    funds.
-2. StarkPerpetual - The main exchange contract holding the StarkEx derivatives exchage state and
+2. StarkPerpetual - The main exchange contract holding the StarkEx derivatives exchange state and
    funds.
 3. GpsFactRegistryAdapter - An adapter to the STARK verifier fact registry.
 4. Committee - Verifies signatures attesting to off-chain data availability (where applicable).
@@ -30,6 +30,5 @@ derivates trading (StarkPerpetual).
    contract updates where the only state update is the Proxy upgrade activation timelock.
 10. UpdatePerpetualConfigExternalInitializer - Implements an initialization procedure to be used for
     contract updates where the only state update is the StarkPerpetual configuration hash.
-11. V2toV3ChangesExternalInitializer - Implements an initialization procedure to be used for
-    StarkEx contract updates from v2 contracts to v3 contracts which requires setting some default
-    values.
+11. V3toV45ChangesExternalInitializer - Implements an initialization procedure to be used for
+    StarkEx contract updates from v3/v4 contracts to v4.5 contracts.

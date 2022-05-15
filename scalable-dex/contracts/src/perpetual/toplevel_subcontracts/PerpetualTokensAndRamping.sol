@@ -1,15 +1,13 @@
 // SPDX-License-Identifier: Apache-2.0.
-pragma solidity ^0.6.11;
+pragma solidity ^0.6.12;
 
 import "../components/PerpetualTokenRegister.sol";
 import "../../components/TokenTransfers.sol";
 import "../../components/ERC721Receiver.sol";
 import "../../components/Freezable.sol";
 import "../../components/KeyGetters.sol";
-import "../../components/Users.sol";
 import "../../components/MainGovernance.sol";
 import "../../interactions/AcceptModifications.sol";
-import "../../interactions/CompositeActions.sol";
 import "../../interactions/Deposits.sol";
 import "../../interactions/TokenAssetData.sol";
 import "../../interactions/TokenQuantization.sol";
@@ -27,9 +25,7 @@ contract PerpetualTokensAndRamping is
     TokenTransfers,
     PerpetualTokenRegister,
     KeyGetters,
-    Users,
     Deposits,
-    CompositeActions,
     Withdrawals
 {
     function initialize(
@@ -42,7 +38,18 @@ contract PerpetualTokensAndRamping is
         return 0;
     }
 
+    function validatedSelectors() external pure override returns (bytes4[] memory selectors) {
+        uint256 len_ = 3;
+        uint256 index_ = 0;
+
+        selectors = new bytes4[](len_);
+        selectors[index_++] = Deposits.depositCancel.selector;
+        selectors[index_++] = Deposits.depositReclaim.selector;
+        selectors[index_++] = Withdrawals.withdraw.selector;
+        require(index_ == len_, "INCORRECT_SELECTORS_ARRAY_LENGTH");
+    }
+
     function identify() external pure override returns (string memory) {
-        return "StarkWare_PerpetualTokensAndRamping_2020_1";
+        return "StarkWare_PerpetualTokensAndRamping_2022_2";
     }
 }

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0.
-pragma solidity ^0.6.11;
+pragma solidity ^0.6.12;
 
 import "../components/StarkExStorage.sol";
 import "../interfaces/MStarkExForcedActionState.sol";
@@ -92,7 +92,8 @@ abstract contract UpdateState is
     event LogRootUpdate(
         uint256 sequenceNumber,
         uint256 batchId,
-        uint256 vaultRoot,
+        uint256 validiumVaultRoot,
+        uint256 rollupVaultRoot,
         uint256 orderRoot
     );
 
@@ -116,16 +117,20 @@ abstract contract UpdateState is
             "publicInput does not contain all required fields."
         );
         require(
-            publicInput[PUB_IN_FINAL_VAULT_ROOT_OFFSET] < K_MODULUS,
-            "New vault root >= PRIME."
+            publicInput[PUB_IN_GLOBAL_CONFIG_CODE_OFFSET] == globalConfigCode,
+            "Global config code mismatch."
+        );
+        require(
+            publicInput[PUB_IN_FINAL_VALIDIUM_VAULT_ROOT_OFFSET] < K_MODULUS,
+            "New validium vault root >= PRIME."
+        );
+        require(
+            publicInput[PUB_IN_FINAL_ROLLUP_VAULT_ROOT_OFFSET] < K_MODULUS,
+            "New rollup vault root >= PRIME."
         );
         require(
             publicInput[PUB_IN_FINAL_ORDER_ROOT_OFFSET] < K_MODULUS,
             "New order root >= PRIME."
-        );
-        require(
-            publicInput[PUB_IN_ONCHAIN_DATA_VERSION] == onchainDataVersion,
-            "Unsupported onchain-data version."
         );
         require(
             lastBatchId == 0 || applicationData[APP_DATA_PREVIOUS_BATCH_ID_OFFSET] == lastBatchId,
@@ -157,8 +162,8 @@ abstract contract UpdateState is
 
         bytes32 availabilityFact = keccak256(
             abi.encodePacked(
-                publicInput[PUB_IN_FINAL_VAULT_ROOT_OFFSET],
-                publicInput[PUB_IN_VAULT_TREE_HEIGHT_OFFSET],
+                publicInput[PUB_IN_FINAL_VALIDIUM_VAULT_ROOT_OFFSET],
+                publicInput[PUB_IN_VALIDIUM_VAULT_TREE_HEIGHT_OFFSET],
                 publicInput[PUB_IN_FINAL_ORDER_ROOT_OFFSET],
                 publicInput[PUB_IN_ORDER_TREE_HEIGHT_OFFSET],
                 sequenceNumber + 1
@@ -180,40 +185,36 @@ abstract contract UpdateState is
         pure
         returns (bytes32)
     {
-        uint256 onchainDataVersionField = publicInput[PUB_IN_ONCHAIN_DATA_VERSION];
-        if (onchainDataVersionField == ONCHAIN_DATA_NONE) {
-            return keccak256(abi.encodePacked(publicInput));
-        } else if (onchainDataVersionField == ONCHAIN_DATA_VAULTS) {
-            // Use a simple fact tree.
-            require(
-                publicInput.length >=
-                    PUB_IN_TRANSACTIONS_DATA_OFFSET +
-                        OnchainDataFactTreeEncoder.ONCHAIN_DATA_FACT_ADDITIONAL_WORDS,
-                "programOutput does not contain all required fields."
+        // Use a simple fact tree.
+        require(
+            publicInput.length >=
+                PUB_IN_TRANSACTIONS_DATA_OFFSET +
+                    OnchainDataFactTreeEncoder.ONCHAIN_DATA_FACT_ADDITIONAL_WORDS,
+            "programOutput does not contain all required fields."
+        );
+        return
+            OnchainDataFactTreeEncoder.encodeFactWithOnchainData(
+                publicInput[:publicInput.length -
+                    OnchainDataFactTreeEncoder.ONCHAIN_DATA_FACT_ADDITIONAL_WORDS],
+                OnchainDataFactTreeEncoder.DataAvailabilityFact({
+                    onchainDataHash: publicInput[publicInput.length - 2],
+                    onchainDataSize: publicInput[publicInput.length - 1]
+                })
             );
-            return
-                OnchainDataFactTreeEncoder.encodeFactWithOnchainData(
-                    publicInput[:publicInput.length -
-                        OnchainDataFactTreeEncoder.ONCHAIN_DATA_FACT_ADDITIONAL_WORDS],
-                    OnchainDataFactTreeEncoder.DataAvailabilityFact({
-                        onchainDataHash: publicInput[publicInput.length - 2],
-                        onchainDataSize: publicInput[publicInput.length - 1]
-                    })
-                );
-        } else {
-            revert("Unsupported onchain-data version.");
-        }
     }
 
     function performUpdateState(uint256[] calldata publicInput, uint256[] calldata applicationData)
         internal
     {
         rootUpdate(
-            publicInput[PUB_IN_INITIAL_VAULT_ROOT_OFFSET],
-            publicInput[PUB_IN_FINAL_VAULT_ROOT_OFFSET],
+            publicInput[PUB_IN_INITIAL_VALIDIUM_VAULT_ROOT_OFFSET],
+            publicInput[PUB_IN_FINAL_VALIDIUM_VAULT_ROOT_OFFSET],
+            publicInput[PUB_IN_INITIAL_ROLLUP_VAULT_ROOT_OFFSET],
+            publicInput[PUB_IN_FINAL_ROLLUP_VAULT_ROOT_OFFSET],
             publicInput[PUB_IN_INITIAL_ORDER_ROOT_OFFSET],
             publicInput[PUB_IN_FINAL_ORDER_ROOT_OFFSET],
-            publicInput[PUB_IN_VAULT_TREE_HEIGHT_OFFSET],
+            publicInput[PUB_IN_VALIDIUM_VAULT_TREE_HEIGHT_OFFSET],
+            publicInput[PUB_IN_ROLLUP_VAULT_TREE_HEIGHT_OFFSET],
             publicInput[PUB_IN_ORDER_TREE_HEIGHT_OFFSET],
             applicationData[APP_DATA_BATCH_ID_OFFSET]
         );
@@ -221,30 +222,36 @@ abstract contract UpdateState is
     }
 
     function rootUpdate(
-        uint256 oldVaultRoot,
-        uint256 newVaultRoot,
+        uint256 oldValidiumVaultRoot,
+        uint256 newValidiumVaultRoot,
+        uint256 oldRollupVaultRoot,
+        uint256 newRollupVaultRoot,
         uint256 oldOrderRoot,
         uint256 newOrderRoot,
-        uint256 vaultTreeHeightSent,
+        uint256 validiumTreeHeightSent,
+        uint256 rollupTreeHeightSent,
         uint256 orderTreeHeightSent,
         uint256 batchId
     ) internal virtual {
         // Assert that the old state is correct.
-        require(oldVaultRoot == vaultRoot, "VAULT_ROOT_INCORRECT");
+        require(oldValidiumVaultRoot == validiumVaultRoot, "VALIDIUM_VAULT_ROOT_INCORRECT");
+        require(oldRollupVaultRoot == rollupVaultRoot, "ROLLUP_VAULT_ROOT_INCORRECT");
         require(oldOrderRoot == orderRoot, "ORDER_ROOT_INCORRECT");
 
         // Assert that heights are correct.
-        require(vaultTreeHeight == vaultTreeHeightSent, "VAULT_HEIGHT_INCORRECT");
-        require(orderTreeHeight == orderTreeHeightSent, "ORDER_HEIGHT_INCORRECT");
+        require(validiumTreeHeight == validiumTreeHeightSent, "VALIDIUM_TREE_HEIGHT_INCORRECT");
+        require(rollupTreeHeight == rollupTreeHeightSent, "ROLLUP_TREE_HEIGHT_INCORRECT");
+        require(orderTreeHeight == orderTreeHeightSent, "ORDER_TREE_HEIGHT_INCORRECT");
 
         // Update state.
-        vaultRoot = newVaultRoot;
+        validiumVaultRoot = newValidiumVaultRoot;
+        rollupVaultRoot = newRollupVaultRoot;
         orderRoot = newOrderRoot;
         sequenceNumber = sequenceNumber + 1;
         lastBatchId = batchId;
 
         // Log update.
-        emit LogRootUpdate(sequenceNumber, batchId, vaultRoot, orderRoot);
+        emit LogRootUpdate(sequenceNumber, batchId, validiumVaultRoot, rollupVaultRoot, orderRoot);
     }
 
     function performOnchainOperations(
@@ -253,7 +260,6 @@ abstract contract UpdateState is
     ) private {
         uint256 nModifications = publicInput[PUB_IN_N_MODIFICATIONS_OFFSET];
         uint256 nCondTransfers = publicInput[PUB_IN_N_CONDITIONAL_TRANSFERS_OFFSET];
-        uint256 onchainDataVersionField = publicInput[PUB_IN_ONCHAIN_DATA_VERSION];
         uint256 nOnchainVaultUpdates = publicInput[PUB_IN_N_ONCHAIN_VAULT_UPDATES_OFFSET];
         uint256 nOnchainOrders = publicInput[PUB_IN_N_ONCHAIN_ORDERS_OFFSET];
 
@@ -272,7 +278,8 @@ abstract contract UpdateState is
                     PUB_IN_N_WORDS_PER_ONCHAIN_VAULT_UPDATE *
                     nOnchainVaultUpdates +
                     PUB_IN_N_MIN_WORDS_PER_ONCHAIN_ORDER *
-                    nOnchainOrders,
+                    nOnchainOrders +
+                    OnchainDataFactTreeEncoder.ONCHAIN_DATA_FACT_ADDITIONAL_WORDS,
             "publicInput size is inconsistent with expected transactions."
         );
         require(
@@ -316,9 +323,7 @@ abstract contract UpdateState is
         offsetPubInput += verifyOnchainOrders(publicInput[offsetPubInput:], nOnchainOrders);
 
         // The Onchain Data info appears at the end of publicInput.
-        if (onchainDataVersionField == 1) {
-            offsetPubInput += OnchainDataFactTreeEncoder.ONCHAIN_DATA_FACT_ADDITIONAL_WORDS;
-        }
+        offsetPubInput += OnchainDataFactTreeEncoder.ONCHAIN_DATA_FACT_ADDITIONAL_WORDS;
 
         require(offsetPubInput == publicInput.length, "Incorrect Size");
     }
@@ -343,11 +348,11 @@ abstract contract UpdateState is
             require(assetId < K_MODULUS, "Asset id >= PRIME");
 
             uint256 actionParams = slidingPublicInput[offsetPubInput + 2];
-            require((actionParams >> 96) == 0, "Unsupported modification action field.");
+            require((actionParams >> 129) == 0, "Unsupported modification action field.");
 
             // Extract and unbias the balanceDiff.
             int256 balanceDiff = int256((actionParams & ((1 << 64) - 1)) - (1 << 63));
-            uint256 vaultId = (actionParams >> 64) & ((1 << 31) - 1);
+            uint256 vaultId = (actionParams >> 64) & ((1 << 64) - 1);
 
             if (balanceDiff > 0) {
                 // This is a deposit.
@@ -357,7 +362,7 @@ abstract contract UpdateState is
                 acceptWithdrawal(ownerKey, assetId, uint256(-balanceDiff));
             }
 
-            if ((actionParams & (1 << 95)) != 0) {
+            if ((actionParams & (1 << 128)) != 0) {
                 clearFullWithdrawalRequest(ownerKey, vaultId);
             }
 

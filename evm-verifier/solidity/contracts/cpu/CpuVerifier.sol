@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0.
-pragma solidity ^0.6.11;
+pragma solidity ^0.6.12;
 
 import "../CairoVerifierContract.sol";
 import "../MemoryPageFactRegistry.sol";
@@ -9,14 +9,14 @@ import "./StarkVerifier.sol";
 
 /*
   Verifies a Cairo statement: there exists a memory assignment and a valid corresponding program
-  trace satisfying the public memory requirements, for which if a program starts at pc=0,
-  it runs successfully and ends with pc=2.
+  trace satisfying the public memory requirements, for which if a program starts at pc=INITIAL_PC,
+  it runs successfully and ends with pc=FINAL_PC.
 
   This contract verifies that:
   * Initial pc is INITIAL_PC and final pc is FINAL_PC.
   * The memory assignment satisfies the given public memory requirements.
   * The 16-bit range-checks are properly configured (0 <= rc_min <= rc_max < 2^16).
-  * The segments for the Pedersen and range-check builtins do not exceed their maximum length (thus
+  * The segments for the builtins do not exceed their maximum length (thus
     when these builtins are properly used in the program, they will function correctly).
   * The layout is valid.
 

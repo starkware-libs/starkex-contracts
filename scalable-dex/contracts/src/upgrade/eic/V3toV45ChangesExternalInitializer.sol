@@ -1,78 +1,65 @@
 // SPDX-License-Identifier: Apache-2.0.
-pragma solidity ^0.6.11;
+pragma solidity ^0.6.12;
 
-import "../StorageSlots.sol";
 import "../../interfaces/ExternalInitializer.sol";
 import "../../interfaces/Identity.sol";
 import "../../libraries/Common.sol";
 import "../../libraries/LibConstants.sol";
-import "../../starkex/components/StarkExStorage.sol";
+import "../../components/MainStorage.sol";
 
 /*
-  This contract is an external initializing contract that performs required adjustments for upgrade
-  to V3 on a system that is with an old (V1) Proxy.
+  This contract is an external initializing contract that performs required adjustments for V3->V4.5
+  ugrade:
+  1. Replace verifier adapter.
+  2. Set migrated order tree root and height.
+  3. Set new rollup tree root and height.
+  4. set new globalConfigCode value.
 
-  Actions taken:
-  1. Replace verifier adapter & committee address.
-  2. Set onchain data version.
-  3. Store MessageRegistry address.
-  4. Set upgrade delay value.
+  Note: The values stored in vaultRoot and vaultTreeHeight are unchanged in the upgrade to V4.5.
+  These storage slots are renamed validiumVaultRoot and validiumTreeHeight.
 */
-contract V1toV3ExternalInitializer is
-    ExternalInitializer,
-    StarkExStorage,
-    StorageSlots,
-    LibConstants
-{
+contract V3toV45ChangesExternalInitializer is ExternalInitializer, MainStorage, LibConstants {
     using Addresses for address;
     uint256 constant ENTRY_NOT_FOUND = uint256(~0);
-    uint256 constant MAX_DELAY = 28 days;
+
+    event OrderTreeMigration(
+        uint256 oldOrderRoot,
+        uint256 oldOrderTreeHeight,
+        uint256 newOrderRoot,
+        uint256 newOrderTreeHeight
+    );
 
     function initialize(bytes calldata data) external override {
-        require(data.length == 288, "INCORRECT_INIT_DATA_SIZE_288");
+        require(data.length == 224, "INCORRECT_INIT_DATA_SIZE_224");
         (
             address newVerifierAddress,
             bytes32 verifierIdHash,
-            address newAvailabilityVerifierAddress,
-            bytes32 availabilityVerifierIdHash,
-            uint256 newOnchainDataVersion,
-            bool newVaultBalancePolicy,
-            address newOrderRegistryAddress,
-            bytes32 messageRegistryIdHash,
-            uint256 delayInSeconds
-        ) = abi.decode(
-                data,
-                (address, bytes32, address, bytes32, uint256, bool, address, bytes32, uint256)
-            );
+            uint256 newOrderRoot,
+            uint256 newOrderTreeHeight,
+            uint256 newRollupVaultRoot,
+            uint256 newRollupTreeHeigh,
+            uint256 newGlobalConfigCode
+        ) = abi.decode(data, (address, bytes32, uint256, uint256, uint256, uint256, uint256));
+
+        require(newGlobalConfigCode < K_MODULUS, "GLOBAL_CONFIG_CODE >= PRIME");
 
         // Flush the current verifiers & availabilityVerifier list.
         delete verifiersChain.list;
-        delete availabilityVerifiersChain.list;
 
         // ApprovalChain addEntry performs all the required checks for us.
         addEntry(verifiersChain, newVerifierAddress, MAX_VERIFIER_COUNT, verifierIdHash);
-        addEntry(
-            availabilityVerifiersChain,
-            newAvailabilityVerifierAddress,
-            MAX_VERIFIER_COUNT,
-            availabilityVerifierIdHash
-        );
 
-        onchainDataVersion = newOnchainDataVersion;
-        strictVaultBalancePolicy = newVaultBalancePolicy;
-        orderRegistryAddress = newOrderRegistryAddress;
-        newOrderRegistryAddress.validateContractId(messageRegistryIdHash);
-        setActivationDelay(delayInSeconds);
+        uint256 oldOrderRoot = orderRoot;
+        uint256 oldOrderTreeHeight = orderTreeHeight;
+
+        orderRoot = newOrderRoot;
+        orderTreeHeight = newOrderTreeHeight;
+        rollupVaultRoot = newRollupVaultRoot;
+        rollupTreeHeight = newRollupTreeHeigh;
+        globalConfigCode = newGlobalConfigCode;
+
+        emit OrderTreeMigration(oldOrderRoot, oldOrderTreeHeight, newOrderRoot, newOrderTreeHeight);
         emit LogExternalInitialize(data);
-    }
-
-    function setActivationDelay(uint256 delayInSeconds) private {
-        require(delayInSeconds <= MAX_DELAY, "DELAY_TOO_LONG");
-
-        bytes32 slot = UPGRADE_DELAY_SLOT;
-        assembly {
-            sstore(slot, delayInSeconds)
-        }
     }
 
     /*

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0.
-pragma solidity ^0.6.11;
+pragma solidity ^0.6.12;
 
 import "./components/FactRegistry.sol";
 import "./FriLayer.sol";
@@ -27,7 +27,7 @@ contract FriStatementContract is FriLayer, FactRegistry {
         uint256 friStepSize,
         uint256 expectedRoot
     ) public {
-        require(friStepSize <= FRI_MAX_FRI_STEP, "FRI step size too large");
+        require(friStepSize <= FRI_MAX_STEP_SIZE, "FRI step size too large");
         /*
           The friQueue should have of 3*nQueries + 1 elements, beginning with nQueries triplets
           of the form (query_index, FRI_value, FRI_inverse_point), and ending with a single buffer

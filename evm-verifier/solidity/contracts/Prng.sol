@@ -1,27 +1,27 @@
 // SPDX-License-Identifier: Apache-2.0.
-pragma solidity ^0.6.11;
+pragma solidity ^0.6.12;
 
 import "./PrimeFieldElement0.sol";
 
 contract Prng is PrimeFieldElement0 {
     function storePrng(
-        uint256 statePtr,
+        uint256 prngPtr,
         bytes32 digest,
         uint256 counter
     ) internal pure {
         assembly {
-            mstore(statePtr, digest)
-            mstore(add(statePtr, 0x20), counter)
+            mstore(prngPtr, digest)
+            mstore(add(prngPtr, 0x20), counter)
         }
     }
 
-    function loadPrng(uint256 statePtr) internal pure returns (bytes32, uint256) {
+    function loadPrng(uint256 prngPtr) internal pure returns (bytes32, uint256) {
         bytes32 digest;
         uint256 counter;
 
         assembly {
-            digest := mload(statePtr)
-            counter := mload(add(statePtr, 0x20))
+            digest := mload(prngPtr)
+            counter := mload(add(prngPtr, 0x20))
         }
 
         return (digest, counter);
@@ -67,20 +67,5 @@ contract Prng is PrimeFieldElement0 {
 
         storePrng(prngPtr, digest, counter);
         return randomBytes;
-    }
-
-    function mixSeedWithBytes(uint256 prngPtr, bytes memory dataBytes) internal pure {
-        bytes32 digest;
-
-        assembly {
-            digest := mload(prngPtr)
-        }
-        initPrng(prngPtr, keccak256(abi.encodePacked(digest, dataBytes)));
-    }
-
-    function getPrngDigest(uint256 prngPtr) internal pure returns (bytes32 digest) {
-        assembly {
-            digest := mload(prngPtr)
-        }
     }
 }

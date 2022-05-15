@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0.
-pragma solidity ^0.6.11;
+pragma solidity ^0.6.12;
 
 import "../../interfaces/SubContractor.sol";
 import "../../upgrade/ProxyGovernance.sol";
@@ -20,10 +20,6 @@ contract ProxyUtils is SubContractor, StorageSlots, ProxyGovernance, ProxyStorag
 
     function initializerSize() external view override returns (uint256) {
         return 0;
-    }
-
-    function identify() external pure override returns (string memory) {
-        return "StarkWare_ProxyUtils_2021_1";
     }
 
     function storedActivationDelay() internal view returns (uint256 delay) {
@@ -68,5 +64,14 @@ contract ProxyUtils is SubContractor, StorageSlots, ProxyGovernance, ProxyStorag
             enabledTime[implementationKey] = updatedActivationTime;
             emit ImplementationActivationRescheduled(implementation, updatedActivationTime);
         }
+    }
+
+    function validatedSelectors() external pure override returns (bytes4[] memory selectors) {
+        // This sub-contract has no selectors to validate.
+        selectors = new bytes4[](0);
+    }
+
+    function identify() external pure override returns (string memory) {
+        return "StarkWare_ProxyUtils_2022_2";
     }
 }

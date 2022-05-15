@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0.
-pragma solidity ^0.6.11;
+pragma solidity ^0.6.12;
 
 contract ProgramOutputOffsets {
     // The following constants are offsets of data expected in the program output.

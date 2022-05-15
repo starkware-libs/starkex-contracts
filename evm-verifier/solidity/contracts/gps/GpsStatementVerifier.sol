@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0.
-pragma solidity ^0.6.11;
+pragma solidity ^0.6.12;
 
 import "../cpu/CairoBootloaderProgram.sol";
 import "../cpu/CairoVerifierContract.sol";
@@ -21,6 +21,10 @@ contract GpsStatementVerifier is
     uint256 internal constant N_BUILTINS = 5;
     uint256 internal constant N_MAIN_ARGS = N_BUILTINS;
     uint256 internal constant N_MAIN_RETURN_VALUES = N_BUILTINS;
+    // Cairo verifier program hash.
+    uint256 immutable hashedSupportedCairoVerifiers_;
+    // Simple bootloader program hash.
+    uint256 immutable simpleBootloaderProgramHash_;
 
     /*
       Constructs an instance of GpsStatementVerifier.
@@ -30,7 +34,9 @@ contract GpsStatementVerifier is
     constructor(
         address bootloaderProgramContract,
         address memoryPageFactRegistry_,
-        address[] memory cairoVerifierContracts
+        address[] memory cairoVerifierContracts,
+        uint256 hashedSupportedCairoVerifiers,
+        uint256 simpleBootloaderProgramHash
     ) public {
         bootloaderProgramContractAddress = CairoBootloaderProgram(bootloaderProgramContract);
         memoryPageFactRegistry = MemoryPageFactRegistry(memoryPageFactRegistry_);
@@ -38,10 +44,19 @@ contract GpsStatementVerifier is
         for (uint256 i = 0; i < cairoVerifierContracts.length; ++i) {
             cairoVerifierContractAddresses[i] = CairoVerifierContract(cairoVerifierContracts[i]);
         }
+        hashedSupportedCairoVerifiers_ = hashedSupportedCairoVerifiers;
+        simpleBootloaderProgramHash_ = simpleBootloaderProgramHash;
     }
 
     function identify() external pure override returns (string memory) {
-        return "StarkWare_GpsStatementVerifier_2021_3";
+        return "StarkWare_GpsStatementVerifier_2022_5";
+    }
+
+    /*
+      Returns the bootloader config.
+    */
+    function getBootloaderConfig() external view returns (uint256, uint256) {
+        return (simpleBootloaderProgramHash_, hashedSupportedCairoVerifiers_);
     }
 
     /*
@@ -82,6 +97,7 @@ contract GpsStatementVerifier is
             require(cairoAuxInput.length > publicMemoryOffset, "Invalid cairoAuxInput length.");
             publicMemoryPages = (uint256[])(cairoPublicInput[publicMemoryOffset:]);
             uint256 nPages = publicMemoryPages[0];
+            require(nPages < 10000, "Invalid nPages.");
 
             // Each page has a page info and a hash.
             require(
@@ -97,8 +113,8 @@ contract GpsStatementVerifier is
             ) = registerPublicMemoryMainPage(taskMetadata, cairoAuxInput, selectedBuiltins);
 
             // Make sure the first page is valid.
-            // If the size or the hash are invalid, it may indicate that there is a mismatch between the
-            // bootloader program contract and the program in the proof.
+            // If the size or the hash are invalid, it may indicate that there is a mismatch
+            // between the prover and the verifier on the bootloader program or bootloader config.
             require(
                 publicMemoryPages[PAGE_INFO_SIZE_OFFSET] == publicMemoryLength,
                 "Invalid size for memory page 0."
@@ -158,6 +174,8 @@ contract GpsStatementVerifier is
             2 +
             N_MAIN_ARGS +
             N_MAIN_RETURN_VALUES +
+            // Bootloader config size =
+            2 +
             // Number of tasks cell =
             1 +
             2 *
@@ -233,21 +251,19 @@ contract GpsStatementVerifier is
 
         // Program output.
         {
-            // Check that there are enough range checks for the bootloader builtin validation.
-            // Each builtin is validated for each task and each validation uses one range check.
-            require(
-                cairoAuxInput[OFFSET_RANGE_CHECK_STOP_PTR] >=
-                    cairoAuxInput[OFFSET_RANGE_CHECK_BEGIN_ADDR] + N_BUILTINS * nTasks,
-                "Range-check stop pointer should be after all range checks used for validations."
-            );
-
             {
                 uint256 outputAddress = cairoAuxInput[OFFSET_OUTPUT_BEGIN_ADDR];
-                // Force that memory[outputAddress] = nTasks.
+                // Force that memory[outputAddress] and memory[outputAddress + 1] contain the
+                // bootloader config (which is 2 words size).
                 publicMemory[offset + 0] = outputAddress;
-                publicMemory[offset + 1] = nTasks;
-                offset += 2;
-                outputAddress += 1;
+                publicMemory[offset + 1] = simpleBootloaderProgramHash_;
+                publicMemory[offset + 2] = outputAddress + 1;
+                publicMemory[offset + 3] = hashedSupportedCairoVerifiers_;
+                // Force that memory[outputAddress + 2] = nTasks.
+                publicMemory[offset + 4] = outputAddress + 2;
+                publicMemory[offset + 5] = nTasks;
+                offset += 6;
+                outputAddress += 3;
 
                 uint256[] calldata taskMetadataSlice = taskMetadata[METADATA_TASKS_OFFSET:];
                 for (uint256 task = 0; task < nTasks; task++) {
