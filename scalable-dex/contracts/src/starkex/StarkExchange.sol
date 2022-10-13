@@ -4,7 +4,7 @@ pragma solidity ^0.6.12;
 import "../interfaces/MainDispatcher.sol";
 
 contract StarkExchange is MainDispatcher {
-    string public constant VERSION = "4.5.0";
+    string public constant VERSION = "4.5.1";
 
     // Salt for a 8 bit unique spread of all relevant selectors. Pre-caclulated.
     // ---------- The following code was auto-generated. PLEASE DO NOT EDIT. ----------
@@ -43,9 +43,9 @@ contract StarkExchange is MainDispatcher {
         } else if (index == 2) {
             id = "StarkWare_TokensAndRamping_2022_2";
         } else if (index == 3) {
-            id = "StarkWare_StarkExState_2022_4";
+            id = "StarkWare_StarkExState_2022_5";
         } else if (index == 4) {
-            id = "StarkWare_ForcedActions_2022_2";
+            id = "StarkWare_ForcedActions_2022_3";
         } else if (index == 5) {
             id = "StarkWare_OnchainVaults_2022_2";
         } else if (index == 6) {

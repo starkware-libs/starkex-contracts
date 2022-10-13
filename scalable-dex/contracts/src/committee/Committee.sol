@@ -14,6 +14,7 @@ contract Committee is FactRegistry, IAvailabilityVerifier, Identity {
     /// @param committeeMembers List of committee members.
     /// @param numSignaturesRequired Number of required signatures.
     constructor(address[] memory committeeMembers, uint256 numSignaturesRequired) public {
+        require(numSignaturesRequired > 0, "NO_REQUIRED_SIGNATURES");
         require(numSignaturesRequired <= committeeMembers.length, "TOO_MANY_REQUIRED_SIGNATURES");
         for (uint256 idx = 0; idx < committeeMembers.length; idx++) {
             require(
@@ -25,8 +26,8 @@ contract Committee is FactRegistry, IAvailabilityVerifier, Identity {
         signaturesRequired = numSignaturesRequired;
     }
 
-    function identify() external pure override returns (string memory) {
-        return "StarkWare_Committee_2019_1";
+    function identify() external pure virtual override returns (string memory) {
+        return "StarkWare_Committee_2022_2";
     }
 
     /// @dev Verifies the availability proof. Reverts if invalid.

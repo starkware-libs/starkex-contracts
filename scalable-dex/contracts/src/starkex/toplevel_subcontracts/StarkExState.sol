@@ -66,6 +66,8 @@ contract StarkExState is
             initValues := add(32, _data)
         }
         require(initValues.globalConfigCode < K_MODULUS, "GLOBAL_CONFIG_CODE >= PRIME");
+        require(initValues.validiumTreeHeight < ROLLUP_VAULTS_BIT, "INVALID_VALIDIUM_HEIGHT");
+        require(initValues.rollupTreeHeight < ROLLUP_VAULTS_BIT, "INVALID_ROLLUP_HEIGHT");
 
         initGovernance();
         StarkExOperator.initialize();
@@ -102,6 +104,6 @@ contract StarkExState is
     }
 
     function identify() external pure override returns (string memory) {
-        return "StarkWare_StarkExState_2022_4";
+        return "StarkWare_StarkExState_2022_5";
     }
 }

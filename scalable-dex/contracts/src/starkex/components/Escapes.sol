@@ -35,10 +35,6 @@ abstract contract Escapes is
         escapeVerifierAddress = escapeVerifier;
     }
 
-    function isRollupVault(uint256 vaultId) internal pure returns (bool) {
-        return (vaultId >> ROLLUP_VAULTS_BIT) != 0;
-    }
-
     /*
       Escape when the contract is frozen.
     */
@@ -48,6 +44,7 @@ abstract contract Escapes is
         uint256 assetId,
         uint256 quantizedAmount
     ) external onlyFrozen {
+        require(isVaultInRange(vaultId), "OUT_OF_RANGE_VAULT_ID");
         require(!escapesUsed[vaultId], "ESCAPE_ALREADY_USED");
 
         // Escape can be used only once.
@@ -55,12 +52,12 @@ abstract contract Escapes is
         escapesUsedCount += 1;
 
         // Select a vault tree to escape from, based on the vault id.
-        (uint256 root, uint256 treeHeight) = isRollupVault(vaultId)
-            ? (getRollupVaultRoot(), getRollupTreeHeight())
-            : (getValidiumVaultRoot(), getValidiumTreeHeight());
+        (uint256 root, uint256 treeHeight) = isValidiumVault(vaultId)
+            ? (getValidiumVaultRoot(), getValidiumTreeHeight())
+            : (getRollupVaultRoot(), getRollupTreeHeight());
 
         // The index of vaultId leaf in its tree doesn't include the rollup bit flag.
-        uint256 vaultLeafIndex = (vaultId & (2**ROLLUP_VAULTS_BIT - 1));
+        uint256 vaultLeafIndex = getVaultLeafIndex(vaultId);
 
         bytes32 claimHash = keccak256(
             abi.encode(ownerKey, assetId, quantizedAmount, root, treeHeight, vaultLeafIndex)

@@ -46,6 +46,6 @@ contract ForcedActions is
     }
 
     function identify() external pure override returns (string memory) {
-        return "StarkWare_ForcedActions_2022_2";
+        return "StarkWare_ForcedActions_2022_3";
     }
 }

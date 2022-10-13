@@ -42,6 +42,7 @@ contract V3toV45ChangesExternalInitializer is ExternalInitializer, MainStorage, 
         ) = abi.decode(data, (address, bytes32, uint256, uint256, uint256, uint256, uint256));
 
         require(newGlobalConfigCode < K_MODULUS, "GLOBAL_CONFIG_CODE >= PRIME");
+        require(newRollupTreeHeigh < ROLLUP_VAULTS_BIT, "INVALID_ROLLUP_HEIGHT");
 
         // Flush the current verifiers & availabilityVerifier list.
         delete verifiersChain.list;

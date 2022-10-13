@@ -5,7 +5,6 @@ import "../interfaces/MStarkExForcedActionState.sol";
 import "../../interactions/StateRoot.sol";
 import "../../interfaces/MFreezable.sol";
 import "../../interfaces/MKeyGetters.sol";
-import "../../libraries/LibConstants.sol";
 
 /**
   At any point in time, a user may opt to perform a full withdrawal request for a given off-chain
@@ -35,25 +34,8 @@ import "../../libraries/LibConstants.sol";
   cost of the request exceed 1M gas.
 
 */
-abstract contract FullWithdrawals is
-    StateRoot,
-    LibConstants,
-    MStarkExForcedActionState,
-    MFreezable,
-    MKeyGetters
-{
+abstract contract FullWithdrawals is StateRoot, MStarkExForcedActionState, MFreezable, MKeyGetters {
     event LogFullWithdrawalRequest(uint256 ownerKey, uint256 vaultId);
-
-    function isVaultInRange(uint256 vaultId) private view returns (bool) {
-        // Retruns true if vaultId is in the validium vaults tree.
-        if (vaultId < 2**getValidiumTreeHeight()) {
-            return true;
-        }
-        // Return true iff vaultId is in the rollup vaults tree.
-        uint256 rollupLowerBound = 2**ROLLUP_VAULTS_BIT;
-        uint256 rollupUpperBound = rollupLowerBound + 2**getRollupTreeHeight();
-        return (rollupLowerBound <= vaultId && vaultId < rollupUpperBound);
-    }
 
     function fullWithdrawalRequest(uint256 ownerKey, uint256 vaultId)
         external
