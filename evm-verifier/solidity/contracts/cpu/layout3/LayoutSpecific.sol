@@ -29,7 +29,8 @@ abstract contract LayoutSpecific is MemoryMap, StarkParameters, CpuPublicInputOf
             (1 << PEDERSEN_BUILTIN_BIT) |
             (1 << RANGE_CHECK_BUILTIN_BIT) |
             (1 << ECDSA_BUILTIN_BIT) |
-            (1 << BITWISE_BUILTIN_BIT);
+            (1 << BITWISE_BUILTIN_BIT) |
+            (1 << EC_OP_BUILTIN_BIT);
     }
 
     function safeDiv(uint256 numerator, uint256 denominator) internal pure returns (uint256) {
@@ -102,6 +103,14 @@ abstract contract LayoutSpecific is MemoryMap, StarkParameters, CpuPublicInputOf
 
         ctx[MM_DILUTED_CHECK__PERMUTATION__PUBLIC_MEMORY_PROD] = 1;
         ctx[MM_DILUTED_CHECK__FIRST_ELM] = 0;
+
+        // "ec_op" memory segment.
+        ctx[MM_INITIAL_EC_OP_ADDR] = publicInput[OFFSET_EC_OP_BEGIN_ADDR];
+        validateBuiltinPointers(
+            ctx[MM_INITIAL_EC_OP_ADDR], publicInput[OFFSET_EC_OP_STOP_ADDR],
+            EC_OP_BUILTIN_RATIO, 7, nSteps, 'ec_op');
+
+        ctx[MM_EC_OP__CURVE_CONFIG_ALPHA] = 1;
     }
 
     function prepareForOodsCheck(uint256[] memory ctx) internal view {
@@ -172,7 +181,7 @@ abstract contract LayoutSpecific is MemoryMap, StarkParameters, CpuPublicInputOf
         // Now we can compute p_{n_bits} and q_{n_bits} in 'n_bits' steps and we are done.
         uint256 z = ctx[MM_DILUTED_CHECK__INTERACTION_Z];
         uint256 alpha = ctx[MM_DILUTED_CHECK__INTERACTION_ALPHA];
-        uint256 diffMultiplier = 1 << BITWISE__DILUTED_SPACING;
+        uint256 diffMultiplier = 1 << DILUTED_SPACING;
         uint256 diffX = diffMultiplier - 2;
         // Initialize p, q and x to p_1, q_1 and x_0 respectively.
         uint256 p = 1 + z;
@@ -181,7 +190,7 @@ abstract contract LayoutSpecific is MemoryMap, StarkParameters, CpuPublicInputOf
         assembly {
             for {
                 let i := 1
-            } lt(i, BITWISE__DILUTED_N_BITS) {
+            } lt(i, DILUTED_N_BITS) {
                 i := add(i, 1)
             } {
                 x := addmod(x, diffX, K_MODULUS)

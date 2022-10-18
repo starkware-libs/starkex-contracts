@@ -18,7 +18,7 @@ contract GpsStatementVerifier is
     MemoryPageFactRegistry memoryPageFactRegistry;
     CairoVerifierContract[] cairoVerifierContractAddresses;
 
-    uint256 internal constant N_BUILTINS = 5;
+    uint256 internal constant N_BUILTINS = 6;
     uint256 internal constant N_MAIN_ARGS = N_BUILTINS;
     uint256 internal constant N_MAIN_RETURN_VALUES = N_BUILTINS;
     // Cairo verifier program hash.
@@ -99,7 +99,10 @@ contract GpsStatementVerifier is
             uint256 nPages = publicMemoryPages[0];
             require(nPages < 10000, "Invalid nPages.");
 
-            // Each page has a page info and a hash.
+            // Validate publicMemoryPages.length.
+            // Each page has a page info and a cumulative product.
+            // There is no 'page address' in the page info for page 0, but this 'free' slot is
+            // used to store the number of pages.
             require(
                 publicMemoryPages.length == nPages * (PAGE_INFO_SIZE + 1),
                 "Invalid publicMemoryPages length."
@@ -158,7 +161,7 @@ contract GpsStatementVerifier is
         uint256[] calldata cairoAuxInput,
         uint256 selectedBuiltins
     )
-        internal
+        private
         returns (
             uint256 publicMemoryLength,
             uint256 memoryHash,
@@ -166,6 +169,7 @@ contract GpsStatementVerifier is
         )
     {
         uint256 nTasks = taskMetadata[0];
+        // Ensure 'nTasks' is bounded as a sanity check (the bound is somewhat arbitrary).
         require(nTasks < 2**30, "Invalid number of tasks.");
 
         // Public memory length.
@@ -180,9 +184,7 @@ contract GpsStatementVerifier is
             1 +
             2 *
             nTasks);
-        uint256[] memory publicMemory = new uint256[](
-            N_WORDS_PER_PUBLIC_MEMORY_ENTRY * publicMemoryLength
-        );
+        uint256[] memory publicMemory = new uint256[](MEMORY_PAIR_SIZE * publicMemoryLength);
 
         uint256 offset = 0;
 
@@ -268,9 +270,15 @@ contract GpsStatementVerifier is
                 uint256[] calldata taskMetadataSlice = taskMetadata[METADATA_TASKS_OFFSET:];
                 for (uint256 task = 0; task < nTasks; task++) {
                     uint256 outputSize = taskMetadataSlice[METADATA_OFFSET_TASK_OUTPUT_SIZE];
+
+                    // Ensure 'outputSize' is at least 2 and bounded from above as a sanity check
+                    // (the bound is somewhat arbitrary).
                     require(2 <= outputSize && outputSize < 2**30, "Invalid task output size.");
                     uint256 programHash = taskMetadataSlice[METADATA_OFFSET_TASK_PROGRAM_HASH];
                     uint256 nTreePairs = taskMetadataSlice[METADATA_OFFSET_TASK_N_TREE_PAIRS];
+
+                    // Ensure 'nTreePairs' is at least 1 and bounded from above as a sanity check
+                    // (the bound is somewhat arbitrary).
                     require(
                         1 <= nTreePairs && nTreePairs < 2**20,
                         "Invalid number of pairs in the Merkle tree structure."

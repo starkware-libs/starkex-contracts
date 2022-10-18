@@ -110,65 +110,89 @@ contract CpuConstraintPoly {
             {
               // Prepare expmods for denominators and numerators.
 
-              // expmods[0] = point^trace_length.
-              mstore(0x38c0, expmod(point, /*trace_length*/ mload(0x80), PRIME))
+              // expmods[0] = point^(trace_length / 8192).
+              mstore(0x38c0, expmod(point, div(/*trace_length*/ mload(0x80), 8192), PRIME))
 
-              // expmods[1] = point^(trace_length / 16).
-              mstore(0x38e0, expmod(point, div(/*trace_length*/ mload(0x80), 16), PRIME))
+              // expmods[1] = point^(trace_length / 4096).
+              mstore(0x38e0, mulmod(
+                /*point^(trace_length / 8192)*/ mload(0x38c0),
+                /*point^(trace_length / 8192)*/ mload(0x38c0),
+                PRIME))
 
-              // expmods[2] = point^(trace_length / 2).
-              mstore(0x3900, expmod(point, div(/*trace_length*/ mload(0x80), 2), PRIME))
+              // expmods[2] = point^(trace_length / 512).
+              mstore(0x3900, expmod(point, div(/*trace_length*/ mload(0x80), 512), PRIME))
 
-              // expmods[3] = point^(trace_length / 8).
-              mstore(0x3920, expmod(point, div(/*trace_length*/ mload(0x80), 8), PRIME))
+              // expmods[3] = point^(trace_length / 256).
+              mstore(0x3920, mulmod(
+                /*point^(trace_length / 512)*/ mload(0x3900),
+                /*point^(trace_length / 512)*/ mload(0x3900),
+                PRIME))
 
-              // expmods[4] = point^(trace_length / 4).
-              mstore(0x3940, expmod(point, div(/*trace_length*/ mload(0x80), 4), PRIME))
+              // expmods[4] = point^(trace_length / 128).
+              mstore(0x3940, mulmod(
+                /*point^(trace_length / 256)*/ mload(0x3920),
+                /*point^(trace_length / 256)*/ mload(0x3920),
+                PRIME))
 
-              // expmods[5] = point^(trace_length / 256).
-              mstore(0x3960, expmod(point, div(/*trace_length*/ mload(0x80), 256), PRIME))
+              // expmods[5] = point^(trace_length / 32).
+              mstore(0x3960, expmod(point, div(/*trace_length*/ mload(0x80), 32), PRIME))
 
-              // expmods[6] = point^(trace_length / 512).
-              mstore(0x3980, expmod(point, div(/*trace_length*/ mload(0x80), 512), PRIME))
+              // expmods[6] = point^(trace_length / 16).
+              mstore(0x3980, mulmod(
+                /*point^(trace_length / 32)*/ mload(0x3960),
+                /*point^(trace_length / 32)*/ mload(0x3960),
+                PRIME))
 
-              // expmods[7] = point^(trace_length / 128).
-              mstore(0x39a0, expmod(point, div(/*trace_length*/ mload(0x80), 128), PRIME))
+              // expmods[7] = point^(trace_length / 8).
+              mstore(0x39a0, mulmod(
+                /*point^(trace_length / 16)*/ mload(0x3980),
+                /*point^(trace_length / 16)*/ mload(0x3980),
+                PRIME))
 
-              // expmods[8] = point^(trace_length / 4096).
-              mstore(0x39c0, expmod(point, div(/*trace_length*/ mload(0x80), 4096), PRIME))
+              // expmods[8] = point^(trace_length / 4).
+              mstore(0x39c0, mulmod(
+                /*point^(trace_length / 8)*/ mload(0x39a0),
+                /*point^(trace_length / 8)*/ mload(0x39a0),
+                PRIME))
 
-              // expmods[9] = point^(trace_length / 32).
-              mstore(0x39e0, expmod(point, div(/*trace_length*/ mload(0x80), 32), PRIME))
+              // expmods[9] = point^(trace_length / 2).
+              mstore(0x39e0, mulmod(
+                /*point^(trace_length / 4)*/ mload(0x39c0),
+                /*point^(trace_length / 4)*/ mload(0x39c0),
+                PRIME))
 
-              // expmods[10] = point^(trace_length / 8192).
-              mstore(0x3a00, expmod(point, div(/*trace_length*/ mload(0x80), 8192), PRIME))
+              // expmods[10] = point^trace_length.
+              mstore(0x3a00, mulmod(
+                /*point^(trace_length / 2)*/ mload(0x39e0),
+                /*point^(trace_length / 2)*/ mload(0x39e0),
+                PRIME))
 
-              // expmods[11] = trace_generator^(15 * trace_length / 16).
-              mstore(0x3a20, expmod(/*trace_generator*/ mload(0x360), div(mul(15, /*trace_length*/ mload(0x80)), 16), PRIME))
+              // expmods[11] = trace_generator^(trace_length / 2).
+              mstore(0x3a20, expmod(/*trace_generator*/ mload(0x360), div(/*trace_length*/ mload(0x80), 2), PRIME))
 
-              // expmods[12] = trace_generator^(16 * (trace_length / 16 - 1)).
-              mstore(0x3a40, expmod(/*trace_generator*/ mload(0x360), mul(16, sub(div(/*trace_length*/ mload(0x80), 16), 1)), PRIME))
+              // expmods[12] = trace_generator^(15 * trace_length / 16).
+              mstore(0x3a40, expmod(/*trace_generator*/ mload(0x360), div(mul(15, /*trace_length*/ mload(0x80)), 16), PRIME))
 
-              // expmods[13] = trace_generator^(2 * (trace_length / 2 - 1)).
-              mstore(0x3a60, expmod(/*trace_generator*/ mload(0x360), mul(2, sub(div(/*trace_length*/ mload(0x80), 2), 1)), PRIME))
+              // expmods[13] = trace_generator^(251 * trace_length / 256).
+              mstore(0x3a60, expmod(/*trace_generator*/ mload(0x360), div(mul(251, /*trace_length*/ mload(0x80)), 256), PRIME))
 
-              // expmods[14] = trace_generator^(4 * (trace_length / 4 - 1)).
-              mstore(0x3a80, expmod(/*trace_generator*/ mload(0x360), mul(4, sub(div(/*trace_length*/ mload(0x80), 4), 1)), PRIME))
+              // expmods[14] = trace_generator^(63 * trace_length / 64).
+              mstore(0x3a80, expmod(/*trace_generator*/ mload(0x360), div(mul(63, /*trace_length*/ mload(0x80)), 64), PRIME))
 
               // expmods[15] = trace_generator^(255 * trace_length / 256).
               mstore(0x3aa0, expmod(/*trace_generator*/ mload(0x360), div(mul(255, /*trace_length*/ mload(0x80)), 256), PRIME))
 
-              // expmods[16] = trace_generator^(63 * trace_length / 64).
-              mstore(0x3ac0, expmod(/*trace_generator*/ mload(0x360), div(mul(63, /*trace_length*/ mload(0x80)), 64), PRIME))
+              // expmods[16] = trace_generator^(16 * (trace_length / 16 - 1)).
+              mstore(0x3ac0, expmod(/*trace_generator*/ mload(0x360), mul(16, sub(div(/*trace_length*/ mload(0x80), 16), 1)), PRIME))
 
-              // expmods[17] = trace_generator^(trace_length / 2).
-              mstore(0x3ae0, expmod(/*trace_generator*/ mload(0x360), div(/*trace_length*/ mload(0x80), 2), PRIME))
+              // expmods[17] = trace_generator^(2 * (trace_length / 2 - 1)).
+              mstore(0x3ae0, expmod(/*trace_generator*/ mload(0x360), mul(2, sub(div(/*trace_length*/ mload(0x80), 2), 1)), PRIME))
 
-              // expmods[18] = trace_generator^(128 * (trace_length / 128 - 1)).
-              mstore(0x3b00, expmod(/*trace_generator*/ mload(0x360), mul(128, sub(div(/*trace_length*/ mload(0x80), 128), 1)), PRIME))
+              // expmods[18] = trace_generator^(4 * (trace_length / 4 - 1)).
+              mstore(0x3b00, expmod(/*trace_generator*/ mload(0x360), mul(4, sub(div(/*trace_length*/ mload(0x80), 4), 1)), PRIME))
 
-              // expmods[19] = trace_generator^(251 * trace_length / 256).
-              mstore(0x3b20, expmod(/*trace_generator*/ mload(0x360), div(mul(251, /*trace_length*/ mload(0x80)), 256), PRIME))
+              // expmods[19] = trace_generator^(128 * (trace_length / 128 - 1)).
+              mstore(0x3b20, expmod(/*trace_generator*/ mload(0x360), mul(128, sub(div(/*trace_length*/ mload(0x80), 128), 1)), PRIME))
 
               // expmods[20] = trace_generator^(8192 * (trace_length / 8192 - 1)).
               mstore(0x3b40, expmod(/*trace_generator*/ mload(0x360), mul(8192, sub(div(/*trace_length*/ mload(0x80), 8192), 1)), PRIME))
@@ -181,165 +205,165 @@ contract CpuConstraintPoly {
               // Denominator for constraints: 'cpu/decode/opcode_rc/bit', 'pedersen/hash0/ec_subset_sum/booleanity_test', 'pedersen/hash0/ec_subset_sum/add_points/slope', 'pedersen/hash0/ec_subset_sum/add_points/x', 'pedersen/hash0/ec_subset_sum/add_points/y', 'pedersen/hash0/ec_subset_sum/copy_point/x', 'pedersen/hash0/ec_subset_sum/copy_point/y', 'pedersen/hash1/ec_subset_sum/booleanity_test', 'pedersen/hash1/ec_subset_sum/add_points/slope', 'pedersen/hash1/ec_subset_sum/add_points/x', 'pedersen/hash1/ec_subset_sum/add_points/y', 'pedersen/hash1/ec_subset_sum/copy_point/x', 'pedersen/hash1/ec_subset_sum/copy_point/y', 'pedersen/hash2/ec_subset_sum/booleanity_test', 'pedersen/hash2/ec_subset_sum/add_points/slope', 'pedersen/hash2/ec_subset_sum/add_points/x', 'pedersen/hash2/ec_subset_sum/add_points/y', 'pedersen/hash2/ec_subset_sum/copy_point/x', 'pedersen/hash2/ec_subset_sum/copy_point/y', 'pedersen/hash3/ec_subset_sum/booleanity_test', 'pedersen/hash3/ec_subset_sum/add_points/slope', 'pedersen/hash3/ec_subset_sum/add_points/x', 'pedersen/hash3/ec_subset_sum/add_points/y', 'pedersen/hash3/ec_subset_sum/copy_point/x', 'pedersen/hash3/ec_subset_sum/copy_point/y'.
               // domains[0] = point^trace_length - 1.
               mstore(0x3b60,
-                     addmod(/*point^trace_length*/ mload(0x38c0), sub(PRIME, 1), PRIME))
+                     addmod(/*point^trace_length*/ mload(0x3a00), sub(PRIME, 1), PRIME))
+
+              // Denominator for constraints: 'memory/multi_column_perm/perm/step0', 'memory/diff_is_bit', 'memory/is_func'.
+              // domains[1] = point^(trace_length / 2) - 1.
+              mstore(0x3b80,
+                     addmod(/*point^(trace_length / 2)*/ mload(0x39e0), sub(PRIME, 1), PRIME))
+
+              // Denominator for constraints: 'rc16/perm/step0', 'rc16/diff_is_bit'.
+              // domains[2] = point^(trace_length / 4) - 1.
+              mstore(0x3ba0,
+                     addmod(/*point^(trace_length / 4)*/ mload(0x39c0), sub(PRIME, 1), PRIME))
+
+              // Denominator for constraints: 'public_memory_addr_zero', 'public_memory_value_zero'.
+              // domains[3] = point^(trace_length / 8) - 1.
+              mstore(0x3bc0,
+                     addmod(/*point^(trace_length / 8)*/ mload(0x39a0), sub(PRIME, 1), PRIME))
 
               // Denominator for constraints: 'cpu/decode/opcode_rc/zero'.
               // Numerator for constraints: 'cpu/decode/opcode_rc/bit'.
-              // domains[1] = point^(trace_length / 16) - trace_generator^(15 * trace_length / 16).
-              mstore(0x3b80,
+              // domains[4] = point^(trace_length / 16) - trace_generator^(15 * trace_length / 16).
+              mstore(0x3be0,
                      addmod(
-                       /*point^(trace_length / 16)*/ mload(0x38e0),
-                       sub(PRIME, /*trace_generator^(15 * trace_length / 16)*/ mload(0x3a20)),
+                       /*point^(trace_length / 16)*/ mload(0x3980),
+                       sub(PRIME, /*trace_generator^(15 * trace_length / 16)*/ mload(0x3a40)),
                        PRIME))
 
               // Denominator for constraints: 'cpu/decode/opcode_rc_input', 'cpu/decode/flag_op1_base_op0_bit', 'cpu/decode/flag_res_op1_bit', 'cpu/decode/flag_pc_update_regular_bit', 'cpu/decode/fp_update_regular_bit', 'cpu/operands/mem_dst_addr', 'cpu/operands/mem0_addr', 'cpu/operands/mem1_addr', 'cpu/operands/ops_mul', 'cpu/operands/res', 'cpu/update_registers/update_pc/tmp0', 'cpu/update_registers/update_pc/tmp1', 'cpu/update_registers/update_pc/pc_cond_negative', 'cpu/update_registers/update_pc/pc_cond_positive', 'cpu/update_registers/update_ap/ap_update', 'cpu/update_registers/update_fp/fp_update', 'cpu/opcodes/call/push_fp', 'cpu/opcodes/call/push_pc', 'cpu/opcodes/call/off0', 'cpu/opcodes/call/off1', 'cpu/opcodes/call/flags', 'cpu/opcodes/ret/off0', 'cpu/opcodes/ret/off2', 'cpu/opcodes/ret/flags', 'cpu/opcodes/assert_eq/assert_eq', 'ecdsa/signature0/doubling_key/slope', 'ecdsa/signature0/doubling_key/x', 'ecdsa/signature0/doubling_key/y', 'ecdsa/signature0/exponentiate_key/booleanity_test', 'ecdsa/signature0/exponentiate_key/add_points/slope', 'ecdsa/signature0/exponentiate_key/add_points/x', 'ecdsa/signature0/exponentiate_key/add_points/y', 'ecdsa/signature0/exponentiate_key/add_points/x_diff_inv', 'ecdsa/signature0/exponentiate_key/copy_point/x', 'ecdsa/signature0/exponentiate_key/copy_point/y'.
-              // domains[2] = point^(trace_length / 16) - 1.
-              mstore(0x3ba0,
-                     addmod(/*point^(trace_length / 16)*/ mload(0x38e0), sub(PRIME, 1), PRIME))
-
-              // Denominator for constraints: 'final_ap', 'final_fp', 'final_pc'.
-              // Numerator for constraints: 'cpu/update_registers/update_pc/tmp0', 'cpu/update_registers/update_pc/tmp1', 'cpu/update_registers/update_pc/pc_cond_negative', 'cpu/update_registers/update_pc/pc_cond_positive', 'cpu/update_registers/update_ap/ap_update', 'cpu/update_registers/update_fp/fp_update'.
-              // domains[3] = point - trace_generator^(16 * (trace_length / 16 - 1)).
-              mstore(0x3bc0,
-                     addmod(
-                       point,
-                       sub(PRIME, /*trace_generator^(16 * (trace_length / 16 - 1))*/ mload(0x3a40)),
-                       PRIME))
-
-              // Denominator for constraints: 'initial_ap', 'initial_fp', 'initial_pc', 'memory/multi_column_perm/perm/init0', 'memory/initial_addr', 'rc16/perm/init0', 'rc16/minimum', 'pedersen/init_addr', 'rc_builtin/init_addr', 'ecdsa/init_addr'.
-              // domains[4] = point - 1.
-              mstore(0x3be0,
-                     addmod(point, sub(PRIME, 1), PRIME))
-
-              // Denominator for constraints: 'memory/multi_column_perm/perm/step0', 'memory/diff_is_bit', 'memory/is_func'.
-              // domains[5] = point^(trace_length / 2) - 1.
+              // domains[5] = point^(trace_length / 16) - 1.
               mstore(0x3c00,
-                     addmod(/*point^(trace_length / 2)*/ mload(0x3900), sub(PRIME, 1), PRIME))
+                     addmod(/*point^(trace_length / 16)*/ mload(0x3980), sub(PRIME, 1), PRIME))
 
-              // Denominator for constraints: 'memory/multi_column_perm/perm/last'.
-              // Numerator for constraints: 'memory/multi_column_perm/perm/step0', 'memory/diff_is_bit', 'memory/is_func'.
-              // domains[6] = point - trace_generator^(2 * (trace_length / 2 - 1)).
+              // Denominator for constraints: 'ecdsa/signature0/exponentiate_generator/booleanity_test', 'ecdsa/signature0/exponentiate_generator/add_points/slope', 'ecdsa/signature0/exponentiate_generator/add_points/x', 'ecdsa/signature0/exponentiate_generator/add_points/y', 'ecdsa/signature0/exponentiate_generator/add_points/x_diff_inv', 'ecdsa/signature0/exponentiate_generator/copy_point/x', 'ecdsa/signature0/exponentiate_generator/copy_point/y'.
+              // domains[6] = point^(trace_length / 32) - 1.
               mstore(0x3c20,
-                     addmod(
-                       point,
-                       sub(PRIME, /*trace_generator^(2 * (trace_length / 2 - 1))*/ mload(0x3a60)),
-                       PRIME))
+                     addmod(/*point^(trace_length / 32)*/ mload(0x3960), sub(PRIME, 1), PRIME))
 
-              // Denominator for constraints: 'public_memory_addr_zero', 'public_memory_value_zero'.
-              // domains[7] = point^(trace_length / 8) - 1.
+              // Denominator for constraints: 'pedersen/input0_addr', 'pedersen/input1_addr', 'pedersen/output_addr', 'rc_builtin/value', 'rc_builtin/addr_step'.
+              // domains[7] = point^(trace_length / 128) - 1.
               mstore(0x3c40,
-                     addmod(/*point^(trace_length / 8)*/ mload(0x3920), sub(PRIME, 1), PRIME))
-
-              // Denominator for constraints: 'rc16/perm/step0', 'rc16/diff_is_bit'.
-              // domains[8] = point^(trace_length / 4) - 1.
-              mstore(0x3c60,
-                     addmod(/*point^(trace_length / 4)*/ mload(0x3940), sub(PRIME, 1), PRIME))
-
-              // Denominator for constraints: 'rc16/perm/last', 'rc16/maximum'.
-              // Numerator for constraints: 'rc16/perm/step0', 'rc16/diff_is_bit'.
-              // domains[9] = point - trace_generator^(4 * (trace_length / 4 - 1)).
-              mstore(0x3c80,
-                     addmod(
-                       point,
-                       sub(PRIME, /*trace_generator^(4 * (trace_length / 4 - 1))*/ mload(0x3a80)),
-                       PRIME))
+                     addmod(/*point^(trace_length / 128)*/ mload(0x3940), sub(PRIME, 1), PRIME))
 
               // Denominator for constraints: 'pedersen/hash0/ec_subset_sum/bit_unpacking/last_one_is_zero', 'pedersen/hash0/ec_subset_sum/bit_unpacking/zeroes_between_ones0', 'pedersen/hash0/ec_subset_sum/bit_unpacking/cumulative_bit192', 'pedersen/hash0/ec_subset_sum/bit_unpacking/zeroes_between_ones192', 'pedersen/hash0/ec_subset_sum/bit_unpacking/cumulative_bit196', 'pedersen/hash0/ec_subset_sum/bit_unpacking/zeroes_between_ones196', 'pedersen/hash0/copy_point/x', 'pedersen/hash0/copy_point/y', 'pedersen/hash1/ec_subset_sum/bit_unpacking/last_one_is_zero', 'pedersen/hash1/ec_subset_sum/bit_unpacking/zeroes_between_ones0', 'pedersen/hash1/ec_subset_sum/bit_unpacking/cumulative_bit192', 'pedersen/hash1/ec_subset_sum/bit_unpacking/zeroes_between_ones192', 'pedersen/hash1/ec_subset_sum/bit_unpacking/cumulative_bit196', 'pedersen/hash1/ec_subset_sum/bit_unpacking/zeroes_between_ones196', 'pedersen/hash1/copy_point/x', 'pedersen/hash1/copy_point/y', 'pedersen/hash2/ec_subset_sum/bit_unpacking/last_one_is_zero', 'pedersen/hash2/ec_subset_sum/bit_unpacking/zeroes_between_ones0', 'pedersen/hash2/ec_subset_sum/bit_unpacking/cumulative_bit192', 'pedersen/hash2/ec_subset_sum/bit_unpacking/zeroes_between_ones192', 'pedersen/hash2/ec_subset_sum/bit_unpacking/cumulative_bit196', 'pedersen/hash2/ec_subset_sum/bit_unpacking/zeroes_between_ones196', 'pedersen/hash2/copy_point/x', 'pedersen/hash2/copy_point/y', 'pedersen/hash3/ec_subset_sum/bit_unpacking/last_one_is_zero', 'pedersen/hash3/ec_subset_sum/bit_unpacking/zeroes_between_ones0', 'pedersen/hash3/ec_subset_sum/bit_unpacking/cumulative_bit192', 'pedersen/hash3/ec_subset_sum/bit_unpacking/zeroes_between_ones192', 'pedersen/hash3/ec_subset_sum/bit_unpacking/cumulative_bit196', 'pedersen/hash3/ec_subset_sum/bit_unpacking/zeroes_between_ones196', 'pedersen/hash3/copy_point/x', 'pedersen/hash3/copy_point/y'.
-              // domains[10] = point^(trace_length / 256) - 1.
-              mstore(0x3ca0,
-                     addmod(/*point^(trace_length / 256)*/ mload(0x3960), sub(PRIME, 1), PRIME))
+              // domains[8] = point^(trace_length / 256) - 1.
+              mstore(0x3c60,
+                     addmod(/*point^(trace_length / 256)*/ mload(0x3920), sub(PRIME, 1), PRIME))
 
               // Denominator for constraints: 'pedersen/hash0/ec_subset_sum/zeros_tail', 'pedersen/hash1/ec_subset_sum/zeros_tail', 'pedersen/hash2/ec_subset_sum/zeros_tail', 'pedersen/hash3/ec_subset_sum/zeros_tail'.
               // Numerator for constraints: 'pedersen/hash0/ec_subset_sum/booleanity_test', 'pedersen/hash0/ec_subset_sum/add_points/slope', 'pedersen/hash0/ec_subset_sum/add_points/x', 'pedersen/hash0/ec_subset_sum/add_points/y', 'pedersen/hash0/ec_subset_sum/copy_point/x', 'pedersen/hash0/ec_subset_sum/copy_point/y', 'pedersen/hash1/ec_subset_sum/booleanity_test', 'pedersen/hash1/ec_subset_sum/add_points/slope', 'pedersen/hash1/ec_subset_sum/add_points/x', 'pedersen/hash1/ec_subset_sum/add_points/y', 'pedersen/hash1/ec_subset_sum/copy_point/x', 'pedersen/hash1/ec_subset_sum/copy_point/y', 'pedersen/hash2/ec_subset_sum/booleanity_test', 'pedersen/hash2/ec_subset_sum/add_points/slope', 'pedersen/hash2/ec_subset_sum/add_points/x', 'pedersen/hash2/ec_subset_sum/add_points/y', 'pedersen/hash2/ec_subset_sum/copy_point/x', 'pedersen/hash2/ec_subset_sum/copy_point/y', 'pedersen/hash3/ec_subset_sum/booleanity_test', 'pedersen/hash3/ec_subset_sum/add_points/slope', 'pedersen/hash3/ec_subset_sum/add_points/x', 'pedersen/hash3/ec_subset_sum/add_points/y', 'pedersen/hash3/ec_subset_sum/copy_point/x', 'pedersen/hash3/ec_subset_sum/copy_point/y'.
-              // domains[11] = point^(trace_length / 256) - trace_generator^(255 * trace_length / 256).
-              mstore(0x3cc0,
+              // domains[9] = point^(trace_length / 256) - trace_generator^(255 * trace_length / 256).
+              mstore(0x3c80,
                      addmod(
-                       /*point^(trace_length / 256)*/ mload(0x3960),
+                       /*point^(trace_length / 256)*/ mload(0x3920),
                        sub(PRIME, /*trace_generator^(255 * trace_length / 256)*/ mload(0x3aa0)),
                        PRIME))
 
               // Denominator for constraints: 'pedersen/hash0/ec_subset_sum/bit_extraction_end', 'pedersen/hash1/ec_subset_sum/bit_extraction_end', 'pedersen/hash2/ec_subset_sum/bit_extraction_end', 'pedersen/hash3/ec_subset_sum/bit_extraction_end'.
-              // domains[12] = point^(trace_length / 256) - trace_generator^(63 * trace_length / 64).
-              mstore(0x3ce0,
+              // domains[10] = point^(trace_length / 256) - trace_generator^(63 * trace_length / 64).
+              mstore(0x3ca0,
                      addmod(
-                       /*point^(trace_length / 256)*/ mload(0x3960),
-                       sub(PRIME, /*trace_generator^(63 * trace_length / 64)*/ mload(0x3ac0)),
+                       /*point^(trace_length / 256)*/ mload(0x3920),
+                       sub(PRIME, /*trace_generator^(63 * trace_length / 64)*/ mload(0x3a80)),
                        PRIME))
 
               // Numerator for constraints: 'pedersen/hash0/copy_point/x', 'pedersen/hash0/copy_point/y', 'pedersen/hash1/copy_point/x', 'pedersen/hash1/copy_point/y', 'pedersen/hash2/copy_point/x', 'pedersen/hash2/copy_point/y', 'pedersen/hash3/copy_point/x', 'pedersen/hash3/copy_point/y'.
-              // domains[13] = point^(trace_length / 512) - trace_generator^(trace_length / 2).
-              mstore(0x3d00,
+              // domains[11] = point^(trace_length / 512) - trace_generator^(trace_length / 2).
+              mstore(0x3cc0,
                      addmod(
-                       /*point^(trace_length / 512)*/ mload(0x3980),
-                       sub(PRIME, /*trace_generator^(trace_length / 2)*/ mload(0x3ae0)),
+                       /*point^(trace_length / 512)*/ mload(0x3900),
+                       sub(PRIME, /*trace_generator^(trace_length / 2)*/ mload(0x3a20)),
                        PRIME))
 
               // Denominator for constraints: 'pedersen/hash0/init/x', 'pedersen/hash0/init/y', 'pedersen/hash1/init/x', 'pedersen/hash1/init/y', 'pedersen/hash2/init/x', 'pedersen/hash2/init/y', 'pedersen/hash3/init/x', 'pedersen/hash3/init/y', 'pedersen/input0_value0', 'pedersen/input0_value1', 'pedersen/input0_value2', 'pedersen/input0_value3', 'pedersen/input1_value0', 'pedersen/input1_value1', 'pedersen/input1_value2', 'pedersen/input1_value3', 'pedersen/output_value0', 'pedersen/output_value1', 'pedersen/output_value2', 'pedersen/output_value3'.
-              // domains[14] = point^(trace_length / 512) - 1.
-              mstore(0x3d20,
-                     addmod(/*point^(trace_length / 512)*/ mload(0x3980), sub(PRIME, 1), PRIME))
-
-              // Denominator for constraints: 'pedersen/input0_addr', 'pedersen/input1_addr', 'pedersen/output_addr', 'rc_builtin/value', 'rc_builtin/addr_step'.
-              // domains[15] = point^(trace_length / 128) - 1.
-              mstore(0x3d40,
-                     addmod(/*point^(trace_length / 128)*/ mload(0x39a0), sub(PRIME, 1), PRIME))
-
-              // Numerator for constraints: 'pedersen/input0_addr', 'rc_builtin/addr_step'.
-              // domains[16] = point - trace_generator^(128 * (trace_length / 128 - 1)).
-              mstore(0x3d60,
-                     addmod(
-                       point,
-                       sub(PRIME, /*trace_generator^(128 * (trace_length / 128 - 1))*/ mload(0x3b00)),
-                       PRIME))
+              // domains[12] = point^(trace_length / 512) - 1.
+              mstore(0x3ce0,
+                     addmod(/*point^(trace_length / 512)*/ mload(0x3900), sub(PRIME, 1), PRIME))
 
               // Denominator for constraints: 'ecdsa/signature0/exponentiate_key/zeros_tail'.
               // Numerator for constraints: 'ecdsa/signature0/doubling_key/slope', 'ecdsa/signature0/doubling_key/x', 'ecdsa/signature0/doubling_key/y', 'ecdsa/signature0/exponentiate_key/booleanity_test', 'ecdsa/signature0/exponentiate_key/add_points/slope', 'ecdsa/signature0/exponentiate_key/add_points/x', 'ecdsa/signature0/exponentiate_key/add_points/y', 'ecdsa/signature0/exponentiate_key/add_points/x_diff_inv', 'ecdsa/signature0/exponentiate_key/copy_point/x', 'ecdsa/signature0/exponentiate_key/copy_point/y'.
-              // domains[17] = point^(trace_length / 4096) - trace_generator^(255 * trace_length / 256).
-              mstore(0x3d80,
+              // domains[13] = point^(trace_length / 4096) - trace_generator^(255 * trace_length / 256).
+              mstore(0x3d00,
                      addmod(
-                       /*point^(trace_length / 4096)*/ mload(0x39c0),
+                       /*point^(trace_length / 4096)*/ mload(0x38e0),
                        sub(PRIME, /*trace_generator^(255 * trace_length / 256)*/ mload(0x3aa0)),
                        PRIME))
 
-              // Denominator for constraints: 'ecdsa/signature0/exponentiate_generator/booleanity_test', 'ecdsa/signature0/exponentiate_generator/add_points/slope', 'ecdsa/signature0/exponentiate_generator/add_points/x', 'ecdsa/signature0/exponentiate_generator/add_points/y', 'ecdsa/signature0/exponentiate_generator/add_points/x_diff_inv', 'ecdsa/signature0/exponentiate_generator/copy_point/x', 'ecdsa/signature0/exponentiate_generator/copy_point/y'.
-              // domains[18] = point^(trace_length / 32) - 1.
-              mstore(0x3da0,
-                     addmod(/*point^(trace_length / 32)*/ mload(0x39e0), sub(PRIME, 1), PRIME))
+              // Denominator for constraints: 'ecdsa/signature0/exponentiate_key/bit_extraction_end'.
+              // domains[14] = point^(trace_length / 4096) - trace_generator^(251 * trace_length / 256).
+              mstore(0x3d20,
+                     addmod(
+                       /*point^(trace_length / 4096)*/ mload(0x38e0),
+                       sub(PRIME, /*trace_generator^(251 * trace_length / 256)*/ mload(0x3a60)),
+                       PRIME))
+
+              // Denominator for constraints: 'ecdsa/signature0/init_key/x', 'ecdsa/signature0/init_key/y', 'ecdsa/signature0/r_and_w_nonzero'.
+              // domains[15] = point^(trace_length / 4096) - 1.
+              mstore(0x3d40,
+                     addmod(/*point^(trace_length / 4096)*/ mload(0x38e0), sub(PRIME, 1), PRIME))
 
               // Denominator for constraints: 'ecdsa/signature0/exponentiate_generator/zeros_tail'.
               // Numerator for constraints: 'ecdsa/signature0/exponentiate_generator/booleanity_test', 'ecdsa/signature0/exponentiate_generator/add_points/slope', 'ecdsa/signature0/exponentiate_generator/add_points/x', 'ecdsa/signature0/exponentiate_generator/add_points/y', 'ecdsa/signature0/exponentiate_generator/add_points/x_diff_inv', 'ecdsa/signature0/exponentiate_generator/copy_point/x', 'ecdsa/signature0/exponentiate_generator/copy_point/y'.
-              // domains[19] = point^(trace_length / 8192) - trace_generator^(255 * trace_length / 256).
-              mstore(0x3dc0,
+              // domains[16] = point^(trace_length / 8192) - trace_generator^(255 * trace_length / 256).
+              mstore(0x3d60,
                      addmod(
-                       /*point^(trace_length / 8192)*/ mload(0x3a00),
+                       /*point^(trace_length / 8192)*/ mload(0x38c0),
                        sub(PRIME, /*trace_generator^(255 * trace_length / 256)*/ mload(0x3aa0)),
                        PRIME))
 
               // Denominator for constraints: 'ecdsa/signature0/exponentiate_generator/bit_extraction_end'.
-              // domains[20] = point^(trace_length / 8192) - trace_generator^(251 * trace_length / 256).
-              mstore(0x3de0,
+              // domains[17] = point^(trace_length / 8192) - trace_generator^(251 * trace_length / 256).
+              mstore(0x3d80,
                      addmod(
-                       /*point^(trace_length / 8192)*/ mload(0x3a00),
-                       sub(PRIME, /*trace_generator^(251 * trace_length / 256)*/ mload(0x3b20)),
-                       PRIME))
-
-              // Denominator for constraints: 'ecdsa/signature0/exponentiate_key/bit_extraction_end'.
-              // domains[21] = point^(trace_length / 4096) - trace_generator^(251 * trace_length / 256).
-              mstore(0x3e00,
-                     addmod(
-                       /*point^(trace_length / 4096)*/ mload(0x39c0),
-                       sub(PRIME, /*trace_generator^(251 * trace_length / 256)*/ mload(0x3b20)),
+                       /*point^(trace_length / 8192)*/ mload(0x38c0),
+                       sub(PRIME, /*trace_generator^(251 * trace_length / 256)*/ mload(0x3a60)),
                        PRIME))
 
               // Denominator for constraints: 'ecdsa/signature0/init_gen/x', 'ecdsa/signature0/init_gen/y', 'ecdsa/signature0/add_results/slope', 'ecdsa/signature0/add_results/x', 'ecdsa/signature0/add_results/y', 'ecdsa/signature0/add_results/x_diff_inv', 'ecdsa/signature0/extract_r/slope', 'ecdsa/signature0/extract_r/x', 'ecdsa/signature0/extract_r/x_diff_inv', 'ecdsa/signature0/z_nonzero', 'ecdsa/signature0/q_on_curve/x_squared', 'ecdsa/signature0/q_on_curve/on_curve', 'ecdsa/message_addr', 'ecdsa/pubkey_addr', 'ecdsa/message_value0', 'ecdsa/pubkey_value0'.
-              // domains[22] = point^(trace_length / 8192) - 1.
-              mstore(0x3e20,
-                     addmod(/*point^(trace_length / 8192)*/ mload(0x3a00), sub(PRIME, 1), PRIME))
+              // domains[18] = point^(trace_length / 8192) - 1.
+              mstore(0x3da0,
+                     addmod(/*point^(trace_length / 8192)*/ mload(0x38c0), sub(PRIME, 1), PRIME))
 
-              // Denominator for constraints: 'ecdsa/signature0/init_key/x', 'ecdsa/signature0/init_key/y', 'ecdsa/signature0/r_and_w_nonzero'.
-              // domains[23] = point^(trace_length / 4096) - 1.
+              // Denominator for constraints: 'final_ap', 'final_fp', 'final_pc'.
+              // Numerator for constraints: 'cpu/update_registers/update_pc/tmp0', 'cpu/update_registers/update_pc/tmp1', 'cpu/update_registers/update_pc/pc_cond_negative', 'cpu/update_registers/update_pc/pc_cond_positive', 'cpu/update_registers/update_ap/ap_update', 'cpu/update_registers/update_fp/fp_update'.
+              // domains[19] = point - trace_generator^(16 * (trace_length / 16 - 1)).
+              mstore(0x3dc0,
+                     addmod(
+                       point,
+                       sub(PRIME, /*trace_generator^(16 * (trace_length / 16 - 1))*/ mload(0x3ac0)),
+                       PRIME))
+
+              // Denominator for constraints: 'initial_ap', 'initial_fp', 'initial_pc', 'memory/multi_column_perm/perm/init0', 'memory/initial_addr', 'rc16/perm/init0', 'rc16/minimum', 'pedersen/init_addr', 'rc_builtin/init_addr', 'ecdsa/init_addr'.
+              // domains[20] = point - 1.
+              mstore(0x3de0,
+                     addmod(point, sub(PRIME, 1), PRIME))
+
+              // Denominator for constraints: 'memory/multi_column_perm/perm/last'.
+              // Numerator for constraints: 'memory/multi_column_perm/perm/step0', 'memory/diff_is_bit', 'memory/is_func'.
+              // domains[21] = point - trace_generator^(2 * (trace_length / 2 - 1)).
+              mstore(0x3e00,
+                     addmod(
+                       point,
+                       sub(PRIME, /*trace_generator^(2 * (trace_length / 2 - 1))*/ mload(0x3ae0)),
+                       PRIME))
+
+              // Denominator for constraints: 'rc16/perm/last', 'rc16/maximum'.
+              // Numerator for constraints: 'rc16/perm/step0', 'rc16/diff_is_bit'.
+              // domains[22] = point - trace_generator^(4 * (trace_length / 4 - 1)).
+              mstore(0x3e20,
+                     addmod(
+                       point,
+                       sub(PRIME, /*trace_generator^(4 * (trace_length / 4 - 1))*/ mload(0x3b00)),
+                       PRIME))
+
+              // Numerator for constraints: 'pedersen/input0_addr', 'rc_builtin/addr_step'.
+              // domains[23] = point - trace_generator^(128 * (trace_length / 128 - 1)).
               mstore(0x3e40,
-                     addmod(/*point^(trace_length / 4096)*/ mload(0x39c0), sub(PRIME, 1), PRIME))
+                     addmod(
+                       point,
+                       sub(PRIME, /*trace_generator^(128 * (trace_length / 128 - 1))*/ mload(0x3b20)),
+                       PRIME))
 
               // Numerator for constraints: 'ecdsa/pubkey_addr'.
               // domains[24] = point - trace_generator^(8192 * (trace_length / 8192 - 1)).
@@ -357,68 +381,68 @@ contract CpuConstraintPoly {
               // denominators[0] = domains[0].
               mstore(0x4140, /*domains[0]*/ mload(0x3b60))
 
-              // denominators[1] = domains[1].
-              mstore(0x4160, /*domains[1]*/ mload(0x3b80))
+              // denominators[1] = domains[4].
+              mstore(0x4160, /*domains[4]*/ mload(0x3be0))
 
-              // denominators[2] = domains[2].
-              mstore(0x4180, /*domains[2]*/ mload(0x3ba0))
+              // denominators[2] = domains[5].
+              mstore(0x4180, /*domains[5]*/ mload(0x3c00))
 
-              // denominators[3] = domains[3].
-              mstore(0x41a0, /*domains[3]*/ mload(0x3bc0))
+              // denominators[3] = domains[19].
+              mstore(0x41a0, /*domains[19]*/ mload(0x3dc0))
 
-              // denominators[4] = domains[4].
-              mstore(0x41c0, /*domains[4]*/ mload(0x3be0))
+              // denominators[4] = domains[20].
+              mstore(0x41c0, /*domains[20]*/ mload(0x3de0))
 
-              // denominators[5] = domains[5].
-              mstore(0x41e0, /*domains[5]*/ mload(0x3c00))
+              // denominators[5] = domains[1].
+              mstore(0x41e0, /*domains[1]*/ mload(0x3b80))
 
-              // denominators[6] = domains[6].
-              mstore(0x4200, /*domains[6]*/ mload(0x3c20))
+              // denominators[6] = domains[21].
+              mstore(0x4200, /*domains[21]*/ mload(0x3e00))
 
-              // denominators[7] = domains[7].
-              mstore(0x4220, /*domains[7]*/ mload(0x3c40))
+              // denominators[7] = domains[3].
+              mstore(0x4220, /*domains[3]*/ mload(0x3bc0))
 
-              // denominators[8] = domains[8].
-              mstore(0x4240, /*domains[8]*/ mload(0x3c60))
+              // denominators[8] = domains[2].
+              mstore(0x4240, /*domains[2]*/ mload(0x3ba0))
 
-              // denominators[9] = domains[9].
-              mstore(0x4260, /*domains[9]*/ mload(0x3c80))
+              // denominators[9] = domains[22].
+              mstore(0x4260, /*domains[22]*/ mload(0x3e20))
 
-              // denominators[10] = domains[10].
-              mstore(0x4280, /*domains[10]*/ mload(0x3ca0))
+              // denominators[10] = domains[8].
+              mstore(0x4280, /*domains[8]*/ mload(0x3c60))
 
-              // denominators[11] = domains[11].
-              mstore(0x42a0, /*domains[11]*/ mload(0x3cc0))
+              // denominators[11] = domains[9].
+              mstore(0x42a0, /*domains[9]*/ mload(0x3c80))
 
-              // denominators[12] = domains[12].
-              mstore(0x42c0, /*domains[12]*/ mload(0x3ce0))
+              // denominators[12] = domains[10].
+              mstore(0x42c0, /*domains[10]*/ mload(0x3ca0))
 
-              // denominators[13] = domains[14].
-              mstore(0x42e0, /*domains[14]*/ mload(0x3d20))
+              // denominators[13] = domains[12].
+              mstore(0x42e0, /*domains[12]*/ mload(0x3ce0))
 
-              // denominators[14] = domains[15].
-              mstore(0x4300, /*domains[15]*/ mload(0x3d40))
+              // denominators[14] = domains[7].
+              mstore(0x4300, /*domains[7]*/ mload(0x3c40))
 
-              // denominators[15] = domains[17].
-              mstore(0x4320, /*domains[17]*/ mload(0x3d80))
+              // denominators[15] = domains[13].
+              mstore(0x4320, /*domains[13]*/ mload(0x3d00))
 
-              // denominators[16] = domains[18].
-              mstore(0x4340, /*domains[18]*/ mload(0x3da0))
+              // denominators[16] = domains[6].
+              mstore(0x4340, /*domains[6]*/ mload(0x3c20))
 
-              // denominators[17] = domains[19].
-              mstore(0x4360, /*domains[19]*/ mload(0x3dc0))
+              // denominators[17] = domains[16].
+              mstore(0x4360, /*domains[16]*/ mload(0x3d60))
 
-              // denominators[18] = domains[20].
-              mstore(0x4380, /*domains[20]*/ mload(0x3de0))
+              // denominators[18] = domains[17].
+              mstore(0x4380, /*domains[17]*/ mload(0x3d80))
 
-              // denominators[19] = domains[21].
-              mstore(0x43a0, /*domains[21]*/ mload(0x3e00))
+              // denominators[19] = domains[14].
+              mstore(0x43a0, /*domains[14]*/ mload(0x3d20))
 
-              // denominators[20] = domains[22].
-              mstore(0x43c0, /*domains[22]*/ mload(0x3e20))
+              // denominators[20] = domains[18].
+              mstore(0x43c0, /*domains[18]*/ mload(0x3da0))
 
-              // denominators[21] = domains[23].
-              mstore(0x43e0, /*domains[23]*/ mload(0x3e40))
+              // denominators[21] = domains[15].
+              mstore(0x43e0, /*domains[15]*/ mload(0x3d40))
 
             }
 
@@ -1008,8 +1032,8 @@ contract CpuConstraintPoly {
                 PRIME)
 
               // Numerator: point^(trace_length / 16) - trace_generator^(15 * trace_length / 16).
-              // val *= domains[1].
-              val := mulmod(val, /*domains[1]*/ mload(0x3b80), PRIME)
+              // val *= domains[4].
+              val := mulmod(val, /*domains[4]*/ mload(0x3be0), PRIME)
               // Denominator: point^trace_length - 1.
               // val *= denominator_invs[0].
               val := mulmod(val, /*denominator_invs[0]*/ mload(0x3e80), PRIME)
@@ -1353,8 +1377,8 @@ contract CpuConstraintPoly {
                 PRIME)
 
               // Numerator: point - trace_generator^(16 * (trace_length / 16 - 1)).
-              // val *= domains[3].
-              val := mulmod(val, /*domains[3]*/ mload(0x3bc0), PRIME)
+              // val *= domains[19].
+              val := mulmod(val, /*domains[19]*/ mload(0x3dc0), PRIME)
               // Denominator: point^(trace_length / 16) - 1.
               // val *= denominator_invs[2].
               val := mulmod(val, /*denominator_invs[2]*/ mload(0x3ec0), PRIME)
@@ -1375,8 +1399,8 @@ contract CpuConstraintPoly {
                 PRIME)
 
               // Numerator: point - trace_generator^(16 * (trace_length / 16 - 1)).
-              // val *= domains[3].
-              val := mulmod(val, /*domains[3]*/ mload(0x3bc0), PRIME)
+              // val *= domains[19].
+              val := mulmod(val, /*domains[19]*/ mload(0x3dc0), PRIME)
               // Denominator: point^(trace_length / 16) - 1.
               // val *= denominator_invs[2].
               val := mulmod(val, /*denominator_invs[2]*/ mload(0x3ec0), PRIME)
@@ -1429,8 +1453,8 @@ contract CpuConstraintPoly {
                 PRIME)
 
               // Numerator: point - trace_generator^(16 * (trace_length / 16 - 1)).
-              // val *= domains[3].
-              val := mulmod(val, /*domains[3]*/ mload(0x3bc0), PRIME)
+              // val *= domains[19].
+              val := mulmod(val, /*domains[19]*/ mload(0x3dc0), PRIME)
               // Denominator: point^(trace_length / 16) - 1.
               // val *= denominator_invs[2].
               val := mulmod(val, /*denominator_invs[2]*/ mload(0x3ec0), PRIME)
@@ -1455,8 +1479,8 @@ contract CpuConstraintPoly {
                 PRIME)
 
               // Numerator: point - trace_generator^(16 * (trace_length / 16 - 1)).
-              // val *= domains[3].
-              val := mulmod(val, /*domains[3]*/ mload(0x3bc0), PRIME)
+              // val *= domains[19].
+              val := mulmod(val, /*domains[19]*/ mload(0x3dc0), PRIME)
               // Denominator: point^(trace_length / 16) - 1.
               // val *= denominator_invs[2].
               val := mulmod(val, /*denominator_invs[2]*/ mload(0x3ec0), PRIME)
@@ -1489,8 +1513,8 @@ contract CpuConstraintPoly {
                 PRIME)
 
               // Numerator: point - trace_generator^(16 * (trace_length / 16 - 1)).
-              // val *= domains[3].
-              val := mulmod(val, /*domains[3]*/ mload(0x3bc0), PRIME)
+              // val *= domains[19].
+              val := mulmod(val, /*domains[19]*/ mload(0x3dc0), PRIME)
               // Denominator: point^(trace_length / 16) - 1.
               // val *= denominator_invs[2].
               val := mulmod(val, /*denominator_invs[2]*/ mload(0x3ec0), PRIME)
@@ -1526,8 +1550,8 @@ contract CpuConstraintPoly {
                 PRIME)
 
               // Numerator: point - trace_generator^(16 * (trace_length / 16 - 1)).
-              // val *= domains[3].
-              val := mulmod(val, /*domains[3]*/ mload(0x3bc0), PRIME)
+              // val *= domains[19].
+              val := mulmod(val, /*domains[19]*/ mload(0x3dc0), PRIME)
               // Denominator: point^(trace_length / 16) - 1.
               // val *= denominator_invs[2].
               val := mulmod(val, /*denominator_invs[2]*/ mload(0x3ec0), PRIME)
@@ -1943,8 +1967,8 @@ contract CpuConstraintPoly {
                 PRIME)
 
               // Numerator: point - trace_generator^(2 * (trace_length / 2 - 1)).
-              // val *= domains[6].
-              val := mulmod(val, /*domains[6]*/ mload(0x3c20), PRIME)
+              // val *= domains[21].
+              val := mulmod(val, /*domains[21]*/ mload(0x3e00), PRIME)
               // Denominator: point^(trace_length / 2) - 1.
               // val *= denominator_invs[5].
               val := mulmod(val, /*denominator_invs[5]*/ mload(0x3f20), PRIME)
@@ -1985,8 +2009,8 @@ contract CpuConstraintPoly {
                 PRIME)
 
               // Numerator: point - trace_generator^(2 * (trace_length / 2 - 1)).
-              // val *= domains[6].
-              val := mulmod(val, /*domains[6]*/ mload(0x3c20), PRIME)
+              // val *= domains[21].
+              val := mulmod(val, /*domains[21]*/ mload(0x3e00), PRIME)
               // Denominator: point^(trace_length / 2) - 1.
               // val *= denominator_invs[5].
               val := mulmod(val, /*denominator_invs[5]*/ mload(0x3f20), PRIME)
@@ -2005,8 +2029,8 @@ contract CpuConstraintPoly {
                 PRIME)
 
               // Numerator: point - trace_generator^(2 * (trace_length / 2 - 1)).
-              // val *= domains[6].
-              val := mulmod(val, /*domains[6]*/ mload(0x3c20), PRIME)
+              // val *= domains[21].
+              val := mulmod(val, /*domains[21]*/ mload(0x3e00), PRIME)
               // Denominator: point^(trace_length / 2) - 1.
               // val *= denominator_invs[5].
               val := mulmod(val, /*denominator_invs[5]*/ mload(0x3f20), PRIME)
@@ -2115,8 +2139,8 @@ contract CpuConstraintPoly {
                 PRIME)
 
               // Numerator: point - trace_generator^(4 * (trace_length / 4 - 1)).
-              // val *= domains[9].
-              val := mulmod(val, /*domains[9]*/ mload(0x3c80), PRIME)
+              // val *= domains[22].
+              val := mulmod(val, /*domains[22]*/ mload(0x3e20), PRIME)
               // Denominator: point^(trace_length / 4) - 1.
               // val *= denominator_invs[8].
               val := mulmod(val, /*denominator_invs[8]*/ mload(0x3f80), PRIME)
@@ -2157,8 +2181,8 @@ contract CpuConstraintPoly {
                 PRIME)
 
               // Numerator: point - trace_generator^(4 * (trace_length / 4 - 1)).
-              // val *= domains[9].
-              val := mulmod(val, /*domains[9]*/ mload(0x3c80), PRIME)
+              // val *= domains[22].
+              val := mulmod(val, /*domains[22]*/ mload(0x3e20), PRIME)
               // Denominator: point^(trace_length / 4) - 1.
               // val *= denominator_invs[8].
               val := mulmod(val, /*denominator_invs[8]*/ mload(0x3f80), PRIME)
@@ -2375,8 +2399,8 @@ contract CpuConstraintPoly {
                 PRIME)
 
               // Numerator: point^(trace_length / 256) - trace_generator^(255 * trace_length / 256).
-              // val *= domains[11].
-              val := mulmod(val, /*domains[11]*/ mload(0x3cc0), PRIME)
+              // val *= domains[9].
+              val := mulmod(val, /*domains[9]*/ mload(0x3c80), PRIME)
               // Denominator: point^trace_length - 1.
               // val *= denominator_invs[0].
               val := mulmod(val, /*denominator_invs[0]*/ mload(0x3e80), PRIME)
@@ -2441,8 +2465,8 @@ contract CpuConstraintPoly {
                 PRIME)
 
               // Numerator: point^(trace_length / 256) - trace_generator^(255 * trace_length / 256).
-              // val *= domains[11].
-              val := mulmod(val, /*domains[11]*/ mload(0x3cc0), PRIME)
+              // val *= domains[9].
+              val := mulmod(val, /*domains[9]*/ mload(0x3c80), PRIME)
               // Denominator: point^trace_length - 1.
               // val *= denominator_invs[0].
               val := mulmod(val, /*denominator_invs[0]*/ mload(0x3e80), PRIME)
@@ -2472,8 +2496,8 @@ contract CpuConstraintPoly {
                 PRIME)
 
               // Numerator: point^(trace_length / 256) - trace_generator^(255 * trace_length / 256).
-              // val *= domains[11].
-              val := mulmod(val, /*domains[11]*/ mload(0x3cc0), PRIME)
+              // val *= domains[9].
+              val := mulmod(val, /*domains[9]*/ mload(0x3c80), PRIME)
               // Denominator: point^trace_length - 1.
               // val *= denominator_invs[0].
               val := mulmod(val, /*denominator_invs[0]*/ mload(0x3e80), PRIME)
@@ -2500,8 +2524,8 @@ contract CpuConstraintPoly {
                 PRIME)
 
               // Numerator: point^(trace_length / 256) - trace_generator^(255 * trace_length / 256).
-              // val *= domains[11].
-              val := mulmod(val, /*domains[11]*/ mload(0x3cc0), PRIME)
+              // val *= domains[9].
+              val := mulmod(val, /*domains[9]*/ mload(0x3c80), PRIME)
               // Denominator: point^trace_length - 1.
               // val *= denominator_invs[0].
               val := mulmod(val, /*denominator_invs[0]*/ mload(0x3e80), PRIME)
@@ -2520,8 +2544,8 @@ contract CpuConstraintPoly {
                 PRIME)
 
               // Numerator: point^(trace_length / 256) - trace_generator^(255 * trace_length / 256).
-              // val *= domains[11].
-              val := mulmod(val, /*domains[11]*/ mload(0x3cc0), PRIME)
+              // val *= domains[9].
+              val := mulmod(val, /*domains[9]*/ mload(0x3c80), PRIME)
               // Denominator: point^trace_length - 1.
               // val *= denominator_invs[0].
               val := mulmod(val, /*denominator_invs[0]*/ mload(0x3e80), PRIME)
@@ -2540,8 +2564,8 @@ contract CpuConstraintPoly {
                 PRIME)
 
               // Numerator: point^(trace_length / 256) - trace_generator^(255 * trace_length / 256).
-              // val *= domains[11].
-              val := mulmod(val, /*domains[11]*/ mload(0x3cc0), PRIME)
+              // val *= domains[9].
+              val := mulmod(val, /*domains[9]*/ mload(0x3c80), PRIME)
               // Denominator: point^trace_length - 1.
               // val *= denominator_invs[0].
               val := mulmod(val, /*denominator_invs[0]*/ mload(0x3e80), PRIME)
@@ -2560,8 +2584,8 @@ contract CpuConstraintPoly {
                 PRIME)
 
               // Numerator: point^(trace_length / 512) - trace_generator^(trace_length / 2).
-              // val *= domains[13].
-              val := mulmod(val, /*domains[13]*/ mload(0x3d00), PRIME)
+              // val *= domains[11].
+              val := mulmod(val, /*domains[11]*/ mload(0x3cc0), PRIME)
               // Denominator: point^(trace_length / 256) - 1.
               // val *= denominator_invs[10].
               val := mulmod(val, /*denominator_invs[10]*/ mload(0x3fc0), PRIME)
@@ -2580,8 +2604,8 @@ contract CpuConstraintPoly {
                 PRIME)
 
               // Numerator: point^(trace_length / 512) - trace_generator^(trace_length / 2).
-              // val *= domains[13].
-              val := mulmod(val, /*domains[13]*/ mload(0x3d00), PRIME)
+              // val *= domains[11].
+              val := mulmod(val, /*domains[11]*/ mload(0x3cc0), PRIME)
               // Denominator: point^(trace_length / 256) - 1.
               // val *= denominator_invs[10].
               val := mulmod(val, /*denominator_invs[10]*/ mload(0x3fc0), PRIME)
@@ -2804,8 +2828,8 @@ contract CpuConstraintPoly {
                 PRIME)
 
               // Numerator: point^(trace_length / 256) - trace_generator^(255 * trace_length / 256).
-              // val *= domains[11].
-              val := mulmod(val, /*domains[11]*/ mload(0x3cc0), PRIME)
+              // val *= domains[9].
+              val := mulmod(val, /*domains[9]*/ mload(0x3c80), PRIME)
               // Denominator: point^trace_length - 1.
               // val *= denominator_invs[0].
               val := mulmod(val, /*denominator_invs[0]*/ mload(0x3e80), PRIME)
@@ -2870,8 +2894,8 @@ contract CpuConstraintPoly {
                 PRIME)
 
               // Numerator: point^(trace_length / 256) - trace_generator^(255 * trace_length / 256).
-              // val *= domains[11].
-              val := mulmod(val, /*domains[11]*/ mload(0x3cc0), PRIME)
+              // val *= domains[9].
+              val := mulmod(val, /*domains[9]*/ mload(0x3c80), PRIME)
               // Denominator: point^trace_length - 1.
               // val *= denominator_invs[0].
               val := mulmod(val, /*denominator_invs[0]*/ mload(0x3e80), PRIME)
@@ -2901,8 +2925,8 @@ contract CpuConstraintPoly {
                 PRIME)
 
               // Numerator: point^(trace_length / 256) - trace_generator^(255 * trace_length / 256).
-              // val *= domains[11].
-              val := mulmod(val, /*domains[11]*/ mload(0x3cc0), PRIME)
+              // val *= domains[9].
+              val := mulmod(val, /*domains[9]*/ mload(0x3c80), PRIME)
               // Denominator: point^trace_length - 1.
               // val *= denominator_invs[0].
               val := mulmod(val, /*denominator_invs[0]*/ mload(0x3e80), PRIME)
@@ -2929,8 +2953,8 @@ contract CpuConstraintPoly {
                 PRIME)
 
               // Numerator: point^(trace_length / 256) - trace_generator^(255 * trace_length / 256).
-              // val *= domains[11].
-              val := mulmod(val, /*domains[11]*/ mload(0x3cc0), PRIME)
+              // val *= domains[9].
+              val := mulmod(val, /*domains[9]*/ mload(0x3c80), PRIME)
               // Denominator: point^trace_length - 1.
               // val *= denominator_invs[0].
               val := mulmod(val, /*denominator_invs[0]*/ mload(0x3e80), PRIME)
@@ -2949,8 +2973,8 @@ contract CpuConstraintPoly {
                 PRIME)
 
               // Numerator: point^(trace_length / 256) - trace_generator^(255 * trace_length / 256).
-              // val *= domains[11].
-              val := mulmod(val, /*domains[11]*/ mload(0x3cc0), PRIME)
+              // val *= domains[9].
+              val := mulmod(val, /*domains[9]*/ mload(0x3c80), PRIME)
               // Denominator: point^trace_length - 1.
               // val *= denominator_invs[0].
               val := mulmod(val, /*denominator_invs[0]*/ mload(0x3e80), PRIME)
@@ -2969,8 +2993,8 @@ contract CpuConstraintPoly {
                 PRIME)
 
               // Numerator: point^(trace_length / 256) - trace_generator^(255 * trace_length / 256).
-              // val *= domains[11].
-              val := mulmod(val, /*domains[11]*/ mload(0x3cc0), PRIME)
+              // val *= domains[9].
+              val := mulmod(val, /*domains[9]*/ mload(0x3c80), PRIME)
               // Denominator: point^trace_length - 1.
               // val *= denominator_invs[0].
               val := mulmod(val, /*denominator_invs[0]*/ mload(0x3e80), PRIME)
@@ -2989,8 +3013,8 @@ contract CpuConstraintPoly {
                 PRIME)
 
               // Numerator: point^(trace_length / 512) - trace_generator^(trace_length / 2).
-              // val *= domains[13].
-              val := mulmod(val, /*domains[13]*/ mload(0x3d00), PRIME)
+              // val *= domains[11].
+              val := mulmod(val, /*domains[11]*/ mload(0x3cc0), PRIME)
               // Denominator: point^(trace_length / 256) - 1.
               // val *= denominator_invs[10].
               val := mulmod(val, /*denominator_invs[10]*/ mload(0x3fc0), PRIME)
@@ -3009,8 +3033,8 @@ contract CpuConstraintPoly {
                 PRIME)
 
               // Numerator: point^(trace_length / 512) - trace_generator^(trace_length / 2).
-              // val *= domains[13].
-              val := mulmod(val, /*domains[13]*/ mload(0x3d00), PRIME)
+              // val *= domains[11].
+              val := mulmod(val, /*domains[11]*/ mload(0x3cc0), PRIME)
               // Denominator: point^(trace_length / 256) - 1.
               // val *= denominator_invs[10].
               val := mulmod(val, /*denominator_invs[10]*/ mload(0x3fc0), PRIME)
@@ -3233,8 +3257,8 @@ contract CpuConstraintPoly {
                 PRIME)
 
               // Numerator: point^(trace_length / 256) - trace_generator^(255 * trace_length / 256).
-              // val *= domains[11].
-              val := mulmod(val, /*domains[11]*/ mload(0x3cc0), PRIME)
+              // val *= domains[9].
+              val := mulmod(val, /*domains[9]*/ mload(0x3c80), PRIME)
               // Denominator: point^trace_length - 1.
               // val *= denominator_invs[0].
               val := mulmod(val, /*denominator_invs[0]*/ mload(0x3e80), PRIME)
@@ -3299,8 +3323,8 @@ contract CpuConstraintPoly {
                 PRIME)
 
               // Numerator: point^(trace_length / 256) - trace_generator^(255 * trace_length / 256).
-              // val *= domains[11].
-              val := mulmod(val, /*domains[11]*/ mload(0x3cc0), PRIME)
+              // val *= domains[9].
+              val := mulmod(val, /*domains[9]*/ mload(0x3c80), PRIME)
               // Denominator: point^trace_length - 1.
               // val *= denominator_invs[0].
               val := mulmod(val, /*denominator_invs[0]*/ mload(0x3e80), PRIME)
@@ -3330,8 +3354,8 @@ contract CpuConstraintPoly {
                 PRIME)
 
               // Numerator: point^(trace_length / 256) - trace_generator^(255 * trace_length / 256).
-              // val *= domains[11].
-              val := mulmod(val, /*domains[11]*/ mload(0x3cc0), PRIME)
+              // val *= domains[9].
+              val := mulmod(val, /*domains[9]*/ mload(0x3c80), PRIME)
               // Denominator: point^trace_length - 1.
               // val *= denominator_invs[0].
               val := mulmod(val, /*denominator_invs[0]*/ mload(0x3e80), PRIME)
@@ -3358,8 +3382,8 @@ contract CpuConstraintPoly {
                 PRIME)
 
               // Numerator: point^(trace_length / 256) - trace_generator^(255 * trace_length / 256).
-              // val *= domains[11].
-              val := mulmod(val, /*domains[11]*/ mload(0x3cc0), PRIME)
+              // val *= domains[9].
+              val := mulmod(val, /*domains[9]*/ mload(0x3c80), PRIME)
               // Denominator: point^trace_length - 1.
               // val *= denominator_invs[0].
               val := mulmod(val, /*denominator_invs[0]*/ mload(0x3e80), PRIME)
@@ -3378,8 +3402,8 @@ contract CpuConstraintPoly {
                 PRIME)
 
               // Numerator: point^(trace_length / 256) - trace_generator^(255 * trace_length / 256).
-              // val *= domains[11].
-              val := mulmod(val, /*domains[11]*/ mload(0x3cc0), PRIME)
+              // val *= domains[9].
+              val := mulmod(val, /*domains[9]*/ mload(0x3c80), PRIME)
               // Denominator: point^trace_length - 1.
               // val *= denominator_invs[0].
               val := mulmod(val, /*denominator_invs[0]*/ mload(0x3e80), PRIME)
@@ -3398,8 +3422,8 @@ contract CpuConstraintPoly {
                 PRIME)
 
               // Numerator: point^(trace_length / 256) - trace_generator^(255 * trace_length / 256).
-              // val *= domains[11].
-              val := mulmod(val, /*domains[11]*/ mload(0x3cc0), PRIME)
+              // val *= domains[9].
+              val := mulmod(val, /*domains[9]*/ mload(0x3c80), PRIME)
               // Denominator: point^trace_length - 1.
               // val *= denominator_invs[0].
               val := mulmod(val, /*denominator_invs[0]*/ mload(0x3e80), PRIME)
@@ -3418,8 +3442,8 @@ contract CpuConstraintPoly {
                 PRIME)
 
               // Numerator: point^(trace_length / 512) - trace_generator^(trace_length / 2).
-              // val *= domains[13].
-              val := mulmod(val, /*domains[13]*/ mload(0x3d00), PRIME)
+              // val *= domains[11].
+              val := mulmod(val, /*domains[11]*/ mload(0x3cc0), PRIME)
               // Denominator: point^(trace_length / 256) - 1.
               // val *= denominator_invs[10].
               val := mulmod(val, /*denominator_invs[10]*/ mload(0x3fc0), PRIME)
@@ -3438,8 +3462,8 @@ contract CpuConstraintPoly {
                 PRIME)
 
               // Numerator: point^(trace_length / 512) - trace_generator^(trace_length / 2).
-              // val *= domains[13].
-              val := mulmod(val, /*domains[13]*/ mload(0x3d00), PRIME)
+              // val *= domains[11].
+              val := mulmod(val, /*domains[11]*/ mload(0x3cc0), PRIME)
               // Denominator: point^(trace_length / 256) - 1.
               // val *= denominator_invs[10].
               val := mulmod(val, /*denominator_invs[10]*/ mload(0x3fc0), PRIME)
@@ -3662,8 +3686,8 @@ contract CpuConstraintPoly {
                 PRIME)
 
               // Numerator: point^(trace_length / 256) - trace_generator^(255 * trace_length / 256).
-              // val *= domains[11].
-              val := mulmod(val, /*domains[11]*/ mload(0x3cc0), PRIME)
+              // val *= domains[9].
+              val := mulmod(val, /*domains[9]*/ mload(0x3c80), PRIME)
               // Denominator: point^trace_length - 1.
               // val *= denominator_invs[0].
               val := mulmod(val, /*denominator_invs[0]*/ mload(0x3e80), PRIME)
@@ -3728,8 +3752,8 @@ contract CpuConstraintPoly {
                 PRIME)
 
               // Numerator: point^(trace_length / 256) - trace_generator^(255 * trace_length / 256).
-              // val *= domains[11].
-              val := mulmod(val, /*domains[11]*/ mload(0x3cc0), PRIME)
+              // val *= domains[9].
+              val := mulmod(val, /*domains[9]*/ mload(0x3c80), PRIME)
               // Denominator: point^trace_length - 1.
               // val *= denominator_invs[0].
               val := mulmod(val, /*denominator_invs[0]*/ mload(0x3e80), PRIME)
@@ -3759,8 +3783,8 @@ contract CpuConstraintPoly {
                 PRIME)
 
               // Numerator: point^(trace_length / 256) - trace_generator^(255 * trace_length / 256).
-              // val *= domains[11].
-              val := mulmod(val, /*domains[11]*/ mload(0x3cc0), PRIME)
+              // val *= domains[9].
+              val := mulmod(val, /*domains[9]*/ mload(0x3c80), PRIME)
               // Denominator: point^trace_length - 1.
               // val *= denominator_invs[0].
               val := mulmod(val, /*denominator_invs[0]*/ mload(0x3e80), PRIME)
@@ -3787,8 +3811,8 @@ contract CpuConstraintPoly {
                 PRIME)
 
               // Numerator: point^(trace_length / 256) - trace_generator^(255 * trace_length / 256).
-              // val *= domains[11].
-              val := mulmod(val, /*domains[11]*/ mload(0x3cc0), PRIME)
+              // val *= domains[9].
+              val := mulmod(val, /*domains[9]*/ mload(0x3c80), PRIME)
               // Denominator: point^trace_length - 1.
               // val *= denominator_invs[0].
               val := mulmod(val, /*denominator_invs[0]*/ mload(0x3e80), PRIME)
@@ -3807,8 +3831,8 @@ contract CpuConstraintPoly {
                 PRIME)
 
               // Numerator: point^(trace_length / 256) - trace_generator^(255 * trace_length / 256).
-              // val *= domains[11].
-              val := mulmod(val, /*domains[11]*/ mload(0x3cc0), PRIME)
+              // val *= domains[9].
+              val := mulmod(val, /*domains[9]*/ mload(0x3c80), PRIME)
               // Denominator: point^trace_length - 1.
               // val *= denominator_invs[0].
               val := mulmod(val, /*denominator_invs[0]*/ mload(0x3e80), PRIME)
@@ -3827,8 +3851,8 @@ contract CpuConstraintPoly {
                 PRIME)
 
               // Numerator: point^(trace_length / 256) - trace_generator^(255 * trace_length / 256).
-              // val *= domains[11].
-              val := mulmod(val, /*domains[11]*/ mload(0x3cc0), PRIME)
+              // val *= domains[9].
+              val := mulmod(val, /*domains[9]*/ mload(0x3c80), PRIME)
               // Denominator: point^trace_length - 1.
               // val *= denominator_invs[0].
               val := mulmod(val, /*denominator_invs[0]*/ mload(0x3e80), PRIME)
@@ -3847,8 +3871,8 @@ contract CpuConstraintPoly {
                 PRIME)
 
               // Numerator: point^(trace_length / 512) - trace_generator^(trace_length / 2).
-              // val *= domains[13].
-              val := mulmod(val, /*domains[13]*/ mload(0x3d00), PRIME)
+              // val *= domains[11].
+              val := mulmod(val, /*domains[11]*/ mload(0x3cc0), PRIME)
               // Denominator: point^(trace_length / 256) - 1.
               // val *= denominator_invs[10].
               val := mulmod(val, /*denominator_invs[10]*/ mload(0x3fc0), PRIME)
@@ -3867,8 +3891,8 @@ contract CpuConstraintPoly {
                 PRIME)
 
               // Numerator: point^(trace_length / 512) - trace_generator^(trace_length / 2).
-              // val *= domains[13].
-              val := mulmod(val, /*domains[13]*/ mload(0x3d00), PRIME)
+              // val *= domains[11].
+              val := mulmod(val, /*domains[11]*/ mload(0x3cc0), PRIME)
               // Denominator: point^(trace_length / 256) - 1.
               // val *= denominator_invs[10].
               val := mulmod(val, /*denominator_invs[10]*/ mload(0x3fc0), PRIME)
@@ -3998,8 +4022,8 @@ contract CpuConstraintPoly {
                 PRIME)
 
               // Numerator: point - trace_generator^(128 * (trace_length / 128 - 1)).
-              // val *= domains[16].
-              val := mulmod(val, /*domains[16]*/ mload(0x3d60), PRIME)
+              // val *= domains[23].
+              val := mulmod(val, /*domains[23]*/ mload(0x3e40), PRIME)
               // Denominator: point^(trace_length / 128) - 1.
               // val *= denominator_invs[14].
               val := mulmod(val, /*denominator_invs[14]*/ mload(0x4040), PRIME)
@@ -4246,8 +4270,8 @@ contract CpuConstraintPoly {
                 PRIME)
 
               // Numerator: point - trace_generator^(128 * (trace_length / 128 - 1)).
-              // val *= domains[16].
-              val := mulmod(val, /*domains[16]*/ mload(0x3d60), PRIME)
+              // val *= domains[23].
+              val := mulmod(val, /*domains[23]*/ mload(0x3e40), PRIME)
               // Denominator: point^(trace_length / 128) - 1.
               // val *= denominator_invs[14].
               val := mulmod(val, /*denominator_invs[14]*/ mload(0x4040), PRIME)
@@ -4299,8 +4323,8 @@ contract CpuConstraintPoly {
                 PRIME)
 
               // Numerator: point^(trace_length / 4096) - trace_generator^(255 * trace_length / 256).
-              // val *= domains[17].
-              val := mulmod(val, /*domains[17]*/ mload(0x3d80), PRIME)
+              // val *= domains[13].
+              val := mulmod(val, /*domains[13]*/ mload(0x3d00), PRIME)
               // Denominator: point^(trace_length / 16) - 1.
               // val *= denominator_invs[2].
               val := mulmod(val, /*denominator_invs[2]*/ mload(0x3ec0), PRIME)
@@ -4324,8 +4348,8 @@ contract CpuConstraintPoly {
                 PRIME)
 
               // Numerator: point^(trace_length / 4096) - trace_generator^(255 * trace_length / 256).
-              // val *= domains[17].
-              val := mulmod(val, /*domains[17]*/ mload(0x3d80), PRIME)
+              // val *= domains[13].
+              val := mulmod(val, /*domains[13]*/ mload(0x3d00), PRIME)
               // Denominator: point^(trace_length / 16) - 1.
               // val *= denominator_invs[2].
               val := mulmod(val, /*denominator_invs[2]*/ mload(0x3ec0), PRIME)
@@ -4352,8 +4376,8 @@ contract CpuConstraintPoly {
                 PRIME)
 
               // Numerator: point^(trace_length / 4096) - trace_generator^(255 * trace_length / 256).
-              // val *= domains[17].
-              val := mulmod(val, /*domains[17]*/ mload(0x3d80), PRIME)
+              // val *= domains[13].
+              val := mulmod(val, /*domains[13]*/ mload(0x3d00), PRIME)
               // Denominator: point^(trace_length / 16) - 1.
               // val *= denominator_invs[2].
               val := mulmod(val, /*denominator_invs[2]*/ mload(0x3ec0), PRIME)
@@ -4375,8 +4399,8 @@ contract CpuConstraintPoly {
                 PRIME)
 
               // Numerator: point^(trace_length / 8192) - trace_generator^(255 * trace_length / 256).
-              // val *= domains[19].
-              val := mulmod(val, /*domains[19]*/ mload(0x3dc0), PRIME)
+              // val *= domains[16].
+              val := mulmod(val, /*domains[16]*/ mload(0x3d60), PRIME)
               // Denominator: point^(trace_length / 32) - 1.
               // val *= denominator_invs[16].
               val := mulmod(val, /*denominator_invs[16]*/ mload(0x4080), PRIME)
@@ -4441,8 +4465,8 @@ contract CpuConstraintPoly {
                 PRIME)
 
               // Numerator: point^(trace_length / 8192) - trace_generator^(255 * trace_length / 256).
-              // val *= domains[19].
-              val := mulmod(val, /*domains[19]*/ mload(0x3dc0), PRIME)
+              // val *= domains[16].
+              val := mulmod(val, /*domains[16]*/ mload(0x3d60), PRIME)
               // Denominator: point^(trace_length / 32) - 1.
               // val *= denominator_invs[16].
               val := mulmod(val, /*denominator_invs[16]*/ mload(0x4080), PRIME)
@@ -4472,8 +4496,8 @@ contract CpuConstraintPoly {
                 PRIME)
 
               // Numerator: point^(trace_length / 8192) - trace_generator^(255 * trace_length / 256).
-              // val *= domains[19].
-              val := mulmod(val, /*domains[19]*/ mload(0x3dc0), PRIME)
+              // val *= domains[16].
+              val := mulmod(val, /*domains[16]*/ mload(0x3d60), PRIME)
               // Denominator: point^(trace_length / 32) - 1.
               // val *= denominator_invs[16].
               val := mulmod(val, /*denominator_invs[16]*/ mload(0x4080), PRIME)
@@ -4503,8 +4527,8 @@ contract CpuConstraintPoly {
                 PRIME)
 
               // Numerator: point^(trace_length / 8192) - trace_generator^(255 * trace_length / 256).
-              // val *= domains[19].
-              val := mulmod(val, /*domains[19]*/ mload(0x3dc0), PRIME)
+              // val *= domains[16].
+              val := mulmod(val, /*domains[16]*/ mload(0x3d60), PRIME)
               // Denominator: point^(trace_length / 32) - 1.
               // val *= denominator_invs[16].
               val := mulmod(val, /*denominator_invs[16]*/ mload(0x4080), PRIME)
@@ -4529,8 +4553,8 @@ contract CpuConstraintPoly {
                 PRIME)
 
               // Numerator: point^(trace_length / 8192) - trace_generator^(255 * trace_length / 256).
-              // val *= domains[19].
-              val := mulmod(val, /*domains[19]*/ mload(0x3dc0), PRIME)
+              // val *= domains[16].
+              val := mulmod(val, /*domains[16]*/ mload(0x3d60), PRIME)
               // Denominator: point^(trace_length / 32) - 1.
               // val *= denominator_invs[16].
               val := mulmod(val, /*denominator_invs[16]*/ mload(0x4080), PRIME)
@@ -4552,8 +4576,8 @@ contract CpuConstraintPoly {
                 PRIME)
 
               // Numerator: point^(trace_length / 8192) - trace_generator^(255 * trace_length / 256).
-              // val *= domains[19].
-              val := mulmod(val, /*domains[19]*/ mload(0x3dc0), PRIME)
+              // val *= domains[16].
+              val := mulmod(val, /*domains[16]*/ mload(0x3d60), PRIME)
               // Denominator: point^(trace_length / 32) - 1.
               // val *= denominator_invs[16].
               val := mulmod(val, /*denominator_invs[16]*/ mload(0x4080), PRIME)
@@ -4575,8 +4599,8 @@ contract CpuConstraintPoly {
                 PRIME)
 
               // Numerator: point^(trace_length / 8192) - trace_generator^(255 * trace_length / 256).
-              // val *= domains[19].
-              val := mulmod(val, /*domains[19]*/ mload(0x3dc0), PRIME)
+              // val *= domains[16].
+              val := mulmod(val, /*domains[16]*/ mload(0x3d60), PRIME)
               // Denominator: point^(trace_length / 32) - 1.
               // val *= denominator_invs[16].
               val := mulmod(val, /*denominator_invs[16]*/ mload(0x4080), PRIME)
@@ -4598,8 +4622,8 @@ contract CpuConstraintPoly {
                 PRIME)
 
               // Numerator: point^(trace_length / 4096) - trace_generator^(255 * trace_length / 256).
-              // val *= domains[17].
-              val := mulmod(val, /*domains[17]*/ mload(0x3d80), PRIME)
+              // val *= domains[13].
+              val := mulmod(val, /*domains[13]*/ mload(0x3d00), PRIME)
               // Denominator: point^(trace_length / 16) - 1.
               // val *= denominator_invs[2].
               val := mulmod(val, /*denominator_invs[2]*/ mload(0x3ec0), PRIME)
@@ -4661,8 +4685,8 @@ contract CpuConstraintPoly {
                 PRIME)
 
               // Numerator: point^(trace_length / 4096) - trace_generator^(255 * trace_length / 256).
-              // val *= domains[17].
-              val := mulmod(val, /*domains[17]*/ mload(0x3d80), PRIME)
+              // val *= domains[13].
+              val := mulmod(val, /*domains[13]*/ mload(0x3d00), PRIME)
               // Denominator: point^(trace_length / 16) - 1.
               // val *= denominator_invs[2].
               val := mulmod(val, /*denominator_invs[2]*/ mload(0x3ec0), PRIME)
@@ -4689,8 +4713,8 @@ contract CpuConstraintPoly {
                 PRIME)
 
               // Numerator: point^(trace_length / 4096) - trace_generator^(255 * trace_length / 256).
-              // val *= domains[17].
-              val := mulmod(val, /*domains[17]*/ mload(0x3d80), PRIME)
+              // val *= domains[13].
+              val := mulmod(val, /*domains[13]*/ mload(0x3d00), PRIME)
               // Denominator: point^(trace_length / 16) - 1.
               // val *= denominator_invs[2].
               val := mulmod(val, /*denominator_invs[2]*/ mload(0x3ec0), PRIME)
@@ -4720,8 +4744,8 @@ contract CpuConstraintPoly {
                 PRIME)
 
               // Numerator: point^(trace_length / 4096) - trace_generator^(255 * trace_length / 256).
-              // val *= domains[17].
-              val := mulmod(val, /*domains[17]*/ mload(0x3d80), PRIME)
+              // val *= domains[13].
+              val := mulmod(val, /*domains[13]*/ mload(0x3d00), PRIME)
               // Denominator: point^(trace_length / 16) - 1.
               // val *= denominator_invs[2].
               val := mulmod(val, /*denominator_invs[2]*/ mload(0x3ec0), PRIME)
@@ -4743,8 +4767,8 @@ contract CpuConstraintPoly {
                 PRIME)
 
               // Numerator: point^(trace_length / 4096) - trace_generator^(255 * trace_length / 256).
-              // val *= domains[17].
-              val := mulmod(val, /*domains[17]*/ mload(0x3d80), PRIME)
+              // val *= domains[13].
+              val := mulmod(val, /*domains[13]*/ mload(0x3d00), PRIME)
               // Denominator: point^(trace_length / 16) - 1.
               // val *= denominator_invs[2].
               val := mulmod(val, /*denominator_invs[2]*/ mload(0x3ec0), PRIME)
@@ -4766,8 +4790,8 @@ contract CpuConstraintPoly {
                 PRIME)
 
               // Numerator: point^(trace_length / 4096) - trace_generator^(255 * trace_length / 256).
-              // val *= domains[17].
-              val := mulmod(val, /*domains[17]*/ mload(0x3d80), PRIME)
+              // val *= domains[13].
+              val := mulmod(val, /*domains[13]*/ mload(0x3d00), PRIME)
               // Denominator: point^(trace_length / 16) - 1.
               // val *= denominator_invs[2].
               val := mulmod(val, /*denominator_invs[2]*/ mload(0x3ec0), PRIME)
@@ -4789,8 +4813,8 @@ contract CpuConstraintPoly {
                 PRIME)
 
               // Numerator: point^(trace_length / 4096) - trace_generator^(255 * trace_length / 256).
-              // val *= domains[17].
-              val := mulmod(val, /*domains[17]*/ mload(0x3d80), PRIME)
+              // val *= domains[13].
+              val := mulmod(val, /*domains[13]*/ mload(0x3d00), PRIME)
               // Denominator: point^(trace_length / 16) - 1.
               // val *= denominator_invs[2].
               val := mulmod(val, /*denominator_invs[2]*/ mload(0x3ec0), PRIME)

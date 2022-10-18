@@ -18,8 +18,7 @@ contract MerkleStatementContract is MerkleVerifier, FactRegistry {
         uint256 height,
         uint256 expectedRoot
     ) public {
-        // Ensure 'height' is bounded from above as a sanity check
-        // (the bound is somewhat arbitrary).
+        // Ensure 'height' is bounded as a sanity check (the bound is somewhat arbitrary).
         require(height < 200, "Height must be < 200.");
         require(
             initialMerkleQueue.length <= MAX_N_MERKLE_VERIFIER_QUERIES * 2,

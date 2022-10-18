@@ -33,7 +33,7 @@ abstract contract FriStatementVerifier is
         uint256[] memory ctx,
         uint256 nPoints,
         uint256 sumOfStepSizes
-    ) internal view returns (bytes32 lastLayerHash) {
+    ) private view returns (bytes32 lastLayerHash) {
         uint256 friLastLayerDegBound = ctx[MM_FRI_LAST_LAYER_DEG_BOUND];
         uint256 groupOrderMinusOne = friLastLayerDegBound * ctx[MM_BLOW_UP_FACTOR] - 1;
         uint256 exponent = 1 << sumOfStepSizes;

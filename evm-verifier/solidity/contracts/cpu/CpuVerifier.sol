@@ -3,6 +3,7 @@ pragma solidity ^0.6.12;
 
 import "../CairoVerifierContract.sol";
 import "../MemoryPageFactRegistry.sol";
+import "../PublicMemoryOffsets.sol";
 import "./CpuConstraintPoly.sol";
 import "./LayoutSpecific.sol";
 import "./StarkVerifier.sol";
@@ -29,7 +30,12 @@ import "./StarkVerifier.sol";
     feature (that is, all "call" instructions will return, even if the called function is
     malicious). It guarantees that it's not possible to create a cycle in the call stack.
 */
-contract CpuVerifier is StarkVerifier, MemoryPageFactRegistryConstants, LayoutSpecific {
+contract CpuVerifier is
+    StarkVerifier,
+    MemoryPageFactRegistryConstants,
+    LayoutSpecific,
+    PublicMemoryOffsets
+{
     CpuConstraintPoly constraintPoly;
     IFactRegistry memoryPageFactRegistry;
 
@@ -99,6 +105,10 @@ contract CpuVerifier is StarkVerifier, MemoryPageFactRegistryConstants, LayoutSp
 
     function getNOodsCoefficients() internal pure override returns (uint256) {
         return N_OODS_COEFFICIENTS;
+    }
+
+    function getPublicMemoryOffset() internal pure override returns (uint256) {
+        return OFFSET_PUBLIC_MEMORY;
     }
 
     function airSpecificInit(uint256[] memory publicInput)
@@ -200,13 +210,15 @@ contract CpuVerifier is StarkVerifier, MemoryPageFactRegistryConstants, LayoutSp
         N is the actual number of public memory cells,
         and S is the number of cells allocated for the public memory (which includes the padding).
     */
-    function computePublicMemoryQuotient(uint256[] memory ctx) internal view returns (uint256) {
+    function computePublicMemoryQuotient(uint256[] memory ctx) private view returns (uint256) {
         uint256 nValues = ctx[MM_N_PUBLIC_MEM_ENTRIES];
         uint256 z = ctx[MM_MEMORY__MULTI_COLUMN_PERM__PERM__INTERACTION_ELM];
         uint256 alpha = ctx[MM_MEMORY__MULTI_COLUMN_PERM__HASH_INTERACTION_ELM0];
         // The size that is allocated to the public memory.
         uint256 publicMemorySize = safeDiv(ctx[MM_TRACE_LENGTH], PUBLIC_MEMORY_STEP);
 
+        // Ensure 'nValues' is bounded as a sanity check
+        // (the bound is somewhat arbitrary).
         require(nValues < 0x1000000, "Overflow protection failed.");
         require(nValues <= publicMemorySize, "Number of values of public memory is too large.");
 
@@ -225,10 +237,9 @@ contract CpuVerifier is StarkVerifier, MemoryPageFactRegistryConstants, LayoutSp
         uint256 paddingAddr;
         uint256 paddingValue;
         assembly {
-            paddingAddr := mload(add(publicInputPtr, mul(0x20, OFFSET_PUBLIC_MEMORY_PADDING_ADDR)))
-            paddingValue := mload(
-                add(publicInputPtr, mul(0x20, add(OFFSET_PUBLIC_MEMORY_PADDING_ADDR, 1)))
-            )
+            let paddingAddrPtr := add(publicInputPtr, mul(0x20, OFFSET_PUBLIC_MEMORY_PADDING_ADDR))
+            paddingAddr := mload(paddingAddrPtr)
+            paddingValue := mload(add(paddingAddrPtr, 0x20))
         }
         uint256 hash_first_address_value = fadd(paddingAddr, fmul(paddingValue, alpha));
 
@@ -254,7 +265,7 @@ contract CpuVerifier is StarkVerifier, MemoryPageFactRegistryConstants, LayoutSp
         uint256 cumulativeProdsPtr,
         uint256 nPublicMemoryPages,
         uint256 prime
-    ) internal pure returns (uint256 res) {
+    ) private pure returns (uint256 res) {
         assembly {
             let lastPtr := add(cumulativeProdsPtr, mul(nPublicMemoryPages, 0x20))
             res := 1
@@ -273,7 +284,7 @@ contract CpuVerifier is StarkVerifier, MemoryPageFactRegistryConstants, LayoutSp
       address) is consistent with z and alpha, by checking that the corresponding facts were
       registered on memoryPageFactRegistry.
     */
-    function verifyMemoryPageFacts(uint256[] memory ctx) internal view {
+    function verifyMemoryPageFacts(uint256[] memory ctx) private view {
         uint256 nPublicMemoryPages = ctx[MM_N_PUBLIC_MEM_PAGES];
 
         for (uint256 page = 0; page < nPublicMemoryPages; page++) {
@@ -328,11 +339,11 @@ contract CpuVerifier is StarkVerifier, MemoryPageFactRegistryConstants, LayoutSp
     }
 
     /*
-      Checks that the trace and the compostion agree at oodsPoint, assuming the prover provided us
+      Checks that the trace and the composition agree at oodsPoint, assuming the prover provided us
       with the proper evaluations.
 
-      Later, we will use boundery constraints to check that those evaluations are actully consistent
-      with the commited trace and composition ploynomials.
+      Later, we will use boundary constraints to check that those evaluations are actually
+      consistent with the committed trace and composition polynomials.
     */
     function oodsConsistencyCheck(uint256[] memory ctx) internal view override {
         verifyMemoryPageFacts(ctx);
@@ -360,8 +371,8 @@ contract CpuVerifier is StarkVerifier, MemoryPageFactRegistryConstants, LayoutSp
         }
 
         uint256 claimedComposition = fadd(
-            ctx[MM_OODS_VALUES + MASK_SIZE],
-            fmul(ctx[MM_OODS_POINT], ctx[MM_OODS_VALUES + MASK_SIZE + 1])
+            ctx[MM_COMPOSITION_OODS_VALUES],
+            fmul(ctx[MM_OODS_POINT], ctx[MM_COMPOSITION_OODS_VALUES + 1])
         );
 
         require(

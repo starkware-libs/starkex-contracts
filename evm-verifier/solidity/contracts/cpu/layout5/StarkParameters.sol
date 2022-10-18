@@ -15,10 +15,11 @@ contract StarkParameters is PrimeFieldElement0 {
     uint256 constant internal CONSTRAINTS_DEGREE_BOUND = 2;
     uint256 constant internal N_OODS_VALUES = MASK_SIZE + CONSTRAINTS_DEGREE_BOUND;
     uint256 constant internal N_OODS_COEFFICIENTS = N_OODS_VALUES;
-    uint256 constant internal MAX_FRI_STEP = 3;
 
     // ---------- // Air specific constants. ----------
     uint256 constant internal PUBLIC_MEMORY_STEP = 8;
+    uint256 constant internal DILUTED_SPACING = 4;
+    uint256 constant internal DILUTED_N_BITS = 16;
     uint256 constant internal PEDERSEN_BUILTIN_RATIO = 8;
     uint256 constant internal PEDERSEN_BUILTIN_REPETITIONS = 4;
     uint256 constant internal RC_BUILTIN_RATIO = 8;
@@ -26,8 +27,6 @@ contract StarkParameters is PrimeFieldElement0 {
     uint256 constant internal ECDSA_BUILTIN_RATIO = 512;
     uint256 constant internal ECDSA_BUILTIN_REPETITIONS = 1;
     uint256 constant internal BITWISE__RATIO = 64;
-    uint256 constant internal BITWISE__DILUTED_SPACING = 4;
-    uint256 constant internal BITWISE__DILUTED_N_BITS = 16;
     uint256 constant internal LAYOUT_CODE = 133449663013987685036071398930607862629;
     uint256 constant internal LOG_CPU_COMPONENT_HEIGHT = 4;
 }

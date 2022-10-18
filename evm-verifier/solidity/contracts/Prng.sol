@@ -40,7 +40,7 @@ contract Prng is PrimeFieldElement0 {
       Auxiliary function for getRandomBytes.
     */
     function getRandomBytesInner(bytes32 digest, uint256 counter)
-        internal
+        private
         pure
         returns (
             bytes32,

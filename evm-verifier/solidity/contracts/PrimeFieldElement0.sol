@@ -66,7 +66,7 @@ contract PrimeFieldElement0 {
         uint256 base,
         uint256 exponent,
         uint256 modulus
-    ) internal view returns (uint256 res) {
+    ) private view returns (uint256 res) {
         assembly {
             let p := mload(0x40)
             mstore(p, 0x20) // Length of Base.

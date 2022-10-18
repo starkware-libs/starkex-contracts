@@ -16,9 +16,12 @@ import "./PrimeFieldElement0.sol";
 
   To apply the transformation on a larger coset the transformation above is used multiple times
   with the evaluation points: evalPoint, evalPoint^2, evalPoint^4, ...
-  see for example do2FriSteps.
 */
 contract FriTransform is PrimeFieldElement0 {
+    // The supported step sizes are 2, 3 and 4.
+    uint256 internal constant FRI_MIN_STEP_SIZE = 2;
+    uint256 internal constant FRI_MAX_STEP_SIZE = 4;
+
     // The largest power of 2 multiple of K_MODULUS that fits in a uint256.
     // The value is given as a constant because "Only direct number constants and references to such
     // constants are supported by inline assembly."
@@ -28,7 +31,50 @@ contract FriTransform is PrimeFieldElement0 {
     );
 
     /*
-      Applies 2 + 1 FRI transformations to a coset of size 2^4.
+      Performs a FRI transform for the coset of size friFoldedCosetSize that begins at index.
+
+      Assumes the evaluations on the coset are stored at 'evaluationsOnCosetPtr'.
+      See gatherCosetInputs for more detail.
+    */
+    function transformCoset(
+        uint256 friHalfInvGroupPtr,
+        uint256 evaluationsOnCosetPtr,
+        uint256 cosetOffset,
+        uint256 friEvalPoint,
+        uint256 friCosetSize
+    ) internal pure returns (uint256 nextLayerValue, uint256 nextXInv) {
+        // Compare to expected FRI step sizes in order of likelihood, step size 3 being most common.
+        if (friCosetSize == 8) {
+            return
+                transformCosetOfSize8(
+                    friHalfInvGroupPtr,
+                    evaluationsOnCosetPtr,
+                    cosetOffset,
+                    friEvalPoint
+                );
+        } else if (friCosetSize == 4) {
+            return
+                transformCosetOfSize4(
+                    friHalfInvGroupPtr,
+                    evaluationsOnCosetPtr,
+                    cosetOffset,
+                    friEvalPoint
+                );
+        } else if (friCosetSize == 16) {
+            return
+                transformCosetOfSize16(
+                    friHalfInvGroupPtr,
+                    evaluationsOnCosetPtr,
+                    cosetOffset,
+                    friEvalPoint
+                );
+        } else {
+            require(false, "Only step sizes of 2, 3 or 4 are supported.");
+        }
+    }
+
+    /*
+      Applies 2 + 1 FRI transformations to a coset of size 2^2.
 
       evaluations on coset:                    f0 f1  f2 f3
       ----------------------------------------  \ / -- \ / -----------
@@ -38,12 +84,12 @@ contract FriTransform is PrimeFieldElement0 {
 
       For more detail, see description of the FRI transformations at the top of this file.
     */
-    function do2FriSteps(
+    function transformCosetOfSize4(
         uint256 friHalfInvGroupPtr,
         uint256 evaluationsOnCosetPtr,
         uint256 cosetOffset_,
         uint256 friEvalPoint
-    ) internal pure returns (uint256 nextLayerValue, uint256 nextXInv) {
+    ) private pure returns (uint256 nextLayerValue, uint256 nextXInv) {
         assembly {
             let friEvalPointDivByX := mulmod(friEvalPoint, cosetOffset_, K_MODULUS)
 
@@ -111,12 +157,12 @@ contract FriTransform is PrimeFieldElement0 {
 
       For more detail, see description of the FRI transformations at the top of this file.
     */
-    function do3FriSteps(
+    function transformCosetOfSize8(
         uint256 friHalfInvGroupPtr,
         uint256 evaluationsOnCosetPtr,
         uint256 cosetOffset_,
         uint256 friEvalPoint
-    ) internal pure returns (uint256 nextLayerValue, uint256 nextXInv) {
+    ) private pure returns (uint256 nextLayerValue, uint256 nextXInv) {
         assembly {
             let f0 := mload(evaluationsOnCosetPtr)
 
@@ -271,12 +317,12 @@ contract FriTransform is PrimeFieldElement0 {
 
       For more detail, see description of the FRI transformations at the top of this file.
     */
-    function do4FriSteps(
+    function transformCosetOfSize16(
         uint256 friHalfInvGroupPtr,
         uint256 evaluationsOnCosetPtr,
         uint256 cosetOffset_,
         uint256 friEvalPoint
-    ) internal pure returns (uint256 nextLayerValue, uint256 nextXInv) {
+    ) private pure returns (uint256 nextLayerValue, uint256 nextXInv) {
         assembly {
             let friEvalPointDivByXTessed
             let f0 := mload(evaluationsOnCosetPtr)

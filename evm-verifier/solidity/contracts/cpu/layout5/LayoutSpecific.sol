@@ -172,7 +172,7 @@ abstract contract LayoutSpecific is MemoryMap, StarkParameters, CpuPublicInputOf
         // Now we can compute p_{n_bits} and q_{n_bits} in 'n_bits' steps and we are done.
         uint256 z = ctx[MM_DILUTED_CHECK__INTERACTION_Z];
         uint256 alpha = ctx[MM_DILUTED_CHECK__INTERACTION_ALPHA];
-        uint256 diffMultiplier = 1 << BITWISE__DILUTED_SPACING;
+        uint256 diffMultiplier = 1 << DILUTED_SPACING;
         uint256 diffX = diffMultiplier - 2;
         // Initialize p, q and x to p_1, q_1 and x_0 respectively.
         uint256 p = 1 + z;
@@ -181,7 +181,7 @@ abstract contract LayoutSpecific is MemoryMap, StarkParameters, CpuPublicInputOf
         assembly {
             for {
                 let i := 1
-            } lt(i, BITWISE__DILUTED_N_BITS) {
+            } lt(i, DILUTED_N_BITS) {
                 i := add(i, 1)
             } {
                 x := addmod(x, diffX, K_MODULUS)
