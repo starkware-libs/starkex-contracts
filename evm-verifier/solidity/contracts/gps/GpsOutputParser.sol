@@ -93,7 +93,6 @@ contract GpsOutputParser is CpuPublicInputOffsetsBase, FactRegistry {
         uint256 curPage = FIRST_CONTINUOUS_PAGE_INDEX;
 
         // Bound the size of the stack by the total number of pages.
-        // TODO(lior, 15/04/2022): Get a better bound on the size of the stack.
         uint256[] memory nodeStack = new uint256[](NODE_STACK_ITEM_SIZE * totalNumPages);
 
         // Copy to memory to workaround the "stack too deep" error.

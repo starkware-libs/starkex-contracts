@@ -4,7 +4,8 @@ pragma solidity ^0.6.12;
 import "../../interfaces/ExternalInitializer.sol";
 import "../../interfaces/Identity.sol";
 import "../../components/MainStorage.sol";
-import "../../libraries/Common.sol";
+import "../../libraries/Addresses.sol";
+import {ApprovalChainData} from "../../libraries/StarkExTypes.sol";
 import "../../libraries/LibConstants.sol";
 
 /*
@@ -38,8 +39,8 @@ contract ChangeVerifiersExternalInitializer is ExternalInitializer, MainStorage,
         ) = abi.decode(data, (address, bytes32, address, bytes32));
 
         // Flush the entire verifiers list.
-        delete verifiersChain.list;
-        delete availabilityVerifiersChain.list;
+        delete verifiersChain.verifiers;
+        delete availabilityVerifiersChain.verifiers;
 
         // ApprovalChain addEntry performs all the required checks for us.
         addEntry(verifiersChain, newVerifierAddress, MAX_VERIFIER_COUNT, verifierIdHash);
@@ -59,25 +60,25 @@ contract ChangeVerifiersExternalInitializer is ExternalInitializer, MainStorage,
       2. The verifier ID is passed as hash, and not as string.
     */
     function addEntry(
-        StarkExTypes.ApprovalChainData storage chain,
+        ApprovalChainData storage chain,
         address entry,
         uint256 maxLength,
         bytes32 hashExpectedId
     ) internal {
-        address[] storage list = chain.list;
+        address[] storage verifiers = chain.verifiers;
         require(entry.isContract(), "ADDRESS_NOT_CONTRACT");
         bytes32 hashRealId = keccak256(abi.encodePacked(Identity(entry).identify()));
         require(hashRealId == hashExpectedId, "UNEXPECTED_CONTRACT_IDENTIFIER");
-        require(list.length < maxLength, "CHAIN_AT_MAX_CAPACITY");
-        require(findEntry(list, entry) == ENTRY_NOT_FOUND, "ENTRY_ALREADY_EXISTS");
-        chain.list.push(entry); // NOLINT controlled-array-length;
-        chain.unlockedForRemovalTime[entry] = 0;
+        require(verifiers.length < maxLength, "CHAIN_AT_MAX_CAPACITY");
+        require(findEntry(verifiers, entry) == ENTRY_NOT_FOUND, "ENTRY_ALREADY_EXISTS");
+        chain.verifiers.push(entry); // NOLINT controlled-array-length;
+        chain.verifierAllowedRemovalTime[entry] = 0;
     }
 
-    function findEntry(address[] storage list, address entry) internal view returns (uint256) {
-        uint256 n_entries = list.length;
+    function findEntry(address[] storage verifiers, address entry) internal view returns (uint256) {
+        uint256 n_entries = verifiers.length;
         for (uint256 i = 0; i < n_entries; i++) {
-            if (list[i] == entry) {
+            if (verifiers[i] == entry) {
                 return i;
             }
         }

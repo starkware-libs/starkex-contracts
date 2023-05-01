@@ -4,7 +4,7 @@ pragma solidity ^0.6.12;
 import "./ProxyGovernance.sol";
 import "./ProxyStorage.sol";
 import "./StorageSlots.sol";
-import "../libraries/Common.sol";
+import "../libraries/Addresses.sol";
 
 /**
   The Proxy contract implements delegation of calls to other contracts (`implementations`), with
@@ -52,13 +52,19 @@ contract Proxy is ProxyStorage, ProxyGovernance, StorageSlots {
 
     using Addresses for address;
 
-    string public constant PROXY_VERSION = "3.0.1";
+    uint256 public constant MAX_UPGRADE_DELAY = 180 days;
+
+    string public constant PROXY_VERSION = "3.0.2";
 
     constructor(uint256 upgradeActivationDelay) public {
         initGovernance();
         setUpgradeActivationDelay(upgradeActivationDelay);
     }
 
+    /*
+      Stores the upgrade activation delay (in seconds) in the appropriate slot.
+      this function does not validate the delay value, as it's checked in the getter.
+    */
     function setUpgradeActivationDelay(uint256 delayInSeconds) private {
         bytes32 slot = UPGRADE_DELAY_SLOT;
         assembly {
@@ -66,11 +72,19 @@ contract Proxy is ProxyStorage, ProxyGovernance, StorageSlots {
         }
     }
 
+    /*
+      Reads the upgrade activation delay (in seconds) at the appropriate slot.
+      The returned value is capped at MAX_UPGRADE_DELAY.
+      It is safer to do the capping in the getter because an upgrade
+      flow might modify this value without going through the setter function.
+    */
     function getUpgradeActivationDelay() public view returns (uint256 delay) {
         bytes32 slot = UPGRADE_DELAY_SLOT;
         assembly {
             delay := sload(slot)
         }
+
+        delay = (delay < MAX_UPGRADE_DELAY) ? delay : MAX_UPGRADE_DELAY;
         return delay;
     }
 
@@ -291,11 +305,11 @@ contract Proxy is ProxyStorage, ProxyGovernance, StorageSlots {
         require(success, "CALL_TO_ISFROZEN_REVERTED");
         require(!abi.decode(returndata, (bool)), "NEW_IMPLEMENTATION_FROZEN");
 
+        emit ImplementationUpgraded(newImplementation, data);
+
         if (finalize) {
             setFinalizedFlag();
             emit FinalizedImplementation(newImplementation);
         }
-
-        emit ImplementationUpgraded(newImplementation, data);
     }
 }

@@ -24,6 +24,6 @@ contract MessageRegistry is FactRegistry, Identity {
         bytes32 messageHash
     ) external view returns (bool) {
         bytes32 messageFact = keccak256(abi.encodePacked(from, to, messageHash));
-        return _factCheck(messageFact);
+        return internalIsValid(messageFact);
     }
 }

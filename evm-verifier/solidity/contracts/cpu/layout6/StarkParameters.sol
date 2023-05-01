@@ -5,10 +5,10 @@ pragma solidity ^0.6.12;
 import "../../PrimeFieldElement0.sol";
 
 contract StarkParameters is PrimeFieldElement0 {
-    uint256 constant internal N_COEFFICIENTS = 167;
+    uint256 constant internal N_COEFFICIENTS = 195;
     uint256 constant internal N_INTERACTION_ELEMENTS = 6;
-    uint256 constant internal MASK_SIZE = 212;
-    uint256 constant internal N_ROWS_IN_MASK = 149;
+    uint256 constant internal MASK_SIZE = 269;
+    uint256 constant internal N_ROWS_IN_MASK = 191;
     uint256 constant internal N_COLUMNS_IN_MASK = 10;
     uint256 constant internal N_COLUMNS_IN_TRACE0 = 9;
     uint256 constant internal N_COLUMNS_IN_TRACE1 = 1;
@@ -30,7 +30,11 @@ contract StarkParameters is PrimeFieldElement0 {
     uint256 constant internal EC_OP_BUILTIN_RATIO = 1024;
     uint256 constant internal EC_OP_SCALAR_HEIGHT = 256;
     uint256 constant internal EC_OP_N_BITS = 252;
-    uint256 constant internal LAYOUT_CODE = 42052439942391375477807157877090637012086313290658661;
+    uint256 constant internal POSEIDON__RATIO = 32;
+    uint256 constant internal POSEIDON__M = 3;
+    uint256 constant internal POSEIDON__ROUNDS_FULL = 8;
+    uint256 constant internal POSEIDON__ROUNDS_PARTIAL = 83;
+    uint256 constant internal LAYOUT_CODE = 8319381555716711796;
     uint256 constant internal LOG_CPU_COMPONENT_HEIGHT = 4;
 }
 // ---------- End of auto-generated code. ----------

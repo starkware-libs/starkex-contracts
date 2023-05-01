@@ -5,19 +5,20 @@ contract ProgramOutputOffsets {
     // The following constants are offsets of data expected in the program output.
     // The offsets here are of the fixed fields.
     uint256 internal constant PROG_OUT_GENERAL_CONFIG_HASH = 0;
-    uint256 internal constant PROG_OUT_N_ASSET_CONFIGS = 1;
-    uint256 internal constant PROG_OUT_ASSET_CONFIG_HASHES = 2;
+    uint256 internal constant PROG_OUT_DATA_AVAILABILTY_MODE = 1;
+    uint256 internal constant PROG_OUT_N_ASSET_CONFIGS = 2;
+    uint256 internal constant PROG_OUT_ASSET_CONFIG_HASHES = 3;
 
     /*
       Additional mandatory fields of a single word:
-      - Previous state size         2
-      - New state size              3
-      - Vault tree height           4
-      - Order tree height           5
-      - Expiration timestamp        6
-      - No. of Modifications        7.
+      - Previous state size         3
+      - New state size              4
+      - Vault tree height           5
+      - Order tree height           6
+      - Expiration timestamp        7
+      - No. of Modifications        8.
     */
-    uint256 internal constant PROG_OUT_N_WORDS_MIN_SIZE = 8;
+    uint256 internal constant PROG_OUT_N_WORDS_MIN_SIZE = 9;
 
     uint256 internal constant PROG_OUT_N_WORDS_PER_ASSET_CONFIG = 2;
     uint256 internal constant PROG_OUT_N_WORDS_PER_MODIFICATION = 3;
@@ -35,6 +36,10 @@ contract ProgramOutputOffsets {
     uint256 internal constant STATE_OFFSET_ORDERS_HEIGHT = 3;
     uint256 internal constant STATE_OFFSET_N_FUNDING = 4;
     uint256 internal constant STATE_OFFSET_FUNDING = 5;
+
+    // Data availability mode.
+    uint256 internal constant VALIDIUM_MODE = 0;
+    uint256 internal constant ROLLUP_MODE = 1;
 
     // The following constants are offsets of data expected in the application data.
     uint256 internal constant APP_DATA_BATCH_ID_OFFSET = 0;

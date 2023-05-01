@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0.
 pragma solidity ^0.6.12;
 
-import "../libraries/Common.sol";
+import "../libraries/Addresses.sol";
 import "../interfaces/MTokenTransfers.sol";
 import "../interfaces/MTokenAssetData.sol";
 import "../interfaces/MTokenQuantization.sol";
@@ -55,11 +55,12 @@ abstract contract TokenTransfers is MTokenQuantization, MTokenAssetData, MTokenT
         uint256 quantizedAmount
     ) internal override {
         require(isAssetTypeWithTokenId(assetType), "FUNGIBLE_ASSET_TYPE");
+        if (quantizedAmount == 0) return;
 
         if (isERC721(assetType)) {
             require(quantizedAmount == 1, "ILLEGAL_NFT_BALANCE");
             transferInNft(assetType, tokenId);
-        } else if (quantizedAmount > 0) {
+        } else {
             transferInSft(assetType, tokenId, quantizedAmount);
         }
     }

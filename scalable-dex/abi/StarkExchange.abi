@@ -397,7 +397,7 @@
         "inputs": [
             {
                 "internalType": "address",
-                "name": "testGovernor",
+                "name": "user",
                 "type": "address"
             }
         ],
@@ -1148,11 +1148,11 @@
         "outputs": [
             {
                 "internalType": "uint256",
-                "name": "assetId",
+                "name": "",
                 "type": "uint256"
             }
         ],
-        "stateMutability": "pure",
+        "stateMutability": "view",
         "type": "function"
     },
     {
@@ -2276,7 +2276,7 @@
         "inputs": [
             {
                 "internalType": "address",
-                "name": "testedOperator",
+                "name": "user",
                 "type": "address"
             }
         ],

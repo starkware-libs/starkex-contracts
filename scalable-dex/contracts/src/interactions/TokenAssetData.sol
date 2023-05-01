@@ -3,7 +3,7 @@ pragma solidity ^0.6.12;
 
 import "../components/MainStorage.sol";
 import "../interfaces/MTokenAssetData.sol";
-import "../libraries/Common.sol";
+import "../libraries/Addresses.sol";
 import "../libraries/LibConstants.sol";
 
 contract TokenAssetData is MainStorage, LibConstants, MTokenAssetData {
@@ -15,6 +15,8 @@ contract TokenAssetData is MainStorage, LibConstants, MTokenAssetData {
         bytes4(keccak256("MintableERC20Token(address)"));
     bytes4 internal constant MINTABLE_ERC721_SELECTOR =
         bytes4(keccak256("MintableERC721Token(address,uint256)"));
+    bytes4 internal constant MINTABLE_ERC1155_SELECTOR =
+        bytes4(keccak256("MintableERC1155Token(address,uint256)"));
 
     // The selector follows the 0x20 bytes assetInfo.length field.
     uint256 internal constant SELECTOR_OFFSET = 0x20;
@@ -84,7 +86,9 @@ contract TokenAssetData is MainStorage, LibConstants, MTokenAssetData {
     function isMintableAssetType(uint256 assetType) internal view override returns (bool) {
         bytes4 tokenSelector = extractTokenSelectorFromAssetType(assetType);
         return
-            tokenSelector == MINTABLE_ERC20_SELECTOR || tokenSelector == MINTABLE_ERC721_SELECTOR;
+            tokenSelector == MINTABLE_ERC20_SELECTOR ||
+            tokenSelector == MINTABLE_ERC721_SELECTOR ||
+            tokenSelector == MINTABLE_ERC1155_SELECTOR;
     }
 
     function isAssetTypeWithTokenId(uint256 assetType) internal view override returns (bool) {
@@ -97,9 +101,10 @@ contract TokenAssetData is MainStorage, LibConstants, MTokenAssetData {
             tokenSelector == ETH_SELECTOR ||
             tokenSelector == ERC20_SELECTOR ||
             tokenSelector == ERC721_SELECTOR ||
+            tokenSelector == ERC1155_SELECTOR ||
             tokenSelector == MINTABLE_ERC20_SELECTOR ||
             tokenSelector == MINTABLE_ERC721_SELECTOR ||
-            tokenSelector == ERC1155_SELECTOR;
+            tokenSelector == MINTABLE_ERC1155_SELECTOR;
     }
 
     function extractContractAddressFromAssetInfo(bytes memory assetInfo)
@@ -155,16 +160,31 @@ contract TokenAssetData is MainStorage, LibConstants, MTokenAssetData {
         return uint256(keccak256(abi.encodePacked(prefix, assetType, tokenId))) & MASK_250;
     }
 
-    function calculateMintableAssetId(uint256 assetType, bytes memory mintingBlob)
+    function calculateMintableAssetId(uint256 assetType, bytes calldata mintingBlob)
         public
-        pure
+        view
         override
-        returns (uint256 assetId)
+        returns (uint256)
     {
+        require(isMintableAssetType(assetType), "NON_MINTABLE_ASSET_TYPE");
+
+        // All mintable asset ids have the MINTABLE_ASSET_ID_FLAG (251st bit) set.
+        // Mintable ERC1155 and ERC20 assets have NON_UNIQUE_MINTABLE_ASSET_ID_FLAG (250th bit) set.
+        // Mintable ERC20s also have the MINTABLE_ERC20_ASSET_ID_FLAG (249th bit) set.
+        // I.e. mintable asset ids that start with: 100 => ERC721, 110 => ERC1155, 111 => ERC20.
+
+        uint256 mintable_asset_flags = MINTABLE_ASSET_ID_FLAG;
+        bytes4 selector = extractTokenSelectorFromAssetType(assetType);
+        if (selector == MINTABLE_ERC1155_SELECTOR || selector == MINTABLE_ERC20_SELECTOR) {
+            mintable_asset_flags = mintable_asset_flags | NON_UNIQUE_MINTABLE_ASSET_ID_FLAG;
+        }
+        if (selector == MINTABLE_ERC20_SELECTOR) {
+            mintable_asset_flags = mintable_asset_flags | MINTABLE_ERC20_ASSET_ID_FLAG;
+        }
+
         uint256 blobHash = uint256(keccak256(mintingBlob));
-        assetId =
+        return
             (uint256(keccak256(abi.encodePacked(MINTABLE_PREFIX, assetType, blobHash))) &
-                MASK_240) |
-            MINTABLE_ASSET_ID_FLAG;
+                MASK_240) | mintable_asset_flags;
     }
 }

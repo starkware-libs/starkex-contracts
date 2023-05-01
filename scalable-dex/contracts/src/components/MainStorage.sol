@@ -2,7 +2,8 @@
 pragma solidity ^0.6.12;
 
 import "../upgrade/ProxyStorage.sol";
-import "../libraries/Common.sol";
+import "../libraries/Addresses.sol";
+import {ApprovalChainData} from "../libraries/StarkExTypes.sol";
 
 /*
   Holds ALL the main contract state (storage) variables.
@@ -76,8 +77,8 @@ contract MainStorage is ProxyStorage {
     mapping(uint256 => address) ethKeys; // NOLINT: uninitialized-state.
 
     // Timelocked state transition and availability verification chain.
-    StarkExTypes.ApprovalChainData verifiersChain;
-    StarkExTypes.ApprovalChainData availabilityVerifiersChain;
+    ApprovalChainData verifiersChain;
+    ApprovalChainData availabilityVerifiersChain;
 
     // Batch id of last accepted proof.
     uint256 lastBatchId; // NOLINT: constable-states uninitialized-state.

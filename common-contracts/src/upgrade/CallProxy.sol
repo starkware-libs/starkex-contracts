@@ -5,7 +5,7 @@ import "../interfaces/ContractInitializer.sol";
 import "../interfaces/IFactRegistry.sol";
 import "../interfaces/ProxySupport.sol";
 import "./StorageSlots.sol";
-import "../libraries/Common.sol";
+import "../libraries/Addresses.sol";
 
 /**
   CallProxy is a 'call' based proxy.
@@ -58,7 +58,7 @@ contract CallProxy is StorageSlots, ContractInitializer, ProxySupport {
       In CallProxy a normal init flow has no data,
       as the callProxyImplementation was already set by processSubContractAddresses().
     */
-    function validateInitData(bytes calldata data) internal pure override {
+    function validateInitData(bytes calldata data) internal view override {
         require(data.length == 0, "UNEXPECTED_INIT_DATA");
     }
 

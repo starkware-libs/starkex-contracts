@@ -287,6 +287,9 @@ abstract contract Deposits is
         onlyKeyOwner(starkKey)
     // No notFrozen modifier: This function can always be used, even when frozen.
     {
+        // Allow cancellation only for real deposit that were placed.
+        require(pendingDeposits[starkKey][assetId][vaultId] > 0, "DEPOSIT_DOESNT_EXIST");
+
         // Start the timeout.
         cancellationRequests[starkKey][assetId][vaultId] = block.timestamp;
 

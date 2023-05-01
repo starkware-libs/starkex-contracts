@@ -5,7 +5,7 @@ import "../../interfaces/ExternalInitializer.sol";
 import "../../interfaces/Identity.sol";
 import "../../interfaces/IFactRegistry.sol";
 import "../../components/MainStorage.sol";
-import "../../libraries/Common.sol";
+import "../../libraries/Addresses.sol";
 import "../../libraries/LibConstants.sol";
 
 /*

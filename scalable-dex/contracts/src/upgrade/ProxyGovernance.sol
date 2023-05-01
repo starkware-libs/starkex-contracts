@@ -45,8 +45,8 @@ contract ProxyGovernance is GovernanceStorage, Governance {
         return governanceInfo[PROXY_GOVERNANCE_TAG];
     }
 
-    function proxyIsGovernor(address testGovernor) external view returns (bool) {
-        return _isGovernor(testGovernor);
+    function proxyIsGovernor(address user) external view returns (bool) {
+        return _isGovernor(user);
     }
 
     function proxyNominateNewGovernor(address newGovernor) external {

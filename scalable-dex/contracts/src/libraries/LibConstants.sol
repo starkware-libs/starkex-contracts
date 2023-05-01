@@ -39,8 +39,16 @@ contract LibConstants {
     uint256 public constant MAX_FORCED_ACTIONS_REQS_PER_BLOCK = 10;
 
     uint256 constant QUANTUM_UPPER_BOUND = 2**128;
-    uint256 internal constant MINTABLE_ASSET_ID_FLAG = 1 << 250;
 
-    // The 64th bit (indexed 63, counting from 0) is a flag indicating a rollup vault id.
+    // All mintable asset ids have the MINTABLE_ASSET_ID_FLAG (251st bit) set.
+    // Mintable ERC1155 and ERC20 assets have NON_UNIQUE_MINTABLE_ASSET_ID_FLAG (250th bit) set too.
+    // Mintable ERC20s also have the MINTABLE_ERC20_ASSET_ID_FLAG (249th bit) set.
+    // I.e. mintable asset ids that start with: 100 => ERC721, 110 => ERC1155, 111 => ERC20.
+    // All non-mintable asset ids have the MINTABLE_ASSET_ID_FLAG bit off.
+    uint256 internal constant MINTABLE_ASSET_ID_FLAG = 1 << 250;
+    uint256 internal constant NON_UNIQUE_MINTABLE_ASSET_ID_FLAG = 1 << 249;
+    uint256 internal constant MINTABLE_ERC20_ASSET_ID_FLAG = 1 << 248;
+
+    // Bit 64 (indexed 63, counting from 0) is a flag indicating a rollup vault id.
     uint256 constant ROLLUP_VAULTS_BIT = 63;
 }

@@ -76,7 +76,12 @@ abstract contract AcceptModifications is
                 fromQuantized(presumedAssetType, quantizedAmount),
                 quantizedAmount
             );
-        } else if (assetId == ((assetId & MASK_240) | MINTABLE_ASSET_ID_FLAG)) {
+        } else if (
+            assetId ==
+            ((assetId &
+                (MASK_240 | NON_UNIQUE_MINTABLE_ASSET_ID_FLAG | MINTABLE_ERC20_ASSET_ID_FLAG)) |
+                MINTABLE_ASSET_ID_FLAG)
+        ) {
             emit LogMintableWithdrawalAllowed(ownerKey, assetId, quantizedAmount);
         } else {
             // Default case is Non-Mintable ERC721 or ERC1155 asset id.

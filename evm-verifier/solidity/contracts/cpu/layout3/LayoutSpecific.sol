@@ -11,14 +11,14 @@ import "../CairoVerifierContract.sol";
 abstract contract LayoutSpecific is MemoryMap, StarkParameters, CpuPublicInputOffsets, CairoVerifierContract {
     IPeriodicColumn pedersenPointsX;
     IPeriodicColumn pedersenPointsY;
-    IPeriodicColumn ecdsaPointsX;
-    IPeriodicColumn ecdsaPointsY;
+    IPeriodicColumn ecdsaGeneratorPointsX;
+    IPeriodicColumn ecdsaGeneratorPointsY;
 
     function initPeriodicColumns(address[] memory auxPolynomials) internal {
         pedersenPointsX = IPeriodicColumn(auxPolynomials[1]);
         pedersenPointsY = IPeriodicColumn(auxPolynomials[2]);
-        ecdsaPointsX = IPeriodicColumn(auxPolynomials[3]);
-        ecdsaPointsY = IPeriodicColumn(auxPolynomials[4]);
+        ecdsaGeneratorPointsX = IPeriodicColumn(auxPolynomials[3]);
+        ecdsaGeneratorPointsY = IPeriodicColumn(auxPolynomials[4]);
     }
 
     function getLayoutInfo()
@@ -133,8 +133,8 @@ abstract contract LayoutSpecific is MemoryMap, StarkParameters, CpuPublicInputOf
             ECDSA_BUILTIN_RATIO * ECDSA_BUILTIN_REPETITIONS);
         uint256 zPointPowEcdsa = fpow(oodsPoint, nEcdsaSignatureCopies);
 
-        ctx[MM_PERIODIC_COLUMN__ECDSA__GENERATOR_POINTS__X] = ecdsaPointsX.compute(zPointPowEcdsa);
-        ctx[MM_PERIODIC_COLUMN__ECDSA__GENERATOR_POINTS__Y] = ecdsaPointsY.compute(zPointPowEcdsa);
+        ctx[MM_PERIODIC_COLUMN__ECDSA__GENERATOR_POINTS__X] = ecdsaGeneratorPointsX.compute(zPointPowEcdsa);
+        ctx[MM_PERIODIC_COLUMN__ECDSA__GENERATOR_POINTS__Y] = ecdsaGeneratorPointsY.compute(zPointPowEcdsa);
 
         ctx[MM_DILUTED_CHECK__PERMUTATION__INTERACTION_ELM] = ctx[MM_INTERACTION_ELEMENTS +
             3];

@@ -4,7 +4,7 @@ pragma solidity ^0.6.12;
 import "./SubContractor.sol";
 import "./IDispatcherBase.sol";
 import "../interfaces/BlockDirectCall.sol";
-import "../libraries/Common.sol";
+import "../libraries/Addresses.sol";
 
 abstract contract MainDispatcherBase is IDispatcherBase, BlockDirectCall {
     using Addresses for address;

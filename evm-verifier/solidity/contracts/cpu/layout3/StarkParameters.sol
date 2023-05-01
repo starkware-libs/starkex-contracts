@@ -30,7 +30,7 @@ contract StarkParameters is PrimeFieldElement0 {
     uint256 constant internal EC_OP_BUILTIN_RATIO = 256;
     uint256 constant internal EC_OP_SCALAR_HEIGHT = 256;
     uint256 constant internal EC_OP_N_BITS = 252;
-    uint256 constant internal LAYOUT_CODE = 6384748;
+    uint256 constant internal LAYOUT_CODE = 30151121717527674777951106169;
     uint256 constant internal LOG_CPU_COMPONENT_HEIGHT = 4;
 }
 // ---------- End of auto-generated code. ----------

@@ -79,16 +79,8 @@ contract CpuVerifier is
         return MM_INTERACTION_ELEMENTS;
     }
 
-    function getMmCoefficients() internal pure override returns (uint256) {
-        return MM_COEFFICIENTS;
-    }
-
     function getMmOodsValues() internal pure override returns (uint256) {
         return MM_OODS_VALUES;
-    }
-
-    function getMmOodsCoefficients() internal pure override returns (uint256) {
-        return MM_OODS_COEFFICIENTS;
     }
 
     function getNInteractionElements() internal pure override returns (uint256) {

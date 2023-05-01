@@ -18,7 +18,7 @@ contract GpsStatementVerifier is
     MemoryPageFactRegistry memoryPageFactRegistry;
     CairoVerifierContract[] cairoVerifierContractAddresses;
 
-    uint256 internal constant N_BUILTINS = 6;
+    uint256 internal constant N_BUILTINS = 8;
     uint256 internal constant N_MAIN_ARGS = N_BUILTINS;
     uint256 internal constant N_MAIN_RETURN_VALUES = N_BUILTINS;
     // Cairo verifier program hash.
@@ -49,7 +49,7 @@ contract GpsStatementVerifier is
     }
 
     function identify() external pure override returns (string memory) {
-        return "StarkWare_GpsStatementVerifier_2022_5";
+        return "StarkWare_GpsStatementVerifier_2022_7";
     }
 
     /*

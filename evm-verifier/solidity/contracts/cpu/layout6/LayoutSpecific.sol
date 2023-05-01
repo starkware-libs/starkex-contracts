@@ -11,14 +11,24 @@ import "../CairoVerifierContract.sol";
 abstract contract LayoutSpecific is MemoryMap, StarkParameters, CpuPublicInputOffsets, CairoVerifierContract {
     IPeriodicColumn pedersenPointsX;
     IPeriodicColumn pedersenPointsY;
-    IPeriodicColumn ecdsaPointsX;
-    IPeriodicColumn ecdsaPointsY;
+    IPeriodicColumn ecdsaGeneratorPointsX;
+    IPeriodicColumn ecdsaGeneratorPointsY;
+    IPeriodicColumn poseidonPoseidonFullRoundKey0;
+    IPeriodicColumn poseidonPoseidonFullRoundKey1;
+    IPeriodicColumn poseidonPoseidonFullRoundKey2;
+    IPeriodicColumn poseidonPoseidonPartialRoundKey0;
+    IPeriodicColumn poseidonPoseidonPartialRoundKey1;
 
     function initPeriodicColumns(address[] memory auxPolynomials) internal {
         pedersenPointsX = IPeriodicColumn(auxPolynomials[1]);
         pedersenPointsY = IPeriodicColumn(auxPolynomials[2]);
-        ecdsaPointsX = IPeriodicColumn(auxPolynomials[3]);
-        ecdsaPointsY = IPeriodicColumn(auxPolynomials[4]);
+        ecdsaGeneratorPointsX = IPeriodicColumn(auxPolynomials[3]);
+        ecdsaGeneratorPointsY = IPeriodicColumn(auxPolynomials[4]);
+        poseidonPoseidonFullRoundKey0 = IPeriodicColumn(auxPolynomials[5]);
+        poseidonPoseidonFullRoundKey1 = IPeriodicColumn(auxPolynomials[6]);
+        poseidonPoseidonFullRoundKey2 = IPeriodicColumn(auxPolynomials[7]);
+        poseidonPoseidonPartialRoundKey0 = IPeriodicColumn(auxPolynomials[8]);
+        poseidonPoseidonPartialRoundKey1 = IPeriodicColumn(auxPolynomials[9]);
     }
 
     function getLayoutInfo()
@@ -30,7 +40,8 @@ abstract contract LayoutSpecific is MemoryMap, StarkParameters, CpuPublicInputOf
             (1 << RANGE_CHECK_BUILTIN_BIT) |
             (1 << ECDSA_BUILTIN_BIT) |
             (1 << BITWISE_BUILTIN_BIT) |
-            (1 << EC_OP_BUILTIN_BIT);
+            (1 << EC_OP_BUILTIN_BIT) |
+            (1 << POSEIDON_BUILTIN_BIT);
     }
 
     function safeDiv(uint256 numerator, uint256 denominator) internal pure returns (uint256) {
@@ -111,6 +122,12 @@ abstract contract LayoutSpecific is MemoryMap, StarkParameters, CpuPublicInputOf
             EC_OP_BUILTIN_RATIO, 7, nSteps, 'ec_op');
 
         ctx[MM_EC_OP__CURVE_CONFIG_ALPHA] = 1;
+
+        // "poseidon" memory segment.
+        ctx[MM_INITIAL_POSEIDON_ADDR] = publicInput[OFFSET_POSEIDON_BEGIN_ADDR];
+        validateBuiltinPointers(
+            ctx[MM_INITIAL_POSEIDON_ADDR], publicInput[OFFSET_POSEIDON_STOP_PTR],
+            POSEIDON__RATIO, 6, nSteps, 'poseidon');
     }
 
     function prepareForOodsCheck(uint256[] memory ctx) internal view {
@@ -133,8 +150,8 @@ abstract contract LayoutSpecific is MemoryMap, StarkParameters, CpuPublicInputOf
             ECDSA_BUILTIN_RATIO * ECDSA_BUILTIN_REPETITIONS);
         uint256 zPointPowEcdsa = fpow(oodsPoint, nEcdsaSignatureCopies);
 
-        ctx[MM_PERIODIC_COLUMN__ECDSA__GENERATOR_POINTS__X] = ecdsaPointsX.compute(zPointPowEcdsa);
-        ctx[MM_PERIODIC_COLUMN__ECDSA__GENERATOR_POINTS__Y] = ecdsaPointsY.compute(zPointPowEcdsa);
+        ctx[MM_PERIODIC_COLUMN__ECDSA__GENERATOR_POINTS__X] = ecdsaGeneratorPointsX.compute(zPointPowEcdsa);
+        ctx[MM_PERIODIC_COLUMN__ECDSA__GENERATOR_POINTS__Y] = ecdsaGeneratorPointsY.compute(zPointPowEcdsa);
 
         ctx[MM_DILUTED_CHECK__PERMUTATION__INTERACTION_ELM] = ctx[MM_INTERACTION_ELEMENTS +
             3];
@@ -143,6 +160,20 @@ abstract contract LayoutSpecific is MemoryMap, StarkParameters, CpuPublicInputOf
             5];
 
         ctx[MM_DILUTED_CHECK__FINAL_CUM_VAL] = computeDilutedCumulativeValue(ctx);
+
+        // The number of copies in the Poseidon hash periodic columns is
+        // nSteps / POSEIDON__RATIO.
+        uint256 nPoseidonHashCopies = safeDiv(
+            2 ** ctx[MM_LOG_N_STEPS],
+            POSEIDON__RATIO);
+        uint256 zPointPowPoseidon = fpow(oodsPoint, nPoseidonHashCopies);
+
+        ctx[MM_PERIODIC_COLUMN__POSEIDON__POSEIDON__FULL_ROUND_KEY0] = poseidonPoseidonFullRoundKey0.compute(zPointPowPoseidon);
+        ctx[MM_PERIODIC_COLUMN__POSEIDON__POSEIDON__FULL_ROUND_KEY1] = poseidonPoseidonFullRoundKey1.compute(zPointPowPoseidon);
+        ctx[MM_PERIODIC_COLUMN__POSEIDON__POSEIDON__FULL_ROUND_KEY2] = poseidonPoseidonFullRoundKey2.compute(zPointPowPoseidon);
+        ctx[MM_PERIODIC_COLUMN__POSEIDON__POSEIDON__PARTIAL_ROUND_KEY0] = poseidonPoseidonPartialRoundKey0.compute(zPointPowPoseidon);
+        ctx[MM_PERIODIC_COLUMN__POSEIDON__POSEIDON__PARTIAL_ROUND_KEY1] = poseidonPoseidonPartialRoundKey1.compute(zPointPowPoseidon);
+
     }
 
     /*

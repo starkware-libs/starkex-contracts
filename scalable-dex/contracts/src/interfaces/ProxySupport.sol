@@ -2,7 +2,7 @@
 pragma solidity ^0.6.12;
 
 import "../components/Governance.sol";
-import "../libraries/Common.sol";
+import "../libraries/Addresses.sol";
 import "./BlockDirectCall.sol";
 import "./ContractInitializer.sol";
 

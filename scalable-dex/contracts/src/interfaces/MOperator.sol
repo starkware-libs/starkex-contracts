@@ -7,7 +7,7 @@ abstract contract MOperator {
     event LogOperatorAdded(address operator);
     event LogOperatorRemoved(address operator);
 
-    function isOperator(address testedOperator) public view virtual returns (bool);
+    function isOperator(address user) public view virtual returns (bool);
 
     modifier onlyOperator() {
         require(isOperator(msg.sender), "ONLY_OPERATOR");

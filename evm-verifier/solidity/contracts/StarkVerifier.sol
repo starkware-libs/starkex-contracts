@@ -174,11 +174,7 @@ abstract contract StarkVerifier is
 
     function getNColumnsInComposition() internal pure virtual returns (uint256);
 
-    function getMmCoefficients() internal pure virtual returns (uint256);
-
     function getMmOodsValues() internal pure virtual returns (uint256);
-
-    function getMmOodsCoefficients() internal pure virtual returns (uint256);
 
     function getNCoefficients() internal pure virtual returns (uint256);
 
@@ -524,11 +520,8 @@ abstract contract StarkVerifier is
             ctx[MM_TRACE_COMMITMENT + 1] = uint256(readHash(channelPtr, true));
         }
 
-        VerifierChannel.sendFieldElements(
-            channelPtr,
-            getNCoefficients(),
-            getPtr(ctx, getMmCoefficients())
-        );
+        // Send constraint polynomial random element.
+        VerifierChannel.sendFieldElements(channelPtr, 1, getPtr(ctx, MM_COMPOSITION_ALPHA));
         // emit LogGas("Generate coefficients", gasleft());
 
         ctx[MM_OODS_COMMITMENT] = uint256(readHash(channelPtr, true));
@@ -544,11 +537,7 @@ abstract contract StarkVerifier is
         // emit LogGas("Read OODS commitments", gasleft());
         oodsConsistencyCheck(ctx);
         // emit LogGas("OODS consistency check", gasleft());
-        VerifierChannel.sendFieldElements(
-            channelPtr,
-            getNOodsCoefficients(),
-            getPtr(ctx, getMmOodsCoefficients())
-        );
+        VerifierChannel.sendFieldElements(channelPtr, 1, getPtr(ctx, MM_OODS_ALPHA));
         // emit LogGas("Generate OODS coefficients", gasleft());
         ctx[MM_FRI_COMMITMENTS] = uint256(VerifierChannel.readHash(channelPtr, true));
 

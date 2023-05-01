@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0.
 pragma solidity ^0.6.12;
 
-import "../libraries/Common.sol";
+import {ApprovalChainData} from "../libraries/StarkExTypes.sol";
 
 /*
   Implements a data structure that supports instant registration
@@ -16,7 +16,7 @@ abstract contract MApprovalChain {
       Fails if identifier is not identical to the value returned from entry.identify().
     */
     function addEntry(
-        StarkExTypes.ApprovalChainData storage chain,
+        ApprovalChainData storage chain,
         address entry,
         uint256 maxLength,
         string memory identifier
@@ -26,7 +26,7 @@ abstract contract MApprovalChain {
       Returns the index of the verifier in the list if it exists and returns ENTRY_NOT_FOUND
       otherwise.
     */
-    function findEntry(address[] storage list, address entry)
+    function findEntry(address[] storage verifiers, address entry)
         internal
         view
         virtual
@@ -35,19 +35,19 @@ abstract contract MApprovalChain {
     /*
       Same as findEntry(), except that it reverts if the verifier is not found.
     */
-    function safeFindEntry(address[] storage list, address entry)
+    function safeFindEntry(address[] storage verifiers, address entry)
         internal
         view
         virtual
         returns (uint256 idx);
 
     /*
-      Updates the unlockedForRemovalTime field of the given verifier to
+      Updates the verifierAllowedRemovalTime field of the given verifier to
         current time + removalDelay.
       Reverts if the verifier is not found.
     */
     function announceRemovalIntent(
-        StarkExTypes.ApprovalChainData storage chain,
+        ApprovalChainData storage chain,
         address entry,
         uint256 removalDelay
     ) internal virtual;
@@ -55,7 +55,5 @@ abstract contract MApprovalChain {
     /*
       Removes a verifier assuming the expected time has passed.
     */
-    function removeEntry(StarkExTypes.ApprovalChainData storage chain, address entry)
-        internal
-        virtual;
+    function removeEntry(ApprovalChainData storage chain, address entry) internal virtual;
 }

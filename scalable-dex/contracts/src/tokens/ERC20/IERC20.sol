@@ -1,17 +1,11 @@
 // SPDX-License-Identifier: Apache-2.0.
 pragma solidity ^0.6.12;
 
-/*
+/**
   Interface of the ERC20 standard as defined in the EIP. Does not include
   the optional functions; to access them see {ERC20Detailed}.
 */
 interface IERC20 {
-    function name() external view returns (string memory);
-
-    function symbol() external view returns (string memory);
-
-    function decimals() external view returns (uint8);
-
     function totalSupply() external view returns (uint256);
 
     function balanceOf(address account) external view returns (uint256);

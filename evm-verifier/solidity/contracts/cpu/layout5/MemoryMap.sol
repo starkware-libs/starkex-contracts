@@ -71,17 +71,17 @@ contract MemoryMap {
     uint256 constant internal MM_TRACE_GENERATOR =                         0x15f;
     uint256 constant internal MM_OODS_POINT =                              0x160;
     uint256 constant internal MM_INTERACTION_ELEMENTS =                    0x161; // uint256[6]
-    uint256 constant internal MM_COEFFICIENTS =                            0x167; // uint256[197]
-    uint256 constant internal MM_OODS_VALUES =                             0x22c; // uint256[246]
-    uint256 constant internal MM_CONSTRAINT_POLY_ARGS_END =                0x322;
-    uint256 constant internal MM_COMPOSITION_OODS_VALUES =                 0x322; // uint256[2]
-    uint256 constant internal MM_OODS_EVAL_POINTS =                        0x324; // uint256[48]
-    uint256 constant internal MM_OODS_COEFFICIENTS =                       0x354; // uint256[248]
-    uint256 constant internal MM_TRACE_QUERY_RESPONSES =                   0x44c; // uint256[1056]
-    uint256 constant internal MM_COMPOSITION_QUERY_RESPONSES =             0x86c; // uint256[96]
-    uint256 constant internal MM_LOG_N_STEPS =                             0x8cc;
-    uint256 constant internal MM_N_PUBLIC_MEM_ENTRIES =                    0x8cd;
-    uint256 constant internal MM_N_PUBLIC_MEM_PAGES =                      0x8ce;
-    uint256 constant internal MM_CONTEXT_SIZE =                            0x8cf;
+    uint256 constant internal MM_COMPOSITION_ALPHA =                       0x167;
+    uint256 constant internal MM_OODS_VALUES =                             0x168; // uint256[246]
+    uint256 constant internal MM_CONSTRAINT_POLY_ARGS_END =                0x25e;
+    uint256 constant internal MM_COMPOSITION_OODS_VALUES =                 0x25e; // uint256[2]
+    uint256 constant internal MM_OODS_EVAL_POINTS =                        0x260; // uint256[48]
+    uint256 constant internal MM_OODS_ALPHA =                              0x290;
+    uint256 constant internal MM_TRACE_QUERY_RESPONSES =                   0x291; // uint256[1056]
+    uint256 constant internal MM_COMPOSITION_QUERY_RESPONSES =             0x6b1; // uint256[96]
+    uint256 constant internal MM_LOG_N_STEPS =                             0x711;
+    uint256 constant internal MM_N_PUBLIC_MEM_ENTRIES =                    0x712;
+    uint256 constant internal MM_N_PUBLIC_MEM_PAGES =                      0x713;
+    uint256 constant internal MM_CONTEXT_SIZE =                            0x714;
 }
 // ---------- End of auto-generated code. ----------

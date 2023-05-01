@@ -11,7 +11,7 @@ import "../../components/VerifyFactChain.sol";
 import "../../interfaces/MAcceptModifications.sol";
 import "../../interfaces/MFreezable.sol";
 import "../../interfaces/MOperator.sol";
-import "../../libraries/Common.sol";
+import "../../libraries/Addresses.sol";
 
 /**
   TO-DO:DOC.
@@ -44,7 +44,12 @@ abstract contract UpdatePerpetualState is
         uint256 prevSharedStateOffset;
         uint256 newSharedStateSize;
         uint256 newSharedStateOffset;
+        uint256 newVaultsRoot;
+        uint256 newVaultsHeight;
+        uint256 newOrdersRoot;
+        uint256 newOrdersHeight;
         uint256 newSystemTime;
+        uint256 dataAvailabilityMode;
         uint256 expirationTimestamp;
         uint256 nModifications;
         uint256 modificationsOffset;
@@ -80,6 +85,16 @@ abstract contract UpdatePerpetualState is
             outputMarkers.expirationTimestamp > block.timestamp / 3600,
             "BATCH_TIMESTAMP_EXPIRED"
         );
+        require(
+            outputMarkers.newVaultsHeight ==
+                programOutput[outputMarkers.prevSharedStateOffset + STATE_OFFSET_VAULTS_HEIGHT],
+            "INCONSISTENT_POSITION_TREE_HEIGHT"
+        );
+        require(
+            outputMarkers.newOrdersHeight ==
+                programOutput[outputMarkers.prevSharedStateOffset + STATE_OFFSET_ORDERS_HEIGHT],
+            "INCONSISTENT_ORDER_TREE_HEIGHT"
+        );
 
         validateConfigHashes(programOutput, outputMarkers);
 
@@ -98,20 +113,29 @@ abstract contract UpdatePerpetualState is
             "WRONG_PREVIOUS_BATCH_ID"
         );
 
-        require(
-            programOutput.length >=
-                outputMarkers.forcedActionsOffset +
-                    OnchainDataFactTreeEncoder.ONCHAIN_DATA_FACT_ADDITIONAL_WORDS,
-            "programOutput does not contain all required fields."
-        );
-        bytes32 stateTransitionFact = OnchainDataFactTreeEncoder.encodeFactWithOnchainData(
-            programOutput[:programOutput.length -
-                OnchainDataFactTreeEncoder.ONCHAIN_DATA_FACT_ADDITIONAL_WORDS],
-            OnchainDataFactTreeEncoder.DataAvailabilityFact({
-                onchainDataHash: programOutput[programOutput.length - 2],
-                onchainDataSize: programOutput[programOutput.length - 1]
-            })
-        );
+        bytes32 stateTransitionFact;
+        if (outputMarkers.dataAvailabilityMode == VALIDIUM_MODE) {
+            stateTransitionFact = keccak256(abi.encodePacked(programOutput));
+        } else {
+            require(
+                outputMarkers.dataAvailabilityMode == ROLLUP_MODE,
+                "UNSUPPORTED_DATA_AVAILABILITY_MODE"
+            );
+            require(
+                programOutput.length >=
+                    outputMarkers.forcedActionsOffset +
+                        OnchainDataFactTreeEncoder.ONCHAIN_DATA_FACT_ADDITIONAL_WORDS,
+                "programOutput does not contain all required fields."
+            );
+            stateTransitionFact = OnchainDataFactTreeEncoder.encodeFactWithOnchainData(
+                programOutput[:programOutput.length -
+                    OnchainDataFactTreeEncoder.ONCHAIN_DATA_FACT_ADDITIONAL_WORDS],
+                OnchainDataFactTreeEncoder.DataAvailabilityFact({
+                    onchainDataHash: programOutput[programOutput.length - 2],
+                    onchainDataSize: programOutput[programOutput.length - 1]
+                })
+            );
+        }
 
         emit LogStateTransitionFact(stateTransitionFact);
 
@@ -121,6 +145,24 @@ abstract contract UpdatePerpetualState is
             "NO_STATE_TRANSITION_VERIFIERS",
             "NO_STATE_TRANSITION_PROOF"
         );
+
+        if (outputMarkers.dataAvailabilityMode == VALIDIUM_MODE) {
+            bytes32 availabilityFact = keccak256(
+                abi.encodePacked(
+                    outputMarkers.newVaultsRoot,
+                    outputMarkers.newVaultsHeight,
+                    outputMarkers.newOrdersRoot,
+                    outputMarkers.newOrdersHeight,
+                    sequenceNumber + 1
+                )
+            );
+            verifyFact(
+                availabilityVerifiersChain,
+                availabilityFact,
+                "NO_AVAILABILITY_VERIFIERS",
+                "NO_AVAILABILITY_PROOF"
+            );
+        }
 
         performUpdateState(programOutput, outputMarkers, applicationData);
     }
@@ -158,6 +200,7 @@ abstract contract UpdatePerpetualState is
 
         ProgramOutputMarkers memory markers; // NOLINT: uninitialized-local.
         markers.globalConfigurationHash = programOutput[PROG_OUT_GENERAL_CONFIG_HASH];
+        markers.dataAvailabilityMode = programOutput[PROG_OUT_DATA_AVAILABILTY_MODE];
         markers.nAssets = programOutput[PROG_OUT_N_ASSET_CONFIGS];
         require(markers.nAssets < 2**16, "ILLEGAL_NUMBER_OF_ASSETS");
 
@@ -190,6 +233,19 @@ abstract contract UpdatePerpetualState is
         // System time is the last field in the state.
         markers.newSystemTime = programOutput[offset - 1];
 
+        markers.newVaultsRoot = programOutput[
+            markers.newSharedStateOffset + STATE_OFFSET_VAULTS_ROOT
+        ];
+        markers.newVaultsHeight = programOutput[
+            markers.newSharedStateOffset + STATE_OFFSET_VAULTS_HEIGHT
+        ];
+        markers.newOrdersRoot = programOutput[
+            markers.newSharedStateOffset + STATE_OFFSET_ORDERS_ROOT
+        ];
+        markers.newOrdersHeight = programOutput[
+            markers.newSharedStateOffset + STATE_OFFSET_ORDERS_HEIGHT
+        ];
+
         markers.expirationTimestamp = programOutput[offset++];
 
         markers.nModifications = programOutput[offset++];
@@ -205,8 +261,10 @@ abstract contract UpdatePerpetualState is
         markers.conditionsOffset = offset;
         offset += markers.nConditions;
 
-        offset += OnchainDataFactTreeEncoder.ONCHAIN_DATA_FACT_ADDITIONAL_WORDS;
-
+        // In ROLLUP_MODE the Onchain Data info appears at the end of programOutput.
+        if (markers.dataAvailabilityMode == ROLLUP_MODE) {
+            offset += OnchainDataFactTreeEncoder.ONCHAIN_DATA_FACT_ADDITIONAL_WORDS;
+        }
         require(
             programOutput.length == offset,
             "programOutput invalid size (mods/forced/conditions)"

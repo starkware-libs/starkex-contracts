@@ -20,11 +20,19 @@ import "./MainStorage.sol";
    | `ETH_SELECTOR = bytes4(keccak256("ETH()"));`
    | `ERC20_SELECTOR = bytes4(keccak256("ERC20Token(address)"));`
    | `ERC721_SELECTOR = bytes4(keccak256("ERC721Token(address,uint256)"));`
+   | `ERC1155_SELECTOR = bytes4(keccak256("ERC1155Token(address,uint256)"));`
    | `MINTABLE_ERC20_SELECTOR = bytes4(keccak256("MintableERC20Token(address)"));`
    | `MINTABLE_ERC721_SELECTOR = bytes4(keccak256("MintableERC721Token(address,uint256)"));`
+   | `MINTABLE_ERC1155_SELECTOR = bytes4(keccak256("MintableERC1155Token(address,uint256)"));`
 
   For each token type, `assetInfo` is defined as follows:
+      For ETH,
+   | `assetInfo = ETH_SELECTOR;`
 
+      For all other selectors:
+   | `assetInfo = abi.encodePacked(SELECTOR, address);`
+      Where 'address' is a 32 byte representation of the ERC20 token contract address,
+      padded with leading zeros.
 
   The `quantum` quantization factor defines the multiplicative transformation from the native token
   denomination as a 256b unsigned integer to a 63b unsigned integer representation as used by the
