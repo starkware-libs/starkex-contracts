@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0.
-pragma solidity ^0.6.11;
+pragma solidity ^0.6.12;
 
 import "../components/FactRegistry.sol";
 import "../cpu/CpuPublicInputOffsetsBase.sol";
@@ -26,10 +26,10 @@ contract GpsOutputParser is CpuPublicInputOffsetsBase, FactRegistry {
     uint256 internal constant FIRST_CONTINUOUS_PAGE_INDEX = 1;
 
     /*
-      Logs the fact hash together with the relavent continuous memory pages' hashes.
-      Emitted for each registered fact.
+      Logs the program output fact together with the relevant continuous memory pages' hashes.
+      The event is emitted for each registered fact.
     */
-    event LogMemoryPagesHashes(bytes32 factHash, bytes32[] pagesHashes);
+    event LogMemoryPagesHashes(bytes32 programOutputFact, bytes32[] pagesHashes);
 
     /*
       Parses the GPS program output (using taskMetadata, which should be verified by the caller),
@@ -40,15 +40,16 @@ contract GpsOutputParser is CpuPublicInputOffsetsBase, FactRegistry {
       For each task, the structure is as follows:
         1. Size (including the size and hash fields).
         2. Program hash.
-        3. The numebr of pairs in the Merkle tree structure (see below).
+        3. The number of pairs in the Merkle tree structure (see below).
         4. The Merkle tree structure (see below).
 
       The fact of each task is stored as a (non-binary) Merkle tree.
-      Each non-leaf node is 1 + the hash of (node0, end0, node1, end1, ...)
-      where node* are its children and end* is the the total number of data words up to and
-      including that node and its children (including the previous sibling nodes).
-      We add 1 to the result of the hash to distinguish it from a leaf node.
-      Leaf nodes are the hash of their data.
+      Leaf nodes are labeled with the hash of their data.
+      Each non-leaf node is labeled as 1 + the hash of (node0, end0, node1, end1, ...)
+      where node* is a label of a child children and end* is the total number of data words up to
+      and including that node and its children (including the previous sibling nodes).
+      We add 1 to the result of the hash to prevent an attacker from using a preimage of a leaf node
+      as a preimage of a non-leaf hash and vice versa.
 
       The structure of the tree is passed as a list of pairs (n_pages, n_nodes), and the tree is
       constructed using a stack of nodes (initialized to an empty stack) by repeating for each pair:
@@ -83,14 +84,16 @@ contract GpsOutputParser is CpuPublicInputOffsetsBase, FactRegistry {
 
         uint256 taskMetadataOffset = METADATA_TASKS_OFFSET;
 
-        // Skip the 3 first output cells which contain the number of tasks and the size and
-        // program hash of the first task. curAddr points to the output of the first task.
-        uint256 curAddr = outputStartAddress + 3;
+        // Skip the 5 first output cells which contain the bootloader config, the number of tasks
+        // and the size and program hash of the first task. curAddr points to the output of the
+        // first task.
+        uint256 curAddr = outputStartAddress + 5;
 
         // Skip the main page.
         uint256 curPage = FIRST_CONTINUOUS_PAGE_INDEX;
 
         // Bound the size of the stack by the total number of pages.
+        // TODO(lior, 15/04/2022): Get a better bound on the size of the stack.
         uint256[] memory nodeStack = new uint256[](NODE_STACK_ITEM_SIZE * totalNumPages);
 
         // Copy to memory to workaround the "stack too deep" error.
@@ -120,6 +123,9 @@ contract GpsOutputParser is CpuPublicInputOffsetsBase, FactRegistry {
                         treePair +
                         METADATA_OFFSET_TREE_PAIR_N_PAGES
                 ];
+
+                // Ensure 'nPages' is bounded from above as a sanity check
+                // (the bound is somewhat arbitrary).
                 require(nPages < 2**20, "Invalid value of n_pages in tree structure.");
 
                 for (uint256 i = 0; i < nPages; i++) {
@@ -173,23 +179,23 @@ contract GpsOutputParser is CpuPublicInputOffsetsBase, FactRegistry {
                 );
             }
 
-            uint256 factWithoutProgramHash = nodeStack[NODE_STACK_OFFSET_HASH];
-            bytes32 fact = keccak256(abi.encode(programHash, factWithoutProgramHash));
+            uint256 programOutputFact = nodeStack[NODE_STACK_OFFSET_HASH];
+            bytes32 fact = keccak256(abi.encode(programHash, programOutputFact));
 
             // Update taskMetadataOffset.
             taskMetadataOffset += METADATA_TASK_HEADER_SIZE + 2 * nTreePairs;
 
             {
-                // Documents each fact hash together with the hashes of the relavent memory pages.
+                // Log the output Merkle root with the hashes of the relevant memory pages.
                 // Instead of emit, we use log1 https://docs.soliditylang.org/en/v0.4.24/assembly.html,
                 // https://docs.soliditylang.org/en/v0.6.2/abi-spec.html#use-of-dynamic-types.
 
                 bytes32 logHash = keccak256("LogMemoryPagesHashes(bytes32,bytes32[])");
                 assembly {
                     let buf := add(pageHashesLogData, 0x20)
-                    // Number of memory pages that are relavent for this fact.
+                    // Number of memory pages that are relevant for this fact.
                     let length := sub(curPage, firstPageOfTask)
-                    mstore(buf, factWithoutProgramHash)
+                    mstore(buf, programOutputFact)
                     mstore(add(buf, 0x40), length)
                     log1(buf, mul(add(length, 3), 0x20), logHash)
                 }
@@ -215,12 +221,13 @@ contract GpsOutputParser is CpuPublicInputOffsetsBase, FactRegistry {
         uint256 curOffset,
         uint256[] memory nodeStack,
         uint256 nodeStackLen
-    ) internal pure returns (uint256 pageSize, uint256 pageHash) {
+    ) private pure returns (uint256 pageSize, uint256 pageHash) {
         // Read the first address, page size and hash.
         uint256 pageAddr = pageInfoPtr[PAGE_INFO_ADDRESS_OFFSET];
         pageSize = pageInfoPtr[PAGE_INFO_SIZE_OFFSET];
         pageHash = pageInfoPtr[PAGE_INFO_HASH_OFFSET];
 
+        // Ensure 'pageSize' is bounded as a sanity check (the bound is somewhat arbitrary).
         require(pageSize < 2**30, "Invalid page size.");
         require(pageAddr == curAddr, "Invalid page address.");
 
@@ -238,7 +245,7 @@ contract GpsOutputParser is CpuPublicInputOffsetsBase, FactRegistry {
         uint256[] memory nodeStack,
         uint256 nodeStackLen,
         uint256 nNodes
-    ) internal pure returns (uint256) {
+    ) private pure returns (uint256) {
         require(nNodes <= nodeStackLen, "Invalid value of n_nodes in tree structure.");
         // The end of the node is the end of the last child.
         uint256 newNodeEnd = nodeStack[

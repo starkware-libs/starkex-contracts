@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0.
-pragma solidity ^0.6.11;
+pragma solidity ^0.6.12;
 
 import "./PrimeFieldElement0.sol";
 
@@ -21,6 +21,7 @@ contract HornerEvaluator is PrimeFieldElement0 {
         uint256 prime = PrimeFieldElement0.K_MODULUS;
 
         require(nCoefs % 8 == 0, "Number of polynomial coefficients must be divisible by 8");
+        // Ensure 'nCoefs' is bounded as a sanity check (the bound is somewhat arbitrary).
         require(nCoefs < 4096, "No more than 4096 coefficients are supported");
 
         assembly {

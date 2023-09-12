@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0.
-pragma solidity ^0.6.11;
+pragma solidity ^0.6.12;
 
 import "../components/PerpetualEscapes.sol";
 import "../components/UpdatePerpetualState.sol";
@@ -7,9 +7,8 @@ import "../components/Configuration.sol";
 import "../interactions/ForcedTradeActionState.sol";
 import "../interactions/ForcedWithdrawalActionState.sol";
 import "../../components/Freezable.sol";
-import "../../components/KeyGetters.sol";
 import "../../components/MainGovernance.sol";
-import "../../components/Operator.sol";
+import "../../components/StarkExOperator.sol";
 import "../../interactions/AcceptModifications.sol";
 import "../../interactions/StateRoot.sol";
 import "../../interactions/TokenQuantization.sol";
@@ -19,7 +18,7 @@ contract PerpetualState is
     MainGovernance,
     SubContractor,
     Configuration,
-    Operator,
+    StarkExOperator,
     Freezable,
     AcceptModifications,
     TokenQuantization,
@@ -27,8 +26,7 @@ contract PerpetualState is
     ForcedWithdrawalActionState,
     StateRoot,
     PerpetualEscapes,
-    UpdatePerpetualState,
-    KeyGetters
+    UpdatePerpetualState
 {
     // Empty state is 8 words (256 bytes) To pass as uint[] we need also head & len fields (64).
     uint256 constant INITIALIZER_SIZE = 384; // Padded address(32), uint(32), Empty state(256+64).
@@ -54,13 +52,16 @@ contract PerpetualState is
 
         initGovernance();
         Configuration.initialize(PERPETUAL_CONFIGURATION_DELAY);
-        Operator.initialize();
+        StarkExOperator.initialize();
+        //  Validium tree is not utilized in Perpetual. Initializing its root and height to -1.
         StateRoot.initialize(
             initialSequenceNumber,
-            initialState[0],
-            initialState[2],
-            initialState[1],
-            initialState[3]
+            uint256(-1), // validiumVaultRoot.
+            initialState[0], // rollupVaultRoot.
+            initialState[2], // orderRoot.
+            uint256(-1), // validiumTreeHeight.
+            initialState[1], // rollupTreeHeight.
+            initialState[3] // orderTreeHeight.
         );
         sharedStateHash = keccak256(abi.encodePacked(initialState));
         PerpetualEscapes.initialize(escapeVerifierAddress_);
@@ -74,7 +75,16 @@ contract PerpetualState is
         return INITIALIZER_SIZE;
     }
 
+    function validatedSelectors() external pure override returns (bytes4[] memory selectors) {
+        uint256 len_ = 1;
+        uint256 index_ = 0;
+
+        selectors = new bytes4[](len_);
+        selectors[index_++] = PerpetualEscapes.escape.selector;
+        require(index_ == len_, "INCORRECT_SELECTORS_ARRAY_LENGTH");
+    }
+
     function identify() external pure override returns (string memory) {
-        return "StarkWare_PerpetualState_2020_1";
+        return "StarkWare_PerpetualState_2022_2";
     }
 }

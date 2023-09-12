@@ -1,1 +1,1 @@
-../CpuVerifier.sol.ref
+../CpuVerifier.sol

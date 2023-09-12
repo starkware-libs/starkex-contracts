@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0.
-pragma solidity ^0.6.11;
+pragma solidity ^0.6.12;
 
 abstract contract MTokenQuantization {
     function fromQuantized(uint256 presumedAssetType, uint256 quantizedAmount)

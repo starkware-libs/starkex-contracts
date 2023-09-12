@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0.
-pragma solidity ^0.6.11;
+pragma solidity ^0.6.12;
 
 import "../libraries/LibConstants.sol";
 import "../interfaces/MAcceptModifications.sol";
@@ -71,6 +71,17 @@ abstract contract Deposits is
         uint256 assetId
     );
 
+    event LogDepositWithTokenId(
+        address depositorEthKey,
+        uint256 starkKey,
+        uint256 vaultId,
+        uint256 assetType,
+        uint256 tokenId,
+        uint256 assetId,
+        uint256 nonQuantizedAmount,
+        uint256 quantizedAmount
+    );
+
     event LogDepositCancel(uint256 starkKey, uint256 vaultId, uint256 assetId);
 
     event LogDepositCancelReclaimed(
@@ -89,21 +100,31 @@ abstract contract Deposits is
         uint256 assetId
     );
 
+    event LogDepositWithTokenIdCancelReclaimed(
+        uint256 starkKey,
+        uint256 vaultId,
+        uint256 assetType,
+        uint256 tokenId,
+        uint256 assetId,
+        uint256 nonQuantizedAmount,
+        uint256 quantizedAmount
+    );
+
     function getDepositBalance(
         uint256 starkKey,
         uint256 assetId,
         uint256 vaultId
-    ) external view returns (uint256 balance) {
+    ) external view returns (uint256) {
         uint256 presumedAssetType = assetId;
-        balance = fromQuantized(presumedAssetType, pendingDeposits[starkKey][assetId][vaultId]);
+        return fromQuantized(presumedAssetType, pendingDeposits[starkKey][assetId][vaultId]);
     }
 
     function getQuantizedDepositBalance(
         uint256 starkKey,
         uint256 assetId,
         uint256 vaultId
-    ) external view returns (uint256 balance) {
-        balance = pendingDeposits[starkKey][assetId][vaultId];
+    ) external view returns (uint256) {
+        return pendingDeposits[starkKey][assetId][vaultId];
     }
 
     function depositNft(
@@ -112,16 +133,32 @@ abstract contract Deposits is
         uint256 vaultId,
         uint256 tokenId
     ) external notFrozen {
-        // The vaultId is not validated but should be in the allowed range supported by the
-        // exchange. If not, it will be ignored by the exchange and the starkKey owner may reclaim
-        // the funds by using depositCancel + depositReclaim.
+        require(isERC721(assetType), "NOT_ERC721_TOKEN");
+        depositWithTokenId(starkKey, assetType, tokenId, vaultId, 1);
+    }
 
-        require(!isMintableAssetType(assetType), "MINTABLE_ASSET_TYPE");
-        require(!isFungibleAssetType(assetType), "FUNGIBLE_ASSET_TYPE");
-        uint256 assetId = calculateNftAssetId(assetType, tokenId);
+    function depositERC1155(
+        uint256 starkKey,
+        uint256 assetType,
+        uint256 tokenId,
+        uint256 vaultId,
+        uint256 quantizedAmount
+    ) external notFrozen {
+        require(isERC1155(assetType), "NOT_ERC1155_TOKEN");
+        depositWithTokenId(starkKey, assetType, tokenId, vaultId, quantizedAmount);
+    }
 
-        // Update the balance.
-        pendingDeposits[starkKey][assetId][vaultId] = 1;
+    function depositStateUpdate(
+        uint256 starkKey,
+        uint256 assetId,
+        uint256 vaultId,
+        uint256 quantizedAmount
+    ) private returns (uint256) {
+        // Checks for overflow and updates the pendingDeposits balance.
+        uint256 vaultBalance = pendingDeposits[starkKey][assetId][vaultId];
+        vaultBalance += quantizedAmount;
+        require(vaultBalance >= quantizedAmount, "DEPOSIT_OVERFLOW");
+        pendingDeposits[starkKey][assetId][vaultId] = vaultBalance;
 
         // Disable the cancellationRequest timeout when users deposit into their own account.
         if (
@@ -130,11 +167,45 @@ abstract contract Deposits is
             delete cancellationRequests[starkKey][assetId][vaultId];
         }
 
-        // Transfer the tokens to the Deposit contract.
-        transferInNft(assetType, tokenId);
+        // Returns the updated vault balance.
+        return vaultBalance;
+    }
 
+    function depositWithTokenId(
+        uint256 starkKey,
+        uint256 assetType,
+        uint256 tokenId,
+        uint256 vaultId,
+        uint256 quantizedAmount
+    ) public notFrozen {
+        // The vaultId is not validated but should be in the allowed range supported by the
+        // exchange. If not, it will be ignored by the exchange and the starkKey owner may reclaim
+        // the funds by using depositCancel + depositReclaim.
+        require(isAssetTypeWithTokenId(assetType), "INVALID_ASSET_TYPE");
+
+        uint256 assetId = calculateAssetIdWithTokenId(assetType, tokenId);
+
+        // Updates the pendingDeposits balance and clears cancellationRequests when applicable.
+        uint256 newVaultBalance = depositStateUpdate(starkKey, assetId, vaultId, quantizedAmount);
+
+        // No need to verify amount > 0, a deposit with amount = 0 can be used to undo cancellation.
+        if (isERC721(assetType)) {
+            require(newVaultBalance <= 1, "ILLEGAL_ERC721_AMOUNT");
+            emit LogNftDeposit(msg.sender, starkKey, vaultId, assetType, tokenId, assetId);
+        }
+        // Transfer the tokens to the Deposit contract.
+        transferInWithTokenId(assetType, tokenId, quantizedAmount);
         // Log event.
-        emit LogNftDeposit(msg.sender, starkKey, vaultId, assetType, tokenId, assetId);
+        emit LogDepositWithTokenId(
+            msg.sender,
+            starkKey,
+            vaultId,
+            assetType,
+            tokenId,
+            assetId,
+            fromQuantized(assetType, quantizedAmount),
+            quantizedAmount
+        );
     }
 
     function getCancellationRequest(
@@ -177,18 +248,11 @@ abstract contract Deposits is
         // No need to verify amount > 0, a deposit with amount = 0 can be used to undo cancellation.
         require(!isMintableAssetType(assetType), "MINTABLE_ASSET_TYPE");
         require(isFungibleAssetType(assetType), "NON_FUNGIBLE_ASSET_TYPE");
+
         uint256 assetId = assetType;
 
-        // Update the balance.
-        pendingDeposits[starkKey][assetId][vaultId] += quantizedAmount;
-        require(pendingDeposits[starkKey][assetId][vaultId] >= quantizedAmount, "DEPOSIT_OVERFLOW");
-
-        // Disable the cancellationRequest timeout when users deposit into their own account.
-        if (
-            isMsgSenderKeyOwner(starkKey) && cancellationRequests[starkKey][assetId][vaultId] != 0
-        ) {
-            delete cancellationRequests[starkKey][assetId][vaultId];
-        }
+        // Updates the pendingDeposits balance and clears cancellationRequests when applicable.
+        depositStateUpdate(starkKey, assetId, vaultId, quantizedAmount);
 
         // Transfer the tokens to the Deposit contract.
         transferIn(assetType, quantizedAmount);
@@ -230,17 +294,11 @@ abstract contract Deposits is
         emit LogDepositCancel(starkKey, vaultId, assetId);
     }
 
-    function depositReclaim(
+    function clearCancelledDeposit(
         uint256 starkKey,
         uint256 assetId,
         uint256 vaultId
-    )
-        external
-        onlyKeyOwner(starkKey)
-    // No notFrozen modifier: This function can always be used, even when frozen.
-    {
-        uint256 assetType = assetId;
-
+    ) private returns (uint256) {
         // Make sure enough time has passed.
         uint256 requestTime = cancellationRequests[starkKey][assetId][vaultId];
         require(requestTime != 0, "DEPOSIT_NOT_CANCELED");
@@ -253,6 +311,25 @@ abstract contract Deposits is
         delete pendingDeposits[starkKey][assetId][vaultId];
         delete cancellationRequests[starkKey][assetId][vaultId];
 
+        // Return the cleared amount so it can be transferred back to the reclaimer.
+        return quantizedAmount;
+    }
+
+    function depositReclaim(
+        uint256 starkKey,
+        uint256 assetType,
+        uint256 vaultId
+    )
+        external
+        onlyKeyOwner(starkKey)
+    // No notFrozen modifier: This function can always be used, even when frozen.
+    {
+        require(isFungibleAssetType(assetType), "NON_FUNGIBLE_ASSET_TYPE");
+
+        // Clear deposit and attain the cleared amount to be transferred out.
+        uint256 assetId = assetType;
+        uint256 quantizedAmount = clearCancelledDeposit(starkKey, assetId, vaultId);
+
         // Refund deposit.
         transferOut(msg.sender, assetType, quantizedAmount);
 
@@ -261,6 +338,42 @@ abstract contract Deposits is
             starkKey,
             vaultId,
             assetType,
+            fromQuantized(assetType, quantizedAmount),
+            quantizedAmount
+        );
+    }
+
+    function depositWithTokenIdReclaim(
+        uint256 starkKey,
+        uint256 assetType,
+        uint256 tokenId,
+        uint256 vaultId
+    )
+        public
+        onlyKeyOwner(starkKey)
+    // No notFrozen modifier: This function can always be used, even when frozen.
+    {
+        require(isAssetTypeWithTokenId(assetType), "INVALID_ASSET_TYPE");
+
+        // Clear deposit and attain the cleared amount to be transferred out.
+        uint256 assetId = calculateAssetIdWithTokenId(assetType, tokenId);
+        uint256 quantizedAmount = clearCancelledDeposit(starkKey, assetId, vaultId);
+
+        if (quantizedAmount > 0) {
+            // Refund deposit.
+            transferOutWithTokenId(msg.sender, assetType, tokenId, quantizedAmount);
+        }
+
+        // Log event.
+        if (isERC721(assetType)) {
+            emit LogDepositNftCancelReclaimed(starkKey, vaultId, assetType, tokenId, assetId);
+        }
+        emit LogDepositWithTokenIdCancelReclaimed(
+            starkKey,
+            vaultId,
+            assetType,
+            tokenId,
+            assetId,
             fromQuantized(assetType, quantizedAmount),
             quantizedAmount
         );
@@ -276,28 +389,6 @@ abstract contract Deposits is
         onlyKeyOwner(starkKey)
     // No notFrozen modifier: This function can always be used, even when frozen.
     {
-        // assetId is the id for the deposits/withdrawals.
-        // equivalent for the usage of assetType for ERC20.
-        uint256 assetId = calculateNftAssetId(assetType, tokenId);
-
-        // Make sure enough time has passed.
-        uint256 requestTime = cancellationRequests[starkKey][assetId][vaultId];
-        require(requestTime != 0, "DEPOSIT_NOT_CANCELED");
-        uint256 freeTime = requestTime + DEPOSIT_CANCEL_DELAY;
-        assert(freeTime >= DEPOSIT_CANCEL_DELAY);
-        require(block.timestamp >= freeTime, "DEPOSIT_LOCKED");
-
-        // Clear deposit.
-        uint256 amount = pendingDeposits[starkKey][assetId][vaultId];
-        delete pendingDeposits[starkKey][assetId][vaultId];
-        delete cancellationRequests[starkKey][assetId][vaultId];
-
-        if (amount > 0) {
-            // Refund deposit.
-            transferOutNft(msg.sender, assetType, tokenId);
-
-            // Log event.
-            emit LogDepositNftCancelReclaimed(starkKey, vaultId, assetType, tokenId, assetId);
-        }
+        depositWithTokenIdReclaim(starkKey, assetType, tokenId, vaultId);
     }
 }

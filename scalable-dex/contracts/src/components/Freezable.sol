@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0.
-pragma solidity ^0.6.11;
+pragma solidity ^0.6.12;
 
 import "../libraries/LibConstants.sol";
 import "../interfaces/MFreezable.sol";
@@ -47,7 +47,8 @@ abstract contract Freezable is MainStorage, LibConstants, MGovernance, MFreezabl
         stateFrozen = false;
 
         // Increment roots to invalidate them, w/o losing information.
-        vaultRoot += 1;
+        validiumVaultRoot += 1;
+        rollupVaultRoot += 1;
         orderRoot += 1;
 
         // Log event.

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0.
-pragma solidity ^0.6.11;
+pragma solidity ^0.6.12;
 
 import "./PageInfo.sol";
 
@@ -20,7 +20,6 @@ contract CpuPublicInputOffsetsBase is PageInfo {
     uint256 internal constant OFFSET_RANGE_CHECK_BEGIN_ADDR = 12;
     uint256 internal constant OFFSET_RANGE_CHECK_STOP_PTR = 13;
 
-    uint256 internal constant N_WORDS_PER_PUBLIC_MEMORY_ENTRY = 2;
     // The program segment starts from 1, so that memory address 0 is kept for the null pointer.
     uint256 internal constant INITIAL_PC = 1;
     // The first Cairo instructions are:

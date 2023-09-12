@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0.
-pragma solidity ^0.6.11;
+pragma solidity ^0.6.12;
 
 abstract contract CairoVerifierContract {
     function verifyProofExternal(
@@ -25,4 +25,5 @@ abstract contract CairoVerifierContract {
     uint256 internal constant RANGE_CHECK_BUILTIN_BIT = 2;
     uint256 internal constant ECDSA_BUILTIN_BIT = 3;
     uint256 internal constant BITWISE_BUILTIN_BIT = 4;
+    uint256 internal constant EC_OP_BUILTIN_BIT = 5;
 }

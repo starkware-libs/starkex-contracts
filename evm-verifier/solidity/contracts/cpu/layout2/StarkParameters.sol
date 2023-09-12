@@ -1,6 +1,6 @@
 // ---------- The following code was auto-generated. PLEASE DO NOT EDIT. ----------
 // SPDX-License-Identifier: Apache-2.0.
-pragma solidity ^0.6.11;
+pragma solidity ^0.6.12;
 
 import "../../PrimeFieldElement0.sol";
 
@@ -15,7 +15,6 @@ contract StarkParameters is PrimeFieldElement0 {
     uint256 constant internal CONSTRAINTS_DEGREE_BOUND = 2;
     uint256 constant internal N_OODS_VALUES = MASK_SIZE + CONSTRAINTS_DEGREE_BOUND;
     uint256 constant internal N_OODS_COEFFICIENTS = N_OODS_VALUES;
-    uint256 constant internal MAX_FRI_STEP = 3;
 
     // ---------- // Air specific constants. ----------
     uint256 constant internal PUBLIC_MEMORY_STEP = 8;

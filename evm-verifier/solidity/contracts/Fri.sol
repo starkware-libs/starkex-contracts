@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0.
-pragma solidity ^0.6.11;
+pragma solidity ^0.6.12;
 
 import "./MemoryMap.sol";
 import "./MemoryAccessUtils.sol";
@@ -11,19 +11,19 @@ import "../../HornerEvaluator.sol";
   by evaluating the fully committed polynomial, and requires specific handling.
 */
 contract Fri is MemoryMap, MemoryAccessUtils, HornerEvaluator, FriLayer {
-    function verifyLastLayer(uint256[] memory ctx, uint256 nPoints) internal view {
+    function verifyLastLayer(uint256[] memory ctx, uint256 nPoints) private view {
         uint256 friLastLayerDegBound = ctx[MM_FRI_LAST_LAYER_DEG_BOUND];
         uint256 groupOrderMinusOne = friLastLayerDegBound * ctx[MM_BLOW_UP_FACTOR] - 1;
         uint256 coefsStart = ctx[MM_FRI_LAST_LAYER_PTR];
 
         for (uint256 i = 0; i < nPoints; i++) {
-            uint256 point = ctx[MM_FRI_QUEUE + 3 * i + 2];
+            uint256 point = ctx[MM_FRI_QUEUE + FRI_QUEUE_SLOT_SIZE * i + 2];
             // Invert point using inverse(point) == fpow(point, ord(point) - 1).
 
             point = fpow(point, groupOrderMinusOne);
             require(
                 hornerEval(coefsStart, point, friLastLayerDegBound) ==
-                    ctx[MM_FRI_QUEUE + 3 * i + 1],
+                    ctx[MM_FRI_QUEUE + FRI_QUEUE_SLOT_SIZE * i + 1],
                 "Bad Last layer value."
             );
         }
@@ -32,19 +32,13 @@ contract Fri is MemoryMap, MemoryAccessUtils, HornerEvaluator, FriLayer {
     /*
       Verifies FRI layers.
 
-      Upon entry and every time we pass through the "if (index < layerSize)" condition,
-      ctx[mmFriQueue:] holds an array of triplets (query index, FRI value, FRI inversed point), i.e.
-          ctx[mmFriQueue::3] holds query indices.
-          ctx[mmFriQueue + 1::3] holds the input for the next layer.
-          ctx[mmFriQueue + 2::3] holds the inverses of the evaluation points:
-            ctx[mmFriQueue + 3*i + 2] = inverse(
-                fpow(layerGenerator,  bitReverse(ctx[mmFriQueue + 3*i], logLayerSize)).
+      See FriLayer for the descriptions of the FRI context and FRI queue.
     */
     function friVerifyLayers(uint256[] memory ctx) internal view virtual {
         uint256 friCtx = getPtr(ctx, MM_FRI_CTX);
         require(
-            MAX_SUPPORTED_MAX_FRI_STEP == FRI_MAX_FRI_STEP,
-            "Incosistent MAX_FRI_STEP between MemoryMap.sol and FriLayer.sol"
+            MAX_SUPPORTED_FRI_STEP_SIZE == FRI_MAX_STEP_SIZE,
+            "MAX_STEP_SIZE is inconsistent in MemoryMap.sol and FriLayer.sol"
         );
         initFriGroups(friCtx);
         // emit LogGas("FRI offset precomputation", gasleft());
@@ -64,24 +58,27 @@ contract Fri is MemoryMap, MemoryAccessUtils, HornerEvaluator, FriLayer {
         // The values in the proof are already multiplied by MontgomeryR,
         // but the inputs from the OODS oracle need to be fixed.
         for (uint256 i = 0; i < nLiveQueries; i++) {
-            ctx[MM_FRI_QUEUE + 3 * i + 1] = fmul(ctx[MM_FRI_QUEUE + 3 * i + 1], K_MONTGOMERY_R);
+            ctx[MM_FRI_QUEUE + FRI_QUEUE_SLOT_SIZE * i + 1] = fmul(
+                ctx[MM_FRI_QUEUE + FRI_QUEUE_SLOT_SIZE * i + 1],
+                K_MONTGOMERY_R
+            );
         }
 
         uint256 friQueue = getPtr(ctx, MM_FRI_QUEUE);
 
-        uint256[] memory friSteps = getFriSteps(ctx);
-        uint256 nFriSteps = friSteps.length;
+        uint256[] memory friStepSizes = getFriStepSizes(ctx);
+        uint256 nFriSteps = friStepSizes.length;
         while (friStep < nFriSteps) {
-            uint256 friCosetSize = 2**friSteps[friStep];
+            uint256 friCosetSize = 2**friStepSizes[friStep];
 
             nLiveQueries = computeNextLayer(
                 channelPtr,
                 friQueue,
                 merkleQueuePtr,
                 nLiveQueries,
+                friCtx,
                 ctx[MM_FRI_EVAL_POINTS + friStep],
-                friCosetSize,
-                friCtx
+                friCosetSize
             );
 
             // emit LogGas(

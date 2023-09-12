@@ -1,6 +1,6 @@
 // ---------- The following code was auto-generated. PLEASE DO NOT EDIT. ----------
 // SPDX-License-Identifier: Apache-2.0.
-pragma solidity ^0.6.11;
+pragma solidity ^0.6.12;
 
 import "./MemoryMap.sol";
 import "./StarkParameters.sol";
@@ -11,7 +11,6 @@ contract CpuOods is MemoryMap, StarkParameters {
     //  The denominator for the constraint polynomial (x-z^constraintDegree)
     //  [(x-(g^rowNumber)z) for rowNumber in mask].
     uint256 constant internal BATCH_INVERSE_CHUNK = (2 + N_ROWS_IN_MASK);
-    uint256 constant internal BATCH_INVERSE_SIZE = MAX_N_QUERIES * BATCH_INVERSE_CHUNK;
 
     /*
       Builds and sums boundary constraints that check that the prover provided the proper evaluations
@@ -44,18 +43,17 @@ contract CpuOods is MemoryMap, StarkParameters {
             mstore(0x40, add(ctx, ctxSize))
             calldatacopy(ctx, 0, ctxSize)
         }
-        uint256[] memory batchInverseArray = new uint256[](2 * BATCH_INVERSE_SIZE);
-
+        uint256 n_queries = ctx[MM_N_UNIQUE_QUERIES];
+        uint256[] memory batchInverseArray = new uint256[](2 * n_queries * BATCH_INVERSE_CHUNK);
         oodsPrepareInverses(ctx, batchInverseArray);
 
-        uint256 kMontgomeryRInv_ = PrimeFieldElement0.K_MONTGOMERY_R_INV;
+        uint256 kMontgomeryRInv = PrimeFieldElement0.K_MONTGOMERY_R_INV;
 
         assembly {
             let PRIME := 0x800000000000011000000000000000000000000000000000000000000000001
-            let kMontgomeryRInv := kMontgomeryRInv_
             let context := ctx
             let friQueue := /*friQueue*/ add(context, 0xdc0)
-            let friQueueEnd := add(friQueue,  mul(/*n_unique_queries*/ mload(add(context, 0x140)), 0x60))
+            let friQueueEnd := add(friQueue,  mul(n_queries, 0x60))
             let traceQueryResponses := /*traceQueryQesponses*/ add(context, 0x7ae0)
 
             let compositionQueryResponses := /*composition_query_responses*/ add(context, 0x110e0)
@@ -143,7 +141,7 @@ contract CpuOods is MemoryMap, StarkParameters {
                 // res += c_7*(f_0(x) - f_0(g^60 * z)) / (x - g^60 * z).
                 res := add(
                     res,
-                    mulmod(mulmod(/*(x - g^60 * z)^(-1)*/ mload(add(denominatorsPtr, 0x3c0)),
+                    mulmod(mulmod(/*(x - g^60 * z)^(-1)*/ mload(add(denominatorsPtr, 0x3e0)),
                                   /*oods_coefficients[7]*/ mload(add(context, 0x6260)),
                                   PRIME),
                            add(columnValue, sub(PRIME, /*oods_values[7]*/ mload(add(context, 0x4300)))),
@@ -468,13 +466,76 @@ contract CpuOods is MemoryMap, StarkParameters {
                            add(columnValue, sub(PRIME, /*oods_values[39]*/ mload(add(context, 0x4700)))),
                            PRIME))
 
-                // res += c_40*(f_5(x) - f_5(g^255 * z)) / (x - g^255 * z).
+                // res += c_40*(f_5(x) - f_5(g * z)) / (x - g * z).
                 res := add(
                     res,
-                    mulmod(mulmod(/*(x - g^255 * z)^(-1)*/ mload(add(denominatorsPtr, 0x6c0)),
+                    mulmod(mulmod(/*(x - g * z)^(-1)*/ mload(add(denominatorsPtr, 0x20)),
                                   /*oods_coefficients[40]*/ mload(add(context, 0x6680)),
                                   PRIME),
                            add(columnValue, sub(PRIME, /*oods_values[40]*/ mload(add(context, 0x4720)))),
+                           PRIME))
+
+                // res += c_41*(f_5(x) - f_5(g^192 * z)) / (x - g^192 * z).
+                res := add(
+                    res,
+                    mulmod(mulmod(/*(x - g^192 * z)^(-1)*/ mload(add(denominatorsPtr, 0x5a0)),
+                                  /*oods_coefficients[41]*/ mload(add(context, 0x66a0)),
+                                  PRIME),
+                           add(columnValue, sub(PRIME, /*oods_values[41]*/ mload(add(context, 0x4740)))),
+                           PRIME))
+
+                // res += c_42*(f_5(x) - f_5(g^193 * z)) / (x - g^193 * z).
+                res := add(
+                    res,
+                    mulmod(mulmod(/*(x - g^193 * z)^(-1)*/ mload(add(denominatorsPtr, 0x5c0)),
+                                  /*oods_coefficients[42]*/ mload(add(context, 0x66c0)),
+                                  PRIME),
+                           add(columnValue, sub(PRIME, /*oods_values[42]*/ mload(add(context, 0x4760)))),
+                           PRIME))
+
+                // res += c_43*(f_5(x) - f_5(g^196 * z)) / (x - g^196 * z).
+                res := add(
+                    res,
+                    mulmod(mulmod(/*(x - g^196 * z)^(-1)*/ mload(add(denominatorsPtr, 0x5e0)),
+                                  /*oods_coefficients[43]*/ mload(add(context, 0x66e0)),
+                                  PRIME),
+                           add(columnValue, sub(PRIME, /*oods_values[43]*/ mload(add(context, 0x4780)))),
+                           PRIME))
+
+                // res += c_44*(f_5(x) - f_5(g^197 * z)) / (x - g^197 * z).
+                res := add(
+                    res,
+                    mulmod(mulmod(/*(x - g^197 * z)^(-1)*/ mload(add(denominatorsPtr, 0x600)),
+                                  /*oods_coefficients[44]*/ mload(add(context, 0x6700)),
+                                  PRIME),
+                           add(columnValue, sub(PRIME, /*oods_values[44]*/ mload(add(context, 0x47a0)))),
+                           PRIME))
+
+                // res += c_45*(f_5(x) - f_5(g^251 * z)) / (x - g^251 * z).
+                res := add(
+                    res,
+                    mulmod(mulmod(/*(x - g^251 * z)^(-1)*/ mload(add(denominatorsPtr, 0x680)),
+                                  /*oods_coefficients[45]*/ mload(add(context, 0x6720)),
+                                  PRIME),
+                           add(columnValue, sub(PRIME, /*oods_values[45]*/ mload(add(context, 0x47c0)))),
+                           PRIME))
+
+                // res += c_46*(f_5(x) - f_5(g^252 * z)) / (x - g^252 * z).
+                res := add(
+                    res,
+                    mulmod(mulmod(/*(x - g^252 * z)^(-1)*/ mload(add(denominatorsPtr, 0x6a0)),
+                                  /*oods_coefficients[46]*/ mload(add(context, 0x6740)),
+                                  PRIME),
+                           add(columnValue, sub(PRIME, /*oods_values[46]*/ mload(add(context, 0x47e0)))),
+                           PRIME))
+
+                // res += c_47*(f_5(x) - f_5(g^256 * z)) / (x - g^256 * z).
+                res := add(
+                    res,
+                    mulmod(mulmod(/*(x - g^256 * z)^(-1)*/ mload(add(denominatorsPtr, 0x6e0)),
+                                  /*oods_coefficients[47]*/ mload(add(context, 0x6760)),
+                                  PRIME),
+                           add(columnValue, sub(PRIME, /*oods_values[47]*/ mload(add(context, 0x4800)))),
                            PRIME))
                 }
 
@@ -483,85 +544,49 @@ contract CpuOods is MemoryMap, StarkParameters {
                 // Read the next element.
                 let columnValue := mulmod(mload(add(traceQueryResponses, 0xc0)), kMontgomeryRInv, PRIME)
 
-                // res += c_41*(f_6(x) - f_6(z)) / (x - z).
+                // res += c_48*(f_6(x) - f_6(z)) / (x - z).
                 res := add(
                     res,
                     mulmod(mulmod(/*(x - z)^(-1)*/ mload(denominatorsPtr),
-                                  /*oods_coefficients[41]*/ mload(add(context, 0x66a0)),
-                                  PRIME),
-                           add(columnValue, sub(PRIME, /*oods_values[41]*/ mload(add(context, 0x4740)))),
-                           PRIME))
-
-                // res += c_42*(f_6(x) - f_6(g * z)) / (x - g * z).
-                res := add(
-                    res,
-                    mulmod(mulmod(/*(x - g * z)^(-1)*/ mload(add(denominatorsPtr, 0x20)),
-                                  /*oods_coefficients[42]*/ mload(add(context, 0x66c0)),
-                                  PRIME),
-                           add(columnValue, sub(PRIME, /*oods_values[42]*/ mload(add(context, 0x4760)))),
-                           PRIME))
-
-                // res += c_43*(f_6(x) - f_6(g^192 * z)) / (x - g^192 * z).
-                res := add(
-                    res,
-                    mulmod(mulmod(/*(x - g^192 * z)^(-1)*/ mload(add(denominatorsPtr, 0x5a0)),
-                                  /*oods_coefficients[43]*/ mload(add(context, 0x66e0)),
-                                  PRIME),
-                           add(columnValue, sub(PRIME, /*oods_values[43]*/ mload(add(context, 0x4780)))),
-                           PRIME))
-
-                // res += c_44*(f_6(x) - f_6(g^193 * z)) / (x - g^193 * z).
-                res := add(
-                    res,
-                    mulmod(mulmod(/*(x - g^193 * z)^(-1)*/ mload(add(denominatorsPtr, 0x5c0)),
-                                  /*oods_coefficients[44]*/ mload(add(context, 0x6700)),
-                                  PRIME),
-                           add(columnValue, sub(PRIME, /*oods_values[44]*/ mload(add(context, 0x47a0)))),
-                           PRIME))
-
-                // res += c_45*(f_6(x) - f_6(g^196 * z)) / (x - g^196 * z).
-                res := add(
-                    res,
-                    mulmod(mulmod(/*(x - g^196 * z)^(-1)*/ mload(add(denominatorsPtr, 0x5e0)),
-                                  /*oods_coefficients[45]*/ mload(add(context, 0x6720)),
-                                  PRIME),
-                           add(columnValue, sub(PRIME, /*oods_values[45]*/ mload(add(context, 0x47c0)))),
-                           PRIME))
-
-                // res += c_46*(f_6(x) - f_6(g^197 * z)) / (x - g^197 * z).
-                res := add(
-                    res,
-                    mulmod(mulmod(/*(x - g^197 * z)^(-1)*/ mload(add(denominatorsPtr, 0x600)),
-                                  /*oods_coefficients[46]*/ mload(add(context, 0x6740)),
-                                  PRIME),
-                           add(columnValue, sub(PRIME, /*oods_values[46]*/ mload(add(context, 0x47e0)))),
-                           PRIME))
-
-                // res += c_47*(f_6(x) - f_6(g^251 * z)) / (x - g^251 * z).
-                res := add(
-                    res,
-                    mulmod(mulmod(/*(x - g^251 * z)^(-1)*/ mload(add(denominatorsPtr, 0x680)),
-                                  /*oods_coefficients[47]*/ mload(add(context, 0x6760)),
-                                  PRIME),
-                           add(columnValue, sub(PRIME, /*oods_values[47]*/ mload(add(context, 0x4800)))),
-                           PRIME))
-
-                // res += c_48*(f_6(x) - f_6(g^252 * z)) / (x - g^252 * z).
-                res := add(
-                    res,
-                    mulmod(mulmod(/*(x - g^252 * z)^(-1)*/ mload(add(denominatorsPtr, 0x6a0)),
                                   /*oods_coefficients[48]*/ mload(add(context, 0x6780)),
                                   PRIME),
                            add(columnValue, sub(PRIME, /*oods_values[48]*/ mload(add(context, 0x4820)))),
                            PRIME))
 
-                // res += c_49*(f_6(x) - f_6(g^256 * z)) / (x - g^256 * z).
+                // res += c_49*(f_6(x) - f_6(g * z)) / (x - g * z).
                 res := add(
                     res,
-                    mulmod(mulmod(/*(x - g^256 * z)^(-1)*/ mload(add(denominatorsPtr, 0x6e0)),
+                    mulmod(mulmod(/*(x - g * z)^(-1)*/ mload(add(denominatorsPtr, 0x20)),
                                   /*oods_coefficients[49]*/ mload(add(context, 0x67a0)),
                                   PRIME),
                            add(columnValue, sub(PRIME, /*oods_values[49]*/ mload(add(context, 0x4840)))),
+                           PRIME))
+
+                // res += c_50*(f_6(x) - f_6(g^255 * z)) / (x - g^255 * z).
+                res := add(
+                    res,
+                    mulmod(mulmod(/*(x - g^255 * z)^(-1)*/ mload(add(denominatorsPtr, 0x6c0)),
+                                  /*oods_coefficients[50]*/ mload(add(context, 0x67c0)),
+                                  PRIME),
+                           add(columnValue, sub(PRIME, /*oods_values[50]*/ mload(add(context, 0x4860)))),
+                           PRIME))
+
+                // res += c_51*(f_6(x) - f_6(g^256 * z)) / (x - g^256 * z).
+                res := add(
+                    res,
+                    mulmod(mulmod(/*(x - g^256 * z)^(-1)*/ mload(add(denominatorsPtr, 0x6e0)),
+                                  /*oods_coefficients[51]*/ mload(add(context, 0x67e0)),
+                                  PRIME),
+                           add(columnValue, sub(PRIME, /*oods_values[51]*/ mload(add(context, 0x4880)))),
+                           PRIME))
+
+                // res += c_52*(f_6(x) - f_6(g^511 * z)) / (x - g^511 * z).
+                res := add(
+                    res,
+                    mulmod(mulmod(/*(x - g^511 * z)^(-1)*/ mload(add(denominatorsPtr, 0x7c0)),
+                                  /*oods_coefficients[52]*/ mload(add(context, 0x6800)),
+                                  PRIME),
+                           add(columnValue, sub(PRIME, /*oods_values[52]*/ mload(add(context, 0x48a0)))),
                            PRIME))
                 }
 
@@ -570,49 +595,40 @@ contract CpuOods is MemoryMap, StarkParameters {
                 // Read the next element.
                 let columnValue := mulmod(mload(add(traceQueryResponses, 0xe0)), kMontgomeryRInv, PRIME)
 
-                // res += c_50*(f_7(x) - f_7(z)) / (x - z).
+                // res += c_53*(f_7(x) - f_7(z)) / (x - z).
                 res := add(
                     res,
                     mulmod(mulmod(/*(x - z)^(-1)*/ mload(denominatorsPtr),
-                                  /*oods_coefficients[50]*/ mload(add(context, 0x67c0)),
-                                  PRIME),
-                           add(columnValue, sub(PRIME, /*oods_values[50]*/ mload(add(context, 0x4860)))),
-                           PRIME))
-
-                // res += c_51*(f_7(x) - f_7(g * z)) / (x - g * z).
-                res := add(
-                    res,
-                    mulmod(mulmod(/*(x - g * z)^(-1)*/ mload(add(denominatorsPtr, 0x20)),
-                                  /*oods_coefficients[51]*/ mload(add(context, 0x67e0)),
-                                  PRIME),
-                           add(columnValue, sub(PRIME, /*oods_values[51]*/ mload(add(context, 0x4880)))),
-                           PRIME))
-
-                // res += c_52*(f_7(x) - f_7(g^255 * z)) / (x - g^255 * z).
-                res := add(
-                    res,
-                    mulmod(mulmod(/*(x - g^255 * z)^(-1)*/ mload(add(denominatorsPtr, 0x6c0)),
-                                  /*oods_coefficients[52]*/ mload(add(context, 0x6800)),
-                                  PRIME),
-                           add(columnValue, sub(PRIME, /*oods_values[52]*/ mload(add(context, 0x48a0)))),
-                           PRIME))
-
-                // res += c_53*(f_7(x) - f_7(g^256 * z)) / (x - g^256 * z).
-                res := add(
-                    res,
-                    mulmod(mulmod(/*(x - g^256 * z)^(-1)*/ mload(add(denominatorsPtr, 0x6e0)),
                                   /*oods_coefficients[53]*/ mload(add(context, 0x6820)),
                                   PRIME),
                            add(columnValue, sub(PRIME, /*oods_values[53]*/ mload(add(context, 0x48c0)))),
                            PRIME))
 
-                // res += c_54*(f_7(x) - f_7(g^511 * z)) / (x - g^511 * z).
+                // res += c_54*(f_7(x) - f_7(g * z)) / (x - g * z).
                 res := add(
                     res,
-                    mulmod(mulmod(/*(x - g^511 * z)^(-1)*/ mload(add(denominatorsPtr, 0x7c0)),
+                    mulmod(mulmod(/*(x - g * z)^(-1)*/ mload(add(denominatorsPtr, 0x20)),
                                   /*oods_coefficients[54]*/ mload(add(context, 0x6840)),
                                   PRIME),
                            add(columnValue, sub(PRIME, /*oods_values[54]*/ mload(add(context, 0x48e0)))),
+                           PRIME))
+
+                // res += c_55*(f_7(x) - f_7(g^255 * z)) / (x - g^255 * z).
+                res := add(
+                    res,
+                    mulmod(mulmod(/*(x - g^255 * z)^(-1)*/ mload(add(denominatorsPtr, 0x6c0)),
+                                  /*oods_coefficients[55]*/ mload(add(context, 0x6860)),
+                                  PRIME),
+                           add(columnValue, sub(PRIME, /*oods_values[55]*/ mload(add(context, 0x4900)))),
+                           PRIME))
+
+                // res += c_56*(f_7(x) - f_7(g^256 * z)) / (x - g^256 * z).
+                res := add(
+                    res,
+                    mulmod(mulmod(/*(x - g^256 * z)^(-1)*/ mload(add(denominatorsPtr, 0x6e0)),
+                                  /*oods_coefficients[56]*/ mload(add(context, 0x6880)),
+                                  PRIME),
+                           add(columnValue, sub(PRIME, /*oods_values[56]*/ mload(add(context, 0x4920)))),
                            PRIME))
                 }
 
@@ -621,40 +637,86 @@ contract CpuOods is MemoryMap, StarkParameters {
                 // Read the next element.
                 let columnValue := mulmod(mload(add(traceQueryResponses, 0x100)), kMontgomeryRInv, PRIME)
 
-                // res += c_55*(f_8(x) - f_8(z)) / (x - z).
+                // res += c_57*(f_8(x) - f_8(z)) / (x - z).
                 res := add(
                     res,
                     mulmod(mulmod(/*(x - z)^(-1)*/ mload(denominatorsPtr),
-                                  /*oods_coefficients[55]*/ mload(add(context, 0x6860)),
-                                  PRIME),
-                           add(columnValue, sub(PRIME, /*oods_values[55]*/ mload(add(context, 0x4900)))),
-                           PRIME))
-
-                // res += c_56*(f_8(x) - f_8(g * z)) / (x - g * z).
-                res := add(
-                    res,
-                    mulmod(mulmod(/*(x - g * z)^(-1)*/ mload(add(denominatorsPtr, 0x20)),
-                                  /*oods_coefficients[56]*/ mload(add(context, 0x6880)),
-                                  PRIME),
-                           add(columnValue, sub(PRIME, /*oods_values[56]*/ mload(add(context, 0x4920)))),
-                           PRIME))
-
-                // res += c_57*(f_8(x) - f_8(g^255 * z)) / (x - g^255 * z).
-                res := add(
-                    res,
-                    mulmod(mulmod(/*(x - g^255 * z)^(-1)*/ mload(add(denominatorsPtr, 0x6c0)),
                                   /*oods_coefficients[57]*/ mload(add(context, 0x68a0)),
                                   PRIME),
                            add(columnValue, sub(PRIME, /*oods_values[57]*/ mload(add(context, 0x4940)))),
                            PRIME))
 
-                // res += c_58*(f_8(x) - f_8(g^256 * z)) / (x - g^256 * z).
+                // res += c_58*(f_8(x) - f_8(g * z)) / (x - g * z).
                 res := add(
                     res,
-                    mulmod(mulmod(/*(x - g^256 * z)^(-1)*/ mload(add(denominatorsPtr, 0x6e0)),
+                    mulmod(mulmod(/*(x - g * z)^(-1)*/ mload(add(denominatorsPtr, 0x20)),
                                   /*oods_coefficients[58]*/ mload(add(context, 0x68c0)),
                                   PRIME),
                            add(columnValue, sub(PRIME, /*oods_values[58]*/ mload(add(context, 0x4960)))),
+                           PRIME))
+
+                // res += c_59*(f_8(x) - f_8(g^192 * z)) / (x - g^192 * z).
+                res := add(
+                    res,
+                    mulmod(mulmod(/*(x - g^192 * z)^(-1)*/ mload(add(denominatorsPtr, 0x5a0)),
+                                  /*oods_coefficients[59]*/ mload(add(context, 0x68e0)),
+                                  PRIME),
+                           add(columnValue, sub(PRIME, /*oods_values[59]*/ mload(add(context, 0x4980)))),
+                           PRIME))
+
+                // res += c_60*(f_8(x) - f_8(g^193 * z)) / (x - g^193 * z).
+                res := add(
+                    res,
+                    mulmod(mulmod(/*(x - g^193 * z)^(-1)*/ mload(add(denominatorsPtr, 0x5c0)),
+                                  /*oods_coefficients[60]*/ mload(add(context, 0x6900)),
+                                  PRIME),
+                           add(columnValue, sub(PRIME, /*oods_values[60]*/ mload(add(context, 0x49a0)))),
+                           PRIME))
+
+                // res += c_61*(f_8(x) - f_8(g^196 * z)) / (x - g^196 * z).
+                res := addmod(
+                    res,
+                    mulmod(mulmod(/*(x - g^196 * z)^(-1)*/ mload(add(denominatorsPtr, 0x5e0)),
+                                  /*oods_coefficients[61]*/ mload(add(context, 0x6920)),
+                                  PRIME),
+                           add(columnValue, sub(PRIME, /*oods_values[61]*/ mload(add(context, 0x49c0)))),
+                           PRIME),
+                    PRIME)
+
+                // res += c_62*(f_8(x) - f_8(g^197 * z)) / (x - g^197 * z).
+                res := add(
+                    res,
+                    mulmod(mulmod(/*(x - g^197 * z)^(-1)*/ mload(add(denominatorsPtr, 0x600)),
+                                  /*oods_coefficients[62]*/ mload(add(context, 0x6940)),
+                                  PRIME),
+                           add(columnValue, sub(PRIME, /*oods_values[62]*/ mload(add(context, 0x49e0)))),
+                           PRIME))
+
+                // res += c_63*(f_8(x) - f_8(g^251 * z)) / (x - g^251 * z).
+                res := add(
+                    res,
+                    mulmod(mulmod(/*(x - g^251 * z)^(-1)*/ mload(add(denominatorsPtr, 0x680)),
+                                  /*oods_coefficients[63]*/ mload(add(context, 0x6960)),
+                                  PRIME),
+                           add(columnValue, sub(PRIME, /*oods_values[63]*/ mload(add(context, 0x4a00)))),
+                           PRIME))
+
+                // res += c_64*(f_8(x) - f_8(g^252 * z)) / (x - g^252 * z).
+                res := add(
+                    res,
+                    mulmod(mulmod(/*(x - g^252 * z)^(-1)*/ mload(add(denominatorsPtr, 0x6a0)),
+                                  /*oods_coefficients[64]*/ mload(add(context, 0x6980)),
+                                  PRIME),
+                           add(columnValue, sub(PRIME, /*oods_values[64]*/ mload(add(context, 0x4a20)))),
+                           PRIME))
+
+                // res += c_65*(f_8(x) - f_8(g^256 * z)) / (x - g^256 * z).
+                res := add(
+                    res,
+                    mulmod(mulmod(/*(x - g^256 * z)^(-1)*/ mload(add(denominatorsPtr, 0x6e0)),
+                                  /*oods_coefficients[65]*/ mload(add(context, 0x69a0)),
+                                  PRIME),
+                           add(columnValue, sub(PRIME, /*oods_values[65]*/ mload(add(context, 0x4a40)))),
                            PRIME))
                 }
 
@@ -663,22 +725,49 @@ contract CpuOods is MemoryMap, StarkParameters {
                 // Read the next element.
                 let columnValue := mulmod(mload(add(traceQueryResponses, 0x120)), kMontgomeryRInv, PRIME)
 
-                // res += c_59*(f_9(x) - f_9(z)) / (x - z).
+                // res += c_66*(f_9(x) - f_9(z)) / (x - z).
                 res := add(
                     res,
                     mulmod(mulmod(/*(x - z)^(-1)*/ mload(denominatorsPtr),
-                                  /*oods_coefficients[59]*/ mload(add(context, 0x68e0)),
+                                  /*oods_coefficients[66]*/ mload(add(context, 0x69c0)),
                                   PRIME),
-                           add(columnValue, sub(PRIME, /*oods_values[59]*/ mload(add(context, 0x4980)))),
+                           add(columnValue, sub(PRIME, /*oods_values[66]*/ mload(add(context, 0x4a60)))),
                            PRIME))
 
-                // res += c_60*(f_9(x) - f_9(g^255 * z)) / (x - g^255 * z).
+                // res += c_67*(f_9(x) - f_9(g * z)) / (x - g * z).
+                res := add(
+                    res,
+                    mulmod(mulmod(/*(x - g * z)^(-1)*/ mload(add(denominatorsPtr, 0x20)),
+                                  /*oods_coefficients[67]*/ mload(add(context, 0x69e0)),
+                                  PRIME),
+                           add(columnValue, sub(PRIME, /*oods_values[67]*/ mload(add(context, 0x4a80)))),
+                           PRIME))
+
+                // res += c_68*(f_9(x) - f_9(g^255 * z)) / (x - g^255 * z).
                 res := add(
                     res,
                     mulmod(mulmod(/*(x - g^255 * z)^(-1)*/ mload(add(denominatorsPtr, 0x6c0)),
-                                  /*oods_coefficients[60]*/ mload(add(context, 0x6900)),
+                                  /*oods_coefficients[68]*/ mload(add(context, 0x6a00)),
                                   PRIME),
-                           add(columnValue, sub(PRIME, /*oods_values[60]*/ mload(add(context, 0x49a0)))),
+                           add(columnValue, sub(PRIME, /*oods_values[68]*/ mload(add(context, 0x4aa0)))),
+                           PRIME))
+
+                // res += c_69*(f_9(x) - f_9(g^256 * z)) / (x - g^256 * z).
+                res := add(
+                    res,
+                    mulmod(mulmod(/*(x - g^256 * z)^(-1)*/ mload(add(denominatorsPtr, 0x6e0)),
+                                  /*oods_coefficients[69]*/ mload(add(context, 0x6a20)),
+                                  PRIME),
+                           add(columnValue, sub(PRIME, /*oods_values[69]*/ mload(add(context, 0x4ac0)))),
+                           PRIME))
+
+                // res += c_70*(f_9(x) - f_9(g^511 * z)) / (x - g^511 * z).
+                res := add(
+                    res,
+                    mulmod(mulmod(/*(x - g^511 * z)^(-1)*/ mload(add(denominatorsPtr, 0x7c0)),
+                                  /*oods_coefficients[70]*/ mload(add(context, 0x6a40)),
+                                  PRIME),
+                           add(columnValue, sub(PRIME, /*oods_values[70]*/ mload(add(context, 0x4ae0)))),
                            PRIME))
                 }
 
@@ -687,86 +776,40 @@ contract CpuOods is MemoryMap, StarkParameters {
                 // Read the next element.
                 let columnValue := mulmod(mload(add(traceQueryResponses, 0x140)), kMontgomeryRInv, PRIME)
 
-                // res += c_61*(f_10(x) - f_10(z)) / (x - z).
-                res := addmod(
+                // res += c_71*(f_10(x) - f_10(z)) / (x - z).
+                res := add(
                     res,
                     mulmod(mulmod(/*(x - z)^(-1)*/ mload(denominatorsPtr),
-                                  /*oods_coefficients[61]*/ mload(add(context, 0x6920)),
+                                  /*oods_coefficients[71]*/ mload(add(context, 0x6a60)),
                                   PRIME),
-                           add(columnValue, sub(PRIME, /*oods_values[61]*/ mload(add(context, 0x49c0)))),
-                           PRIME),
-                    PRIME)
+                           add(columnValue, sub(PRIME, /*oods_values[71]*/ mload(add(context, 0x4b00)))),
+                           PRIME))
 
-                // res += c_62*(f_10(x) - f_10(g * z)) / (x - g * z).
+                // res += c_72*(f_10(x) - f_10(g * z)) / (x - g * z).
                 res := add(
                     res,
                     mulmod(mulmod(/*(x - g * z)^(-1)*/ mload(add(denominatorsPtr, 0x20)),
-                                  /*oods_coefficients[62]*/ mload(add(context, 0x6940)),
+                                  /*oods_coefficients[72]*/ mload(add(context, 0x6a80)),
                                   PRIME),
-                           add(columnValue, sub(PRIME, /*oods_values[62]*/ mload(add(context, 0x49e0)))),
+                           add(columnValue, sub(PRIME, /*oods_values[72]*/ mload(add(context, 0x4b20)))),
                            PRIME))
 
-                // res += c_63*(f_10(x) - f_10(g^192 * z)) / (x - g^192 * z).
+                // res += c_73*(f_10(x) - f_10(g^255 * z)) / (x - g^255 * z).
                 res := add(
                     res,
-                    mulmod(mulmod(/*(x - g^192 * z)^(-1)*/ mload(add(denominatorsPtr, 0x5a0)),
-                                  /*oods_coefficients[63]*/ mload(add(context, 0x6960)),
+                    mulmod(mulmod(/*(x - g^255 * z)^(-1)*/ mload(add(denominatorsPtr, 0x6c0)),
+                                  /*oods_coefficients[73]*/ mload(add(context, 0x6aa0)),
                                   PRIME),
-                           add(columnValue, sub(PRIME, /*oods_values[63]*/ mload(add(context, 0x4a00)))),
+                           add(columnValue, sub(PRIME, /*oods_values[73]*/ mload(add(context, 0x4b40)))),
                            PRIME))
 
-                // res += c_64*(f_10(x) - f_10(g^193 * z)) / (x - g^193 * z).
-                res := add(
-                    res,
-                    mulmod(mulmod(/*(x - g^193 * z)^(-1)*/ mload(add(denominatorsPtr, 0x5c0)),
-                                  /*oods_coefficients[64]*/ mload(add(context, 0x6980)),
-                                  PRIME),
-                           add(columnValue, sub(PRIME, /*oods_values[64]*/ mload(add(context, 0x4a20)))),
-                           PRIME))
-
-                // res += c_65*(f_10(x) - f_10(g^196 * z)) / (x - g^196 * z).
-                res := add(
-                    res,
-                    mulmod(mulmod(/*(x - g^196 * z)^(-1)*/ mload(add(denominatorsPtr, 0x5e0)),
-                                  /*oods_coefficients[65]*/ mload(add(context, 0x69a0)),
-                                  PRIME),
-                           add(columnValue, sub(PRIME, /*oods_values[65]*/ mload(add(context, 0x4a40)))),
-                           PRIME))
-
-                // res += c_66*(f_10(x) - f_10(g^197 * z)) / (x - g^197 * z).
-                res := add(
-                    res,
-                    mulmod(mulmod(/*(x - g^197 * z)^(-1)*/ mload(add(denominatorsPtr, 0x600)),
-                                  /*oods_coefficients[66]*/ mload(add(context, 0x69c0)),
-                                  PRIME),
-                           add(columnValue, sub(PRIME, /*oods_values[66]*/ mload(add(context, 0x4a60)))),
-                           PRIME))
-
-                // res += c_67*(f_10(x) - f_10(g^251 * z)) / (x - g^251 * z).
-                res := add(
-                    res,
-                    mulmod(mulmod(/*(x - g^251 * z)^(-1)*/ mload(add(denominatorsPtr, 0x680)),
-                                  /*oods_coefficients[67]*/ mload(add(context, 0x69e0)),
-                                  PRIME),
-                           add(columnValue, sub(PRIME, /*oods_values[67]*/ mload(add(context, 0x4a80)))),
-                           PRIME))
-
-                // res += c_68*(f_10(x) - f_10(g^252 * z)) / (x - g^252 * z).
-                res := add(
-                    res,
-                    mulmod(mulmod(/*(x - g^252 * z)^(-1)*/ mload(add(denominatorsPtr, 0x6a0)),
-                                  /*oods_coefficients[68]*/ mload(add(context, 0x6a00)),
-                                  PRIME),
-                           add(columnValue, sub(PRIME, /*oods_values[68]*/ mload(add(context, 0x4aa0)))),
-                           PRIME))
-
-                // res += c_69*(f_10(x) - f_10(g^256 * z)) / (x - g^256 * z).
+                // res += c_74*(f_10(x) - f_10(g^256 * z)) / (x - g^256 * z).
                 res := add(
                     res,
                     mulmod(mulmod(/*(x - g^256 * z)^(-1)*/ mload(add(denominatorsPtr, 0x6e0)),
-                                  /*oods_coefficients[69]*/ mload(add(context, 0x6a20)),
+                                  /*oods_coefficients[74]*/ mload(add(context, 0x6ac0)),
                                   PRIME),
-                           add(columnValue, sub(PRIME, /*oods_values[69]*/ mload(add(context, 0x4ac0)))),
+                           add(columnValue, sub(PRIME, /*oods_values[74]*/ mload(add(context, 0x4b60)))),
                            PRIME))
                 }
 
@@ -775,58 +818,7 @@ contract CpuOods is MemoryMap, StarkParameters {
                 // Read the next element.
                 let columnValue := mulmod(mload(add(traceQueryResponses, 0x160)), kMontgomeryRInv, PRIME)
 
-                // res += c_70*(f_11(x) - f_11(z)) / (x - z).
-                res := add(
-                    res,
-                    mulmod(mulmod(/*(x - z)^(-1)*/ mload(denominatorsPtr),
-                                  /*oods_coefficients[70]*/ mload(add(context, 0x6a40)),
-                                  PRIME),
-                           add(columnValue, sub(PRIME, /*oods_values[70]*/ mload(add(context, 0x4ae0)))),
-                           PRIME))
-
-                // res += c_71*(f_11(x) - f_11(g * z)) / (x - g * z).
-                res := add(
-                    res,
-                    mulmod(mulmod(/*(x - g * z)^(-1)*/ mload(add(denominatorsPtr, 0x20)),
-                                  /*oods_coefficients[71]*/ mload(add(context, 0x6a60)),
-                                  PRIME),
-                           add(columnValue, sub(PRIME, /*oods_values[71]*/ mload(add(context, 0x4b00)))),
-                           PRIME))
-
-                // res += c_72*(f_11(x) - f_11(g^255 * z)) / (x - g^255 * z).
-                res := add(
-                    res,
-                    mulmod(mulmod(/*(x - g^255 * z)^(-1)*/ mload(add(denominatorsPtr, 0x6c0)),
-                                  /*oods_coefficients[72]*/ mload(add(context, 0x6a80)),
-                                  PRIME),
-                           add(columnValue, sub(PRIME, /*oods_values[72]*/ mload(add(context, 0x4b20)))),
-                           PRIME))
-
-                // res += c_73*(f_11(x) - f_11(g^256 * z)) / (x - g^256 * z).
-                res := add(
-                    res,
-                    mulmod(mulmod(/*(x - g^256 * z)^(-1)*/ mload(add(denominatorsPtr, 0x6e0)),
-                                  /*oods_coefficients[73]*/ mload(add(context, 0x6aa0)),
-                                  PRIME),
-                           add(columnValue, sub(PRIME, /*oods_values[73]*/ mload(add(context, 0x4b40)))),
-                           PRIME))
-
-                // res += c_74*(f_11(x) - f_11(g^511 * z)) / (x - g^511 * z).
-                res := add(
-                    res,
-                    mulmod(mulmod(/*(x - g^511 * z)^(-1)*/ mload(add(denominatorsPtr, 0x7c0)),
-                                  /*oods_coefficients[74]*/ mload(add(context, 0x6ac0)),
-                                  PRIME),
-                           add(columnValue, sub(PRIME, /*oods_values[74]*/ mload(add(context, 0x4b60)))),
-                           PRIME))
-                }
-
-                // Mask items for column #12.
-                {
-                // Read the next element.
-                let columnValue := mulmod(mload(add(traceQueryResponses, 0x180)), kMontgomeryRInv, PRIME)
-
-                // res += c_75*(f_12(x) - f_12(z)) / (x - z).
+                // res += c_75*(f_11(x) - f_11(z)) / (x - z).
                 res := add(
                     res,
                     mulmod(mulmod(/*(x - z)^(-1)*/ mload(denominatorsPtr),
@@ -835,7 +827,7 @@ contract CpuOods is MemoryMap, StarkParameters {
                            add(columnValue, sub(PRIME, /*oods_values[75]*/ mload(add(context, 0x4b80)))),
                            PRIME))
 
-                // res += c_76*(f_12(x) - f_12(g * z)) / (x - g * z).
+                // res += c_76*(f_11(x) - f_11(g * z)) / (x - g * z).
                 res := add(
                     res,
                     mulmod(mulmod(/*(x - g * z)^(-1)*/ mload(add(denominatorsPtr, 0x20)),
@@ -844,22 +836,118 @@ contract CpuOods is MemoryMap, StarkParameters {
                            add(columnValue, sub(PRIME, /*oods_values[76]*/ mload(add(context, 0x4ba0)))),
                            PRIME))
 
-                // res += c_77*(f_12(x) - f_12(g^255 * z)) / (x - g^255 * z).
+                // res += c_77*(f_11(x) - f_11(g^192 * z)) / (x - g^192 * z).
                 res := add(
                     res,
-                    mulmod(mulmod(/*(x - g^255 * z)^(-1)*/ mload(add(denominatorsPtr, 0x6c0)),
+                    mulmod(mulmod(/*(x - g^192 * z)^(-1)*/ mload(add(denominatorsPtr, 0x5a0)),
                                   /*oods_coefficients[77]*/ mload(add(context, 0x6b20)),
                                   PRIME),
                            add(columnValue, sub(PRIME, /*oods_values[77]*/ mload(add(context, 0x4bc0)))),
                            PRIME))
 
-                // res += c_78*(f_12(x) - f_12(g^256 * z)) / (x - g^256 * z).
+                // res += c_78*(f_11(x) - f_11(g^193 * z)) / (x - g^193 * z).
                 res := add(
                     res,
-                    mulmod(mulmod(/*(x - g^256 * z)^(-1)*/ mload(add(denominatorsPtr, 0x6e0)),
+                    mulmod(mulmod(/*(x - g^193 * z)^(-1)*/ mload(add(denominatorsPtr, 0x5c0)),
                                   /*oods_coefficients[78]*/ mload(add(context, 0x6b40)),
                                   PRIME),
                            add(columnValue, sub(PRIME, /*oods_values[78]*/ mload(add(context, 0x4be0)))),
+                           PRIME))
+
+                // res += c_79*(f_11(x) - f_11(g^196 * z)) / (x - g^196 * z).
+                res := add(
+                    res,
+                    mulmod(mulmod(/*(x - g^196 * z)^(-1)*/ mload(add(denominatorsPtr, 0x5e0)),
+                                  /*oods_coefficients[79]*/ mload(add(context, 0x6b60)),
+                                  PRIME),
+                           add(columnValue, sub(PRIME, /*oods_values[79]*/ mload(add(context, 0x4c00)))),
+                           PRIME))
+
+                // res += c_80*(f_11(x) - f_11(g^197 * z)) / (x - g^197 * z).
+                res := add(
+                    res,
+                    mulmod(mulmod(/*(x - g^197 * z)^(-1)*/ mload(add(denominatorsPtr, 0x600)),
+                                  /*oods_coefficients[80]*/ mload(add(context, 0x6b80)),
+                                  PRIME),
+                           add(columnValue, sub(PRIME, /*oods_values[80]*/ mload(add(context, 0x4c20)))),
+                           PRIME))
+
+                // res += c_81*(f_11(x) - f_11(g^251 * z)) / (x - g^251 * z).
+                res := add(
+                    res,
+                    mulmod(mulmod(/*(x - g^251 * z)^(-1)*/ mload(add(denominatorsPtr, 0x680)),
+                                  /*oods_coefficients[81]*/ mload(add(context, 0x6ba0)),
+                                  PRIME),
+                           add(columnValue, sub(PRIME, /*oods_values[81]*/ mload(add(context, 0x4c40)))),
+                           PRIME))
+
+                // res += c_82*(f_11(x) - f_11(g^252 * z)) / (x - g^252 * z).
+                res := add(
+                    res,
+                    mulmod(mulmod(/*(x - g^252 * z)^(-1)*/ mload(add(denominatorsPtr, 0x6a0)),
+                                  /*oods_coefficients[82]*/ mload(add(context, 0x6bc0)),
+                                  PRIME),
+                           add(columnValue, sub(PRIME, /*oods_values[82]*/ mload(add(context, 0x4c60)))),
+                           PRIME))
+
+                // res += c_83*(f_11(x) - f_11(g^256 * z)) / (x - g^256 * z).
+                res := add(
+                    res,
+                    mulmod(mulmod(/*(x - g^256 * z)^(-1)*/ mload(add(denominatorsPtr, 0x6e0)),
+                                  /*oods_coefficients[83]*/ mload(add(context, 0x6be0)),
+                                  PRIME),
+                           add(columnValue, sub(PRIME, /*oods_values[83]*/ mload(add(context, 0x4c80)))),
+                           PRIME))
+                }
+
+                // Mask items for column #12.
+                {
+                // Read the next element.
+                let columnValue := mulmod(mload(add(traceQueryResponses, 0x180)), kMontgomeryRInv, PRIME)
+
+                // res += c_84*(f_12(x) - f_12(z)) / (x - z).
+                res := add(
+                    res,
+                    mulmod(mulmod(/*(x - z)^(-1)*/ mload(denominatorsPtr),
+                                  /*oods_coefficients[84]*/ mload(add(context, 0x6c00)),
+                                  PRIME),
+                           add(columnValue, sub(PRIME, /*oods_values[84]*/ mload(add(context, 0x4ca0)))),
+                           PRIME))
+
+                // res += c_85*(f_12(x) - f_12(g * z)) / (x - g * z).
+                res := add(
+                    res,
+                    mulmod(mulmod(/*(x - g * z)^(-1)*/ mload(add(denominatorsPtr, 0x20)),
+                                  /*oods_coefficients[85]*/ mload(add(context, 0x6c20)),
+                                  PRIME),
+                           add(columnValue, sub(PRIME, /*oods_values[85]*/ mload(add(context, 0x4cc0)))),
+                           PRIME))
+
+                // res += c_86*(f_12(x) - f_12(g^255 * z)) / (x - g^255 * z).
+                res := add(
+                    res,
+                    mulmod(mulmod(/*(x - g^255 * z)^(-1)*/ mload(add(denominatorsPtr, 0x6c0)),
+                                  /*oods_coefficients[86]*/ mload(add(context, 0x6c40)),
+                                  PRIME),
+                           add(columnValue, sub(PRIME, /*oods_values[86]*/ mload(add(context, 0x4ce0)))),
+                           PRIME))
+
+                // res += c_87*(f_12(x) - f_12(g^256 * z)) / (x - g^256 * z).
+                res := add(
+                    res,
+                    mulmod(mulmod(/*(x - g^256 * z)^(-1)*/ mload(add(denominatorsPtr, 0x6e0)),
+                                  /*oods_coefficients[87]*/ mload(add(context, 0x6c60)),
+                                  PRIME),
+                           add(columnValue, sub(PRIME, /*oods_values[87]*/ mload(add(context, 0x4d00)))),
+                           PRIME))
+
+                // res += c_88*(f_12(x) - f_12(g^511 * z)) / (x - g^511 * z).
+                res := add(
+                    res,
+                    mulmod(mulmod(/*(x - g^511 * z)^(-1)*/ mload(add(denominatorsPtr, 0x7c0)),
+                                  /*oods_coefficients[88]*/ mload(add(context, 0x6c80)),
+                                  PRIME),
+                           add(columnValue, sub(PRIME, /*oods_values[88]*/ mload(add(context, 0x4d20)))),
                            PRIME))
                 }
 
@@ -868,23 +956,42 @@ contract CpuOods is MemoryMap, StarkParameters {
                 // Read the next element.
                 let columnValue := mulmod(mload(add(traceQueryResponses, 0x1a0)), kMontgomeryRInv, PRIME)
 
-                // res += c_79*(f_13(x) - f_13(z)) / (x - z).
+                // res += c_89*(f_13(x) - f_13(z)) / (x - z).
                 res := add(
                     res,
                     mulmod(mulmod(/*(x - z)^(-1)*/ mload(denominatorsPtr),
-                                  /*oods_coefficients[79]*/ mload(add(context, 0x6b60)),
+                                  /*oods_coefficients[89]*/ mload(add(context, 0x6ca0)),
                                   PRIME),
-                           add(columnValue, sub(PRIME, /*oods_values[79]*/ mload(add(context, 0x4c00)))),
+                           add(columnValue, sub(PRIME, /*oods_values[89]*/ mload(add(context, 0x4d40)))),
                            PRIME))
 
-                // res += c_80*(f_13(x) - f_13(g^255 * z)) / (x - g^255 * z).
+                // res += c_90*(f_13(x) - f_13(g * z)) / (x - g * z).
+                res := add(
+                    res,
+                    mulmod(mulmod(/*(x - g * z)^(-1)*/ mload(add(denominatorsPtr, 0x20)),
+                                  /*oods_coefficients[90]*/ mload(add(context, 0x6cc0)),
+                                  PRIME),
+                           add(columnValue, sub(PRIME, /*oods_values[90]*/ mload(add(context, 0x4d60)))),
+                           PRIME))
+
+                // res += c_91*(f_13(x) - f_13(g^255 * z)) / (x - g^255 * z).
                 res := add(
                     res,
                     mulmod(mulmod(/*(x - g^255 * z)^(-1)*/ mload(add(denominatorsPtr, 0x6c0)),
-                                  /*oods_coefficients[80]*/ mload(add(context, 0x6b80)),
+                                  /*oods_coefficients[91]*/ mload(add(context, 0x6ce0)),
                                   PRIME),
-                           add(columnValue, sub(PRIME, /*oods_values[80]*/ mload(add(context, 0x4c20)))),
+                           add(columnValue, sub(PRIME, /*oods_values[91]*/ mload(add(context, 0x4d80)))),
                            PRIME))
+
+                // res += c_92*(f_13(x) - f_13(g^256 * z)) / (x - g^256 * z).
+                res := addmod(
+                    res,
+                    mulmod(mulmod(/*(x - g^256 * z)^(-1)*/ mload(add(denominatorsPtr, 0x6e0)),
+                                  /*oods_coefficients[92]*/ mload(add(context, 0x6d00)),
+                                  PRIME),
+                           add(columnValue, sub(PRIME, /*oods_values[92]*/ mload(add(context, 0x4da0)))),
+                           PRIME),
+                    PRIME)
                 }
 
                 // Mask items for column #14.
@@ -892,85 +999,85 @@ contract CpuOods is MemoryMap, StarkParameters {
                 // Read the next element.
                 let columnValue := mulmod(mload(add(traceQueryResponses, 0x1c0)), kMontgomeryRInv, PRIME)
 
-                // res += c_81*(f_14(x) - f_14(z)) / (x - z).
+                // res += c_93*(f_14(x) - f_14(z)) / (x - z).
                 res := add(
                     res,
                     mulmod(mulmod(/*(x - z)^(-1)*/ mload(denominatorsPtr),
-                                  /*oods_coefficients[81]*/ mload(add(context, 0x6ba0)),
+                                  /*oods_coefficients[93]*/ mload(add(context, 0x6d20)),
                                   PRIME),
-                           add(columnValue, sub(PRIME, /*oods_values[81]*/ mload(add(context, 0x4c40)))),
+                           add(columnValue, sub(PRIME, /*oods_values[93]*/ mload(add(context, 0x4dc0)))),
                            PRIME))
 
-                // res += c_82*(f_14(x) - f_14(g * z)) / (x - g * z).
+                // res += c_94*(f_14(x) - f_14(g * z)) / (x - g * z).
                 res := add(
                     res,
                     mulmod(mulmod(/*(x - g * z)^(-1)*/ mload(add(denominatorsPtr, 0x20)),
-                                  /*oods_coefficients[82]*/ mload(add(context, 0x6bc0)),
+                                  /*oods_coefficients[94]*/ mload(add(context, 0x6d40)),
                                   PRIME),
-                           add(columnValue, sub(PRIME, /*oods_values[82]*/ mload(add(context, 0x4c60)))),
+                           add(columnValue, sub(PRIME, /*oods_values[94]*/ mload(add(context, 0x4de0)))),
                            PRIME))
 
-                // res += c_83*(f_14(x) - f_14(g^192 * z)) / (x - g^192 * z).
+                // res += c_95*(f_14(x) - f_14(g^192 * z)) / (x - g^192 * z).
                 res := add(
                     res,
                     mulmod(mulmod(/*(x - g^192 * z)^(-1)*/ mload(add(denominatorsPtr, 0x5a0)),
-                                  /*oods_coefficients[83]*/ mload(add(context, 0x6be0)),
+                                  /*oods_coefficients[95]*/ mload(add(context, 0x6d60)),
                                   PRIME),
-                           add(columnValue, sub(PRIME, /*oods_values[83]*/ mload(add(context, 0x4c80)))),
+                           add(columnValue, sub(PRIME, /*oods_values[95]*/ mload(add(context, 0x4e00)))),
                            PRIME))
 
-                // res += c_84*(f_14(x) - f_14(g^193 * z)) / (x - g^193 * z).
+                // res += c_96*(f_14(x) - f_14(g^193 * z)) / (x - g^193 * z).
                 res := add(
                     res,
                     mulmod(mulmod(/*(x - g^193 * z)^(-1)*/ mload(add(denominatorsPtr, 0x5c0)),
-                                  /*oods_coefficients[84]*/ mload(add(context, 0x6c00)),
+                                  /*oods_coefficients[96]*/ mload(add(context, 0x6d80)),
                                   PRIME),
-                           add(columnValue, sub(PRIME, /*oods_values[84]*/ mload(add(context, 0x4ca0)))),
+                           add(columnValue, sub(PRIME, /*oods_values[96]*/ mload(add(context, 0x4e20)))),
                            PRIME))
 
-                // res += c_85*(f_14(x) - f_14(g^196 * z)) / (x - g^196 * z).
+                // res += c_97*(f_14(x) - f_14(g^196 * z)) / (x - g^196 * z).
                 res := add(
                     res,
                     mulmod(mulmod(/*(x - g^196 * z)^(-1)*/ mload(add(denominatorsPtr, 0x5e0)),
-                                  /*oods_coefficients[85]*/ mload(add(context, 0x6c20)),
+                                  /*oods_coefficients[97]*/ mload(add(context, 0x6da0)),
                                   PRIME),
-                           add(columnValue, sub(PRIME, /*oods_values[85]*/ mload(add(context, 0x4cc0)))),
+                           add(columnValue, sub(PRIME, /*oods_values[97]*/ mload(add(context, 0x4e40)))),
                            PRIME))
 
-                // res += c_86*(f_14(x) - f_14(g^197 * z)) / (x - g^197 * z).
+                // res += c_98*(f_14(x) - f_14(g^197 * z)) / (x - g^197 * z).
                 res := add(
                     res,
                     mulmod(mulmod(/*(x - g^197 * z)^(-1)*/ mload(add(denominatorsPtr, 0x600)),
-                                  /*oods_coefficients[86]*/ mload(add(context, 0x6c40)),
+                                  /*oods_coefficients[98]*/ mload(add(context, 0x6dc0)),
                                   PRIME),
-                           add(columnValue, sub(PRIME, /*oods_values[86]*/ mload(add(context, 0x4ce0)))),
+                           add(columnValue, sub(PRIME, /*oods_values[98]*/ mload(add(context, 0x4e60)))),
                            PRIME))
 
-                // res += c_87*(f_14(x) - f_14(g^251 * z)) / (x - g^251 * z).
+                // res += c_99*(f_14(x) - f_14(g^251 * z)) / (x - g^251 * z).
                 res := add(
                     res,
                     mulmod(mulmod(/*(x - g^251 * z)^(-1)*/ mload(add(denominatorsPtr, 0x680)),
-                                  /*oods_coefficients[87]*/ mload(add(context, 0x6c60)),
+                                  /*oods_coefficients[99]*/ mload(add(context, 0x6de0)),
                                   PRIME),
-                           add(columnValue, sub(PRIME, /*oods_values[87]*/ mload(add(context, 0x4d00)))),
+                           add(columnValue, sub(PRIME, /*oods_values[99]*/ mload(add(context, 0x4e80)))),
                            PRIME))
 
-                // res += c_88*(f_14(x) - f_14(g^252 * z)) / (x - g^252 * z).
+                // res += c_100*(f_14(x) - f_14(g^252 * z)) / (x - g^252 * z).
                 res := add(
                     res,
                     mulmod(mulmod(/*(x - g^252 * z)^(-1)*/ mload(add(denominatorsPtr, 0x6a0)),
-                                  /*oods_coefficients[88]*/ mload(add(context, 0x6c80)),
+                                  /*oods_coefficients[100]*/ mload(add(context, 0x6e00)),
                                   PRIME),
-                           add(columnValue, sub(PRIME, /*oods_values[88]*/ mload(add(context, 0x4d20)))),
+                           add(columnValue, sub(PRIME, /*oods_values[100]*/ mload(add(context, 0x4ea0)))),
                            PRIME))
 
-                // res += c_89*(f_14(x) - f_14(g^256 * z)) / (x - g^256 * z).
+                // res += c_101*(f_14(x) - f_14(g^256 * z)) / (x - g^256 * z).
                 res := add(
                     res,
                     mulmod(mulmod(/*(x - g^256 * z)^(-1)*/ mload(add(denominatorsPtr, 0x6e0)),
-                                  /*oods_coefficients[89]*/ mload(add(context, 0x6ca0)),
+                                  /*oods_coefficients[101]*/ mload(add(context, 0x6e20)),
                                   PRIME),
-                           add(columnValue, sub(PRIME, /*oods_values[89]*/ mload(add(context, 0x4d40)))),
+                           add(columnValue, sub(PRIME, /*oods_values[101]*/ mload(add(context, 0x4ec0)))),
                            PRIME))
                 }
 
@@ -979,50 +1086,22 @@ contract CpuOods is MemoryMap, StarkParameters {
                 // Read the next element.
                 let columnValue := mulmod(mload(add(traceQueryResponses, 0x1e0)), kMontgomeryRInv, PRIME)
 
-                // res += c_90*(f_15(x) - f_15(z)) / (x - z).
+                // res += c_102*(f_15(x) - f_15(z)) / (x - z).
                 res := add(
                     res,
                     mulmod(mulmod(/*(x - z)^(-1)*/ mload(denominatorsPtr),
-                                  /*oods_coefficients[90]*/ mload(add(context, 0x6cc0)),
+                                  /*oods_coefficients[102]*/ mload(add(context, 0x6e40)),
                                   PRIME),
-                           add(columnValue, sub(PRIME, /*oods_values[90]*/ mload(add(context, 0x4d60)))),
+                           add(columnValue, sub(PRIME, /*oods_values[102]*/ mload(add(context, 0x4ee0)))),
                            PRIME))
 
-                // res += c_91*(f_15(x) - f_15(g * z)) / (x - g * z).
+                // res += c_103*(f_15(x) - f_15(g^255 * z)) / (x - g^255 * z).
                 res := add(
-                    res,
-                    mulmod(mulmod(/*(x - g * z)^(-1)*/ mload(add(denominatorsPtr, 0x20)),
-                                  /*oods_coefficients[91]*/ mload(add(context, 0x6ce0)),
-                                  PRIME),
-                           add(columnValue, sub(PRIME, /*oods_values[91]*/ mload(add(context, 0x4d80)))),
-                           PRIME))
-
-                // res += c_92*(f_15(x) - f_15(g^255 * z)) / (x - g^255 * z).
-                res := addmod(
                     res,
                     mulmod(mulmod(/*(x - g^255 * z)^(-1)*/ mload(add(denominatorsPtr, 0x6c0)),
-                                  /*oods_coefficients[92]*/ mload(add(context, 0x6d00)),
+                                  /*oods_coefficients[103]*/ mload(add(context, 0x6e60)),
                                   PRIME),
-                           add(columnValue, sub(PRIME, /*oods_values[92]*/ mload(add(context, 0x4da0)))),
-                           PRIME),
-                    PRIME)
-
-                // res += c_93*(f_15(x) - f_15(g^256 * z)) / (x - g^256 * z).
-                res := add(
-                    res,
-                    mulmod(mulmod(/*(x - g^256 * z)^(-1)*/ mload(add(denominatorsPtr, 0x6e0)),
-                                  /*oods_coefficients[93]*/ mload(add(context, 0x6d20)),
-                                  PRIME),
-                           add(columnValue, sub(PRIME, /*oods_values[93]*/ mload(add(context, 0x4dc0)))),
-                           PRIME))
-
-                // res += c_94*(f_15(x) - f_15(g^511 * z)) / (x - g^511 * z).
-                res := add(
-                    res,
-                    mulmod(mulmod(/*(x - g^511 * z)^(-1)*/ mload(add(denominatorsPtr, 0x7c0)),
-                                  /*oods_coefficients[94]*/ mload(add(context, 0x6d40)),
-                                  PRIME),
-                           add(columnValue, sub(PRIME, /*oods_values[94]*/ mload(add(context, 0x4de0)))),
+                           add(columnValue, sub(PRIME, /*oods_values[103]*/ mload(add(context, 0x4f00)))),
                            PRIME))
                 }
 
@@ -1031,40 +1110,22 @@ contract CpuOods is MemoryMap, StarkParameters {
                 // Read the next element.
                 let columnValue := mulmod(mload(add(traceQueryResponses, 0x200)), kMontgomeryRInv, PRIME)
 
-                // res += c_95*(f_16(x) - f_16(z)) / (x - z).
+                // res += c_104*(f_16(x) - f_16(z)) / (x - z).
                 res := add(
                     res,
                     mulmod(mulmod(/*(x - z)^(-1)*/ mload(denominatorsPtr),
-                                  /*oods_coefficients[95]*/ mload(add(context, 0x6d60)),
+                                  /*oods_coefficients[104]*/ mload(add(context, 0x6e80)),
                                   PRIME),
-                           add(columnValue, sub(PRIME, /*oods_values[95]*/ mload(add(context, 0x4e00)))),
+                           add(columnValue, sub(PRIME, /*oods_values[104]*/ mload(add(context, 0x4f20)))),
                            PRIME))
 
-                // res += c_96*(f_16(x) - f_16(g * z)) / (x - g * z).
-                res := add(
-                    res,
-                    mulmod(mulmod(/*(x - g * z)^(-1)*/ mload(add(denominatorsPtr, 0x20)),
-                                  /*oods_coefficients[96]*/ mload(add(context, 0x6d80)),
-                                  PRIME),
-                           add(columnValue, sub(PRIME, /*oods_values[96]*/ mload(add(context, 0x4e20)))),
-                           PRIME))
-
-                // res += c_97*(f_16(x) - f_16(g^255 * z)) / (x - g^255 * z).
+                // res += c_105*(f_16(x) - f_16(g^255 * z)) / (x - g^255 * z).
                 res := add(
                     res,
                     mulmod(mulmod(/*(x - g^255 * z)^(-1)*/ mload(add(denominatorsPtr, 0x6c0)),
-                                  /*oods_coefficients[97]*/ mload(add(context, 0x6da0)),
+                                  /*oods_coefficients[105]*/ mload(add(context, 0x6ea0)),
                                   PRIME),
-                           add(columnValue, sub(PRIME, /*oods_values[97]*/ mload(add(context, 0x4e40)))),
-                           PRIME))
-
-                // res += c_98*(f_16(x) - f_16(g^256 * z)) / (x - g^256 * z).
-                res := add(
-                    res,
-                    mulmod(mulmod(/*(x - g^256 * z)^(-1)*/ mload(add(denominatorsPtr, 0x6e0)),
-                                  /*oods_coefficients[98]*/ mload(add(context, 0x6dc0)),
-                                  PRIME),
-                           add(columnValue, sub(PRIME, /*oods_values[98]*/ mload(add(context, 0x4e60)))),
+                           add(columnValue, sub(PRIME, /*oods_values[105]*/ mload(add(context, 0x4f40)))),
                            PRIME))
                 }
 
@@ -1073,22 +1134,22 @@ contract CpuOods is MemoryMap, StarkParameters {
                 // Read the next element.
                 let columnValue := mulmod(mload(add(traceQueryResponses, 0x220)), kMontgomeryRInv, PRIME)
 
-                // res += c_99*(f_17(x) - f_17(z)) / (x - z).
+                // res += c_106*(f_17(x) - f_17(z)) / (x - z).
                 res := add(
                     res,
                     mulmod(mulmod(/*(x - z)^(-1)*/ mload(denominatorsPtr),
-                                  /*oods_coefficients[99]*/ mload(add(context, 0x6de0)),
+                                  /*oods_coefficients[106]*/ mload(add(context, 0x6ec0)),
                                   PRIME),
-                           add(columnValue, sub(PRIME, /*oods_values[99]*/ mload(add(context, 0x4e80)))),
+                           add(columnValue, sub(PRIME, /*oods_values[106]*/ mload(add(context, 0x4f60)))),
                            PRIME))
 
-                // res += c_100*(f_17(x) - f_17(g^255 * z)) / (x - g^255 * z).
+                // res += c_107*(f_17(x) - f_17(g^255 * z)) / (x - g^255 * z).
                 res := add(
                     res,
                     mulmod(mulmod(/*(x - g^255 * z)^(-1)*/ mload(add(denominatorsPtr, 0x6c0)),
-                                  /*oods_coefficients[100]*/ mload(add(context, 0x6e00)),
+                                  /*oods_coefficients[107]*/ mload(add(context, 0x6ee0)),
                                   PRIME),
-                           add(columnValue, sub(PRIME, /*oods_values[100]*/ mload(add(context, 0x4ea0)))),
+                           add(columnValue, sub(PRIME, /*oods_values[107]*/ mload(add(context, 0x4f80)))),
                            PRIME))
                 }
 
@@ -1097,82 +1158,19 @@ contract CpuOods is MemoryMap, StarkParameters {
                 // Read the next element.
                 let columnValue := mulmod(mload(add(traceQueryResponses, 0x240)), kMontgomeryRInv, PRIME)
 
-                // res += c_101*(f_18(x) - f_18(z)) / (x - z).
+                // res += c_108*(f_18(x) - f_18(z)) / (x - z).
                 res := add(
                     res,
                     mulmod(mulmod(/*(x - z)^(-1)*/ mload(denominatorsPtr),
-                                  /*oods_coefficients[101]*/ mload(add(context, 0x6e20)),
-                                  PRIME),
-                           add(columnValue, sub(PRIME, /*oods_values[101]*/ mload(add(context, 0x4ec0)))),
-                           PRIME))
-
-                // res += c_102*(f_18(x) - f_18(g * z)) / (x - g * z).
-                res := add(
-                    res,
-                    mulmod(mulmod(/*(x - g * z)^(-1)*/ mload(add(denominatorsPtr, 0x20)),
-                                  /*oods_coefficients[102]*/ mload(add(context, 0x6e40)),
-                                  PRIME),
-                           add(columnValue, sub(PRIME, /*oods_values[102]*/ mload(add(context, 0x4ee0)))),
-                           PRIME))
-
-                // res += c_103*(f_18(x) - f_18(g^192 * z)) / (x - g^192 * z).
-                res := add(
-                    res,
-                    mulmod(mulmod(/*(x - g^192 * z)^(-1)*/ mload(add(denominatorsPtr, 0x5a0)),
-                                  /*oods_coefficients[103]*/ mload(add(context, 0x6e60)),
-                                  PRIME),
-                           add(columnValue, sub(PRIME, /*oods_values[103]*/ mload(add(context, 0x4f00)))),
-                           PRIME))
-
-                // res += c_104*(f_18(x) - f_18(g^193 * z)) / (x - g^193 * z).
-                res := add(
-                    res,
-                    mulmod(mulmod(/*(x - g^193 * z)^(-1)*/ mload(add(denominatorsPtr, 0x5c0)),
-                                  /*oods_coefficients[104]*/ mload(add(context, 0x6e80)),
-                                  PRIME),
-                           add(columnValue, sub(PRIME, /*oods_values[104]*/ mload(add(context, 0x4f20)))),
-                           PRIME))
-
-                // res += c_105*(f_18(x) - f_18(g^196 * z)) / (x - g^196 * z).
-                res := add(
-                    res,
-                    mulmod(mulmod(/*(x - g^196 * z)^(-1)*/ mload(add(denominatorsPtr, 0x5e0)),
-                                  /*oods_coefficients[105]*/ mload(add(context, 0x6ea0)),
-                                  PRIME),
-                           add(columnValue, sub(PRIME, /*oods_values[105]*/ mload(add(context, 0x4f40)))),
-                           PRIME))
-
-                // res += c_106*(f_18(x) - f_18(g^197 * z)) / (x - g^197 * z).
-                res := add(
-                    res,
-                    mulmod(mulmod(/*(x - g^197 * z)^(-1)*/ mload(add(denominatorsPtr, 0x600)),
-                                  /*oods_coefficients[106]*/ mload(add(context, 0x6ec0)),
-                                  PRIME),
-                           add(columnValue, sub(PRIME, /*oods_values[106]*/ mload(add(context, 0x4f60)))),
-                           PRIME))
-
-                // res += c_107*(f_18(x) - f_18(g^251 * z)) / (x - g^251 * z).
-                res := add(
-                    res,
-                    mulmod(mulmod(/*(x - g^251 * z)^(-1)*/ mload(add(denominatorsPtr, 0x680)),
-                                  /*oods_coefficients[107]*/ mload(add(context, 0x6ee0)),
-                                  PRIME),
-                           add(columnValue, sub(PRIME, /*oods_values[107]*/ mload(add(context, 0x4f80)))),
-                           PRIME))
-
-                // res += c_108*(f_18(x) - f_18(g^252 * z)) / (x - g^252 * z).
-                res := add(
-                    res,
-                    mulmod(mulmod(/*(x - g^252 * z)^(-1)*/ mload(add(denominatorsPtr, 0x6a0)),
                                   /*oods_coefficients[108]*/ mload(add(context, 0x6f00)),
                                   PRIME),
                            add(columnValue, sub(PRIME, /*oods_values[108]*/ mload(add(context, 0x4fa0)))),
                            PRIME))
 
-                // res += c_109*(f_18(x) - f_18(g^256 * z)) / (x - g^256 * z).
+                // res += c_109*(f_18(x) - f_18(g^255 * z)) / (x - g^255 * z).
                 res := add(
                     res,
-                    mulmod(mulmod(/*(x - g^256 * z)^(-1)*/ mload(add(denominatorsPtr, 0x6e0)),
+                    mulmod(mulmod(/*(x - g^255 * z)^(-1)*/ mload(add(denominatorsPtr, 0x6c0)),
                                   /*oods_coefficients[109]*/ mload(add(context, 0x6f20)),
                                   PRIME),
                            add(columnValue, sub(PRIME, /*oods_values[109]*/ mload(add(context, 0x4fc0)))),
@@ -1702,10 +1700,10 @@ contract CpuOods is MemoryMap, StarkParameters {
                            add(columnValue, sub(PRIME, /*oods_values[165]*/ mload(add(context, 0x56c0)))),
                            PRIME))
 
-                // res += c_166*(f_21(x) - f_21(g^19 * z)) / (x - g^19 * z).
+                // res += c_166*(f_21(x) - f_21(g^17 * z)) / (x - g^17 * z).
                 res := add(
                     res,
-                    mulmod(mulmod(/*(x - g^19 * z)^(-1)*/ mload(add(denominatorsPtr, 0x220)),
+                    mulmod(mulmod(/*(x - g^17 * z)^(-1)*/ mload(add(denominatorsPtr, 0x220)),
                                   /*oods_coefficients[166]*/ mload(add(context, 0x7640)),
                                   PRIME),
                            add(columnValue, sub(PRIME, /*oods_values[166]*/ mload(add(context, 0x56e0)))),
@@ -1783,19 +1781,19 @@ contract CpuOods is MemoryMap, StarkParameters {
                            add(columnValue, sub(PRIME, /*oods_values[174]*/ mload(add(context, 0x57e0)))),
                            PRIME))
 
-                // res += c_175*(f_21(x) - f_21(g^55 * z)) / (x - g^55 * z).
+                // res += c_175*(f_21(x) - f_21(g^47 * z)) / (x - g^47 * z).
                 res := add(
                     res,
-                    mulmod(mulmod(/*(x - g^55 * z)^(-1)*/ mload(add(denominatorsPtr, 0x3a0)),
+                    mulmod(mulmod(/*(x - g^47 * z)^(-1)*/ mload(add(denominatorsPtr, 0x3a0)),
                                   /*oods_coefficients[175]*/ mload(add(context, 0x7760)),
                                   PRIME),
                            add(columnValue, sub(PRIME, /*oods_values[175]*/ mload(add(context, 0x5800)))),
                            PRIME))
 
-                // res += c_176*(f_21(x) - f_21(g^63 * z)) / (x - g^63 * z).
+                // res += c_176*(f_21(x) - f_21(g^55 * z)) / (x - g^55 * z).
                 res := add(
                     res,
-                    mulmod(mulmod(/*(x - g^63 * z)^(-1)*/ mload(add(denominatorsPtr, 0x3e0)),
+                    mulmod(mulmod(/*(x - g^55 * z)^(-1)*/ mload(add(denominatorsPtr, 0x3c0)),
                                   /*oods_coefficients[176]*/ mload(add(context, 0x7780)),
                                   PRIME),
                            add(columnValue, sub(PRIME, /*oods_values[176]*/ mload(add(context, 0x5820)))),
@@ -1810,10 +1808,10 @@ contract CpuOods is MemoryMap, StarkParameters {
                            add(columnValue, sub(PRIME, /*oods_values[177]*/ mload(add(context, 0x5840)))),
                            PRIME))
 
-                // res += c_178*(f_21(x) - f_21(g^4085 * z)) / (x - g^4085 * z).
+                // res += c_178*(f_21(x) - f_21(g^4083 * z)) / (x - g^4083 * z).
                 res := add(
                     res,
-                    mulmod(mulmod(/*(x - g^4085 * z)^(-1)*/ mload(add(denominatorsPtr, 0x800)),
+                    mulmod(mulmod(/*(x - g^4083 * z)^(-1)*/ mload(add(denominatorsPtr, 0x800)),
                                   /*oods_coefficients[178]*/ mload(add(context, 0x77c0)),
                                   PRIME),
                            add(columnValue, sub(PRIME, /*oods_values[178]*/ mload(add(context, 0x5860)))),
@@ -1873,56 +1871,56 @@ contract CpuOods is MemoryMap, StarkParameters {
                            add(columnValue, sub(PRIME, /*oods_values[184]*/ mload(add(context, 0x5920)))),
                            PRIME))
 
-                // res += c_185*(f_21(x) - f_21(g^8175 * z)) / (x - g^8175 * z).
+                // res += c_185*(f_21(x) - f_21(g^8177 * z)) / (x - g^8177 * z).
                 res := addmod(
                     res,
-                    mulmod(mulmod(/*(x - g^8175 * z)^(-1)*/ mload(add(denominatorsPtr, 0x940)),
+                    mulmod(mulmod(/*(x - g^8177 * z)^(-1)*/ mload(add(denominatorsPtr, 0x940)),
                                   /*oods_coefficients[185]*/ mload(add(context, 0x78a0)),
                                   PRIME),
                            add(columnValue, sub(PRIME, /*oods_values[185]*/ mload(add(context, 0x5940)))),
                            PRIME),
                     PRIME)
 
-                // res += c_186*(f_21(x) - f_21(g^8177 * z)) / (x - g^8177 * z).
+                // res += c_186*(f_21(x) - f_21(g^8179 * z)) / (x - g^8179 * z).
                 res := add(
                     res,
-                    mulmod(mulmod(/*(x - g^8177 * z)^(-1)*/ mload(add(denominatorsPtr, 0x960)),
+                    mulmod(mulmod(/*(x - g^8179 * z)^(-1)*/ mload(add(denominatorsPtr, 0x960)),
                                   /*oods_coefficients[186]*/ mload(add(context, 0x78c0)),
                                   PRIME),
                            add(columnValue, sub(PRIME, /*oods_values[186]*/ mload(add(context, 0x5960)))),
                            PRIME))
 
-                // res += c_187*(f_21(x) - f_21(g^8181 * z)) / (x - g^8181 * z).
+                // res += c_187*(f_21(x) - f_21(g^8183 * z)) / (x - g^8183 * z).
                 res := add(
                     res,
-                    mulmod(mulmod(/*(x - g^8181 * z)^(-1)*/ mload(add(denominatorsPtr, 0x980)),
+                    mulmod(mulmod(/*(x - g^8183 * z)^(-1)*/ mload(add(denominatorsPtr, 0x980)),
                                   /*oods_coefficients[187]*/ mload(add(context, 0x78e0)),
                                   PRIME),
                            add(columnValue, sub(PRIME, /*oods_values[187]*/ mload(add(context, 0x5980)))),
                            PRIME))
 
-                // res += c_188*(f_21(x) - f_21(g^8183 * z)) / (x - g^8183 * z).
+                // res += c_188*(f_21(x) - f_21(g^8185 * z)) / (x - g^8185 * z).
                 res := add(
                     res,
-                    mulmod(mulmod(/*(x - g^8183 * z)^(-1)*/ mload(add(denominatorsPtr, 0x9a0)),
+                    mulmod(mulmod(/*(x - g^8185 * z)^(-1)*/ mload(add(denominatorsPtr, 0x9a0)),
                                   /*oods_coefficients[188]*/ mload(add(context, 0x7900)),
                                   PRIME),
                            add(columnValue, sub(PRIME, /*oods_values[188]*/ mload(add(context, 0x59a0)))),
                            PRIME))
 
-                // res += c_189*(f_21(x) - f_21(g^8185 * z)) / (x - g^8185 * z).
+                // res += c_189*(f_21(x) - f_21(g^8187 * z)) / (x - g^8187 * z).
                 res := add(
                     res,
-                    mulmod(mulmod(/*(x - g^8185 * z)^(-1)*/ mload(add(denominatorsPtr, 0x9c0)),
+                    mulmod(mulmod(/*(x - g^8187 * z)^(-1)*/ mload(add(denominatorsPtr, 0x9c0)),
                                   /*oods_coefficients[189]*/ mload(add(context, 0x7920)),
                                   PRIME),
                            add(columnValue, sub(PRIME, /*oods_values[189]*/ mload(add(context, 0x59c0)))),
                            PRIME))
 
-                // res += c_190*(f_21(x) - f_21(g^8189 * z)) / (x - g^8189 * z).
+                // res += c_190*(f_21(x) - f_21(g^8191 * z)) / (x - g^8191 * z).
                 res := add(
                     res,
-                    mulmod(mulmod(/*(x - g^8189 * z)^(-1)*/ mload(add(denominatorsPtr, 0x9e0)),
+                    mulmod(mulmod(/*(x - g^8191 * z)^(-1)*/ mload(add(denominatorsPtr, 0x9e0)),
                                   /*oods_coefficients[190]*/ mload(add(context, 0x7940)),
                                   PRIME),
                            add(columnValue, sub(PRIME, /*oods_values[190]*/ mload(add(context, 0x59e0)))),
@@ -2153,40 +2151,40 @@ contract CpuOods is MemoryMap, StarkParameters {
                           traceGenerator, // traceGenerator^1
                           PRIME))
 
-            // expmodsAndPoints.expmods[4] = traceGenerator^7.
+            // expmodsAndPoints.expmods[4] = traceGenerator^6.
             mstore(add(expmodsAndPoints, 0x80),
                    mulmod(mload(add(expmodsAndPoints, 0x60)), // traceGenerator^5
-                          mload(expmodsAndPoints), // traceGenerator^2
+                          traceGenerator, // traceGenerator^1
                           PRIME))
 
-            // expmodsAndPoints.expmods[5] = traceGenerator^8.
+            // expmodsAndPoints.expmods[5] = traceGenerator^7.
             mstore(add(expmodsAndPoints, 0xa0),
-                   mulmod(mload(add(expmodsAndPoints, 0x80)), // traceGenerator^7
+                   mulmod(mload(add(expmodsAndPoints, 0x80)), // traceGenerator^6
                           traceGenerator, // traceGenerator^1
                           PRIME))
 
-            // expmodsAndPoints.expmods[6] = traceGenerator^9.
+            // expmodsAndPoints.expmods[6] = traceGenerator^8.
             mstore(add(expmodsAndPoints, 0xc0),
-                   mulmod(mload(add(expmodsAndPoints, 0xa0)), // traceGenerator^8
+                   mulmod(mload(add(expmodsAndPoints, 0xa0)), // traceGenerator^7
                           traceGenerator, // traceGenerator^1
                           PRIME))
 
-            // expmodsAndPoints.expmods[7] = traceGenerator^10.
+            // expmodsAndPoints.expmods[7] = traceGenerator^9.
             mstore(add(expmodsAndPoints, 0xe0),
-                   mulmod(mload(add(expmodsAndPoints, 0xc0)), // traceGenerator^9
+                   mulmod(mload(add(expmodsAndPoints, 0xc0)), // traceGenerator^8
                           traceGenerator, // traceGenerator^1
                           PRIME))
 
-            // expmodsAndPoints.expmods[8] = traceGenerator^11.
+            // expmodsAndPoints.expmods[8] = traceGenerator^10.
             mstore(add(expmodsAndPoints, 0x100),
-                   mulmod(mload(add(expmodsAndPoints, 0xe0)), // traceGenerator^10
+                   mulmod(mload(add(expmodsAndPoints, 0xe0)), // traceGenerator^9
                           traceGenerator, // traceGenerator^1
                           PRIME))
 
             // expmodsAndPoints.expmods[9] = traceGenerator^12.
             mstore(add(expmodsAndPoints, 0x120),
-                   mulmod(mload(add(expmodsAndPoints, 0x100)), // traceGenerator^11
-                          traceGenerator, // traceGenerator^1
+                   mulmod(mload(add(expmodsAndPoints, 0x100)), // traceGenerator^10
+                          mload(expmodsAndPoints), // traceGenerator^2
                           PRIME))
 
             // expmodsAndPoints.expmods[10] = traceGenerator^16.
@@ -2222,7 +2220,7 @@ contract CpuOods is MemoryMap, StarkParameters {
             // expmodsAndPoints.expmods[15] = traceGenerator^32.
             mstore(add(expmodsAndPoints, 0x1e0),
                    mulmod(mload(add(expmodsAndPoints, 0x1c0)), // traceGenerator^25
-                          mload(add(expmodsAndPoints, 0x80)), // traceGenerator^7
+                          mload(add(expmodsAndPoints, 0xa0)), // traceGenerator^7
                           PRIME))
 
             // expmodsAndPoints.expmods[16] = traceGenerator^56.
@@ -2236,7 +2234,7 @@ contract CpuOods is MemoryMap, StarkParameters {
             // expmodsAndPoints.expmods[17] = traceGenerator^64.
             mstore(add(expmodsAndPoints, 0x220),
                    mulmod(mload(add(expmodsAndPoints, 0x200)), // traceGenerator^56
-                          mload(add(expmodsAndPoints, 0xa0)), // traceGenerator^8
+                          mload(add(expmodsAndPoints, 0xc0)), // traceGenerator^8
                           PRIME))
 
             // expmodsAndPoints.expmods[18] = traceGenerator^3570.
@@ -2339,13 +2337,13 @@ contract CpuOods is MemoryMap, StarkParameters {
               // expmods_and_points.points[16] = -(g^16 * z).
               mstore(add(expmodsAndPoints, 0x480), point)
 
-              // point *= g^3.
-              point := mulmod(point, /*traceGenerator^3*/ mload(add(expmodsAndPoints, 0x20)), PRIME)
-              // expmods_and_points.points[17] = -(g^19 * z).
+              // point *= g.
+              point := mulmod(point, traceGenerator, PRIME)
+              // expmods_and_points.points[17] = -(g^17 * z).
               mstore(add(expmodsAndPoints, 0x4a0), point)
 
-              // point *= g^2.
-              point := mulmod(point, /*traceGenerator^2*/ mload(expmodsAndPoints), PRIME)
+              // point *= g^4.
+              point := mulmod(point, /*traceGenerator^4*/ mload(add(expmodsAndPoints, 0x40)), PRIME)
               // expmods_and_points.points[18] = -(g^21 * z).
               mstore(add(expmodsAndPoints, 0x4c0), point)
 
@@ -2385,7 +2383,7 @@ contract CpuOods is MemoryMap, StarkParameters {
               mstore(add(expmodsAndPoints, 0x5a0), point)
 
               // point *= g^7.
-              point := mulmod(point, /*traceGenerator^7*/ mload(add(expmodsAndPoints, 0x80)), PRIME)
+              point := mulmod(point, /*traceGenerator^7*/ mload(add(expmodsAndPoints, 0xa0)), PRIME)
               // expmods_and_points.points[26] = -(g^38 * z).
               mstore(add(expmodsAndPoints, 0x5c0), point)
 
@@ -2399,23 +2397,23 @@ contract CpuOods is MemoryMap, StarkParameters {
               // expmods_and_points.points[28] = -(g^44 * z).
               mstore(add(expmodsAndPoints, 0x600), point)
 
-              // point *= g^11.
-              point := mulmod(point, /*traceGenerator^11*/ mload(add(expmodsAndPoints, 0x100)), PRIME)
-              // expmods_and_points.points[29] = -(g^55 * z).
+              // point *= g^3.
+              point := mulmod(point, /*traceGenerator^3*/ mload(add(expmodsAndPoints, 0x20)), PRIME)
+              // expmods_and_points.points[29] = -(g^47 * z).
               mstore(add(expmodsAndPoints, 0x620), point)
+
+              // point *= g^8.
+              point := mulmod(point, /*traceGenerator^8*/ mload(add(expmodsAndPoints, 0xc0)), PRIME)
+              // expmods_and_points.points[30] = -(g^55 * z).
+              mstore(add(expmodsAndPoints, 0x640), point)
 
               // point *= g^5.
               point := mulmod(point, /*traceGenerator^5*/ mload(add(expmodsAndPoints, 0x60)), PRIME)
-              // expmods_and_points.points[30] = -(g^60 * z).
-              mstore(add(expmodsAndPoints, 0x640), point)
-
-              // point *= g^3.
-              point := mulmod(point, /*traceGenerator^3*/ mload(add(expmodsAndPoints, 0x20)), PRIME)
-              // expmods_and_points.points[31] = -(g^63 * z).
+              // expmods_and_points.points[31] = -(g^60 * z).
               mstore(add(expmodsAndPoints, 0x660), point)
 
-              // point *= g^7.
-              point := mulmod(point, /*traceGenerator^7*/ mload(add(expmodsAndPoints, 0x80)), PRIME)
+              // point *= g^10.
+              point := mulmod(point, /*traceGenerator^10*/ mload(add(expmodsAndPoints, 0x100)), PRIME)
               // expmods_and_points.points[32] = -(g^70 * z).
               mstore(add(expmodsAndPoints, 0x680), point)
 
@@ -2440,7 +2438,7 @@ contract CpuOods is MemoryMap, StarkParameters {
               mstore(add(expmodsAndPoints, 0x700), point)
 
               // point *= g^10.
-              point := mulmod(point, /*traceGenerator^10*/ mload(add(expmodsAndPoints, 0xe0)), PRIME)
+              point := mulmod(point, /*traceGenerator^10*/ mload(add(expmodsAndPoints, 0x100)), PRIME)
               // expmods_and_points.points[37] = -(g^102 * z).
               mstore(add(expmodsAndPoints, 0x720), point)
 
@@ -2460,7 +2458,7 @@ contract CpuOods is MemoryMap, StarkParameters {
               mstore(add(expmodsAndPoints, 0x780), point)
 
               // point *= g^10.
-              point := mulmod(point, /*traceGenerator^10*/ mload(add(expmodsAndPoints, 0xe0)), PRIME)
+              point := mulmod(point, /*traceGenerator^10*/ mload(add(expmodsAndPoints, 0x100)), PRIME)
               // expmods_and_points.points[41] = -(g^134 * z).
               mstore(add(expmodsAndPoints, 0x7a0), point)
 
@@ -2470,7 +2468,7 @@ contract CpuOods is MemoryMap, StarkParameters {
               mstore(add(expmodsAndPoints, 0x7c0), point)
 
               // point *= g^9.
-              point := mulmod(point, /*traceGenerator^9*/ mload(add(expmodsAndPoints, 0xc0)), PRIME)
+              point := mulmod(point, /*traceGenerator^9*/ mload(add(expmodsAndPoints, 0xe0)), PRIME)
               // expmods_and_points.points[43] = -(g^144 * z).
               mstore(add(expmodsAndPoints, 0x7e0), point)
 
@@ -2505,7 +2503,7 @@ contract CpuOods is MemoryMap, StarkParameters {
               mstore(add(expmodsAndPoints, 0x8a0), point)
 
               // point *= g^9.
-              point := mulmod(point, /*traceGenerator^9*/ mload(add(expmodsAndPoints, 0xc0)), PRIME)
+              point := mulmod(point, /*traceGenerator^9*/ mload(add(expmodsAndPoints, 0xe0)), PRIME)
               // expmods_and_points.points[50] = -(g^208 * z).
               mstore(add(expmodsAndPoints, 0x8c0), point)
 
@@ -2535,7 +2533,7 @@ contract CpuOods is MemoryMap, StarkParameters {
               mstore(add(expmodsAndPoints, 0x960), point)
 
               // point *= g^7.
-              point := mulmod(point, /*traceGenerator^7*/ mload(add(expmodsAndPoints, 0x80)), PRIME)
+              point := mulmod(point, /*traceGenerator^7*/ mload(add(expmodsAndPoints, 0xa0)), PRIME)
               // expmods_and_points.points[56] = -(g^263 * z).
               mstore(add(expmodsAndPoints, 0x980), point)
 
@@ -2574,13 +2572,13 @@ contract CpuOods is MemoryMap, StarkParameters {
               // expmods_and_points.points[63] = -(g^4081 * z).
               mstore(add(expmodsAndPoints, 0xa60), point)
 
-              // point *= g^4.
-              point := mulmod(point, /*traceGenerator^4*/ mload(add(expmodsAndPoints, 0x40)), PRIME)
-              // expmods_and_points.points[64] = -(g^4085 * z).
+              // point *= g^2.
+              point := mulmod(point, /*traceGenerator^2*/ mload(expmodsAndPoints), PRIME)
+              // expmods_and_points.points[64] = -(g^4083 * z).
               mstore(add(expmodsAndPoints, 0xa80), point)
 
-              // point *= g^4.
-              point := mulmod(point, /*traceGenerator^4*/ mload(add(expmodsAndPoints, 0x40)), PRIME)
+              // point *= g^6.
+              point := mulmod(point, /*traceGenerator^6*/ mload(add(expmodsAndPoints, 0x80)), PRIME)
               // expmods_and_points.points[65] = -(g^4089 * z).
               mstore(add(expmodsAndPoints, 0xaa0), point)
 
@@ -2595,17 +2593,17 @@ contract CpuOods is MemoryMap, StarkParameters {
               mstore(add(expmodsAndPoints, 0xae0), point)
 
               // point *= g^9.
-              point := mulmod(point, /*traceGenerator^9*/ mload(add(expmodsAndPoints, 0xc0)), PRIME)
+              point := mulmod(point, /*traceGenerator^9*/ mload(add(expmodsAndPoints, 0xe0)), PRIME)
               // expmods_and_points.points[68] = -(g^4102 * z).
               mstore(add(expmodsAndPoints, 0xb00), point)
 
               // point *= g^8.
-              point := mulmod(point, /*traceGenerator^8*/ mload(add(expmodsAndPoints, 0xa0)), PRIME)
+              point := mulmod(point, /*traceGenerator^8*/ mload(add(expmodsAndPoints, 0xc0)), PRIME)
               // expmods_and_points.points[69] = -(g^4110 * z).
               mstore(add(expmodsAndPoints, 0xb20), point)
 
               // point *= g^8.
-              point := mulmod(point, /*traceGenerator^8*/ mload(add(expmodsAndPoints, 0xa0)), PRIME)
+              point := mulmod(point, /*traceGenerator^8*/ mload(add(expmodsAndPoints, 0xc0)), PRIME)
               // expmods_and_points.points[70] = -(g^4118 * z).
               mstore(add(expmodsAndPoints, 0xb40), point)
 
@@ -2620,52 +2618,60 @@ contract CpuOods is MemoryMap, StarkParameters {
               mstore(add(expmodsAndPoints, 0xb80), point)
 
               // point *= g^7.
-              point := mulmod(point, /*traceGenerator^7*/ mload(add(expmodsAndPoints, 0x80)), PRIME)
+              point := mulmod(point, /*traceGenerator^7*/ mload(add(expmodsAndPoints, 0xa0)), PRIME)
               // expmods_and_points.points[73] = -(g^8167 * z).
               mstore(add(expmodsAndPoints, 0xba0), point)
 
-              // point *= g^8.
-              point := mulmod(point, /*traceGenerator^8*/ mload(add(expmodsAndPoints, 0xa0)), PRIME)
-              // expmods_and_points.points[74] = -(g^8175 * z).
+              // point *= g^10.
+              point := mulmod(point, /*traceGenerator^10*/ mload(add(expmodsAndPoints, 0x100)), PRIME)
+              // expmods_and_points.points[74] = -(g^8177 * z).
               mstore(add(expmodsAndPoints, 0xbc0), point)
 
               // point *= g^2.
               point := mulmod(point, /*traceGenerator^2*/ mload(expmodsAndPoints), PRIME)
-              // expmods_and_points.points[75] = -(g^8177 * z).
+              // expmods_and_points.points[75] = -(g^8179 * z).
               mstore(add(expmodsAndPoints, 0xbe0), point)
 
               // point *= g^4.
               point := mulmod(point, /*traceGenerator^4*/ mload(add(expmodsAndPoints, 0x40)), PRIME)
-              // expmods_and_points.points[76] = -(g^8181 * z).
+              // expmods_and_points.points[76] = -(g^8183 * z).
               mstore(add(expmodsAndPoints, 0xc00), point)
 
               // point *= g^2.
               point := mulmod(point, /*traceGenerator^2*/ mload(expmodsAndPoints), PRIME)
-              // expmods_and_points.points[77] = -(g^8183 * z).
+              // expmods_and_points.points[77] = -(g^8185 * z).
               mstore(add(expmodsAndPoints, 0xc20), point)
 
               // point *= g^2.
               point := mulmod(point, /*traceGenerator^2*/ mload(expmodsAndPoints), PRIME)
-              // expmods_and_points.points[78] = -(g^8185 * z).
+              // expmods_and_points.points[78] = -(g^8187 * z).
               mstore(add(expmodsAndPoints, 0xc40), point)
 
               // point *= g^4.
               point := mulmod(point, /*traceGenerator^4*/ mload(add(expmodsAndPoints, 0x40)), PRIME)
-              // expmods_and_points.points[79] = -(g^8189 * z).
+              // expmods_and_points.points[79] = -(g^8191 * z).
               mstore(add(expmodsAndPoints, 0xc60), point)
 
-              // point *= g^25.
-              point := mulmod(point, /*traceGenerator^25*/ mload(add(expmodsAndPoints, 0x1c0)), PRIME)
+              // point *= g^23.
+              point := mulmod(point, /*traceGenerator^23*/ mload(add(expmodsAndPoints, 0x1a0)), PRIME)
               // expmods_and_points.points[80] = -(g^8214 * z).
               mstore(add(expmodsAndPoints, 0xc80), point)
             }
 
-
             let evalPointsPtr := /*oodsEvalPoints*/ add(context, 0x5b80)
-            let evalPointsEndPtr := add(evalPointsPtr,
-                                           mul(/*n_unique_queries*/ mload(add(context, 0x140)), 0x20))
+            let evalPointsEndPtr := add(
+                evalPointsPtr,
+                mul(/*n_unique_queries*/ mload(add(context, 0x140)), 0x20))
+
+            // The batchInverseArray is split into two halves.
+            // The first half is used for cumulative products and the second half for values to invert.
+            // Consequently the products and values are half the array size apart.
             let productsPtr := add(batchInverseArray, 0x20)
-            let valuesPtr := add(add(batchInverseArray, 0x20), 0x1f200)
+            // Compute an offset in bytes to the middle of the array.
+            let productsToValuesOffset := mul(
+                /*batchInverseArray.length*/ mload(batchInverseArray),
+                /*0x20 / 2*/ 0x10)
+            let valuesPtr := add(productsPtr, productsToValuesOffset)
             let partialProduct := 1
             let minusPointPow := sub(PRIME, mulmod(oodsPoint, oodsPoint, PRIME))
             for {} lt(evalPointsPtr, evalPointsEndPtr)
@@ -2812,7 +2818,7 @@ contract CpuOods is MemoryMap, StarkParameters {
                 }
 
                 {
-                // Calculate denominator for row 19: x - g^19 * z.
+                // Calculate denominator for row 17: x - g^17 * z.
                 let denominator := add(shiftedEvalPoint, mload(add(expmodsAndPoints, 0x4a0)))
                 mstore(add(productsPtr, 0x220), partialProduct)
                 mstore(add(valuesPtr, 0x220), denominator)
@@ -2908,7 +2914,7 @@ contract CpuOods is MemoryMap, StarkParameters {
                 }
 
                 {
-                // Calculate denominator for row 55: x - g^55 * z.
+                // Calculate denominator for row 47: x - g^47 * z.
                 let denominator := add(shiftedEvalPoint, mload(add(expmodsAndPoints, 0x620)))
                 mstore(add(productsPtr, 0x3a0), partialProduct)
                 mstore(add(valuesPtr, 0x3a0), denominator)
@@ -2916,7 +2922,7 @@ contract CpuOods is MemoryMap, StarkParameters {
                 }
 
                 {
-                // Calculate denominator for row 60: x - g^60 * z.
+                // Calculate denominator for row 55: x - g^55 * z.
                 let denominator := add(shiftedEvalPoint, mload(add(expmodsAndPoints, 0x640)))
                 mstore(add(productsPtr, 0x3c0), partialProduct)
                 mstore(add(valuesPtr, 0x3c0), denominator)
@@ -2924,7 +2930,7 @@ contract CpuOods is MemoryMap, StarkParameters {
                 }
 
                 {
-                // Calculate denominator for row 63: x - g^63 * z.
+                // Calculate denominator for row 60: x - g^60 * z.
                 let denominator := add(shiftedEvalPoint, mload(add(expmodsAndPoints, 0x660)))
                 mstore(add(productsPtr, 0x3e0), partialProduct)
                 mstore(add(valuesPtr, 0x3e0), denominator)
@@ -3188,7 +3194,7 @@ contract CpuOods is MemoryMap, StarkParameters {
                 }
 
                 {
-                // Calculate denominator for row 4085: x - g^4085 * z.
+                // Calculate denominator for row 4083: x - g^4083 * z.
                 let denominator := add(shiftedEvalPoint, mload(add(expmodsAndPoints, 0xa80)))
                 mstore(add(productsPtr, 0x800), partialProduct)
                 mstore(add(valuesPtr, 0x800), denominator)
@@ -3268,7 +3274,7 @@ contract CpuOods is MemoryMap, StarkParameters {
                 }
 
                 {
-                // Calculate denominator for row 8175: x - g^8175 * z.
+                // Calculate denominator for row 8177: x - g^8177 * z.
                 let denominator := add(shiftedEvalPoint, mload(add(expmodsAndPoints, 0xbc0)))
                 mstore(add(productsPtr, 0x940), partialProduct)
                 mstore(add(valuesPtr, 0x940), denominator)
@@ -3276,7 +3282,7 @@ contract CpuOods is MemoryMap, StarkParameters {
                 }
 
                 {
-                // Calculate denominator for row 8177: x - g^8177 * z.
+                // Calculate denominator for row 8179: x - g^8179 * z.
                 let denominator := add(shiftedEvalPoint, mload(add(expmodsAndPoints, 0xbe0)))
                 mstore(add(productsPtr, 0x960), partialProduct)
                 mstore(add(valuesPtr, 0x960), denominator)
@@ -3284,7 +3290,7 @@ contract CpuOods is MemoryMap, StarkParameters {
                 }
 
                 {
-                // Calculate denominator for row 8181: x - g^8181 * z.
+                // Calculate denominator for row 8183: x - g^8183 * z.
                 let denominator := add(shiftedEvalPoint, mload(add(expmodsAndPoints, 0xc00)))
                 mstore(add(productsPtr, 0x980), partialProduct)
                 mstore(add(valuesPtr, 0x980), denominator)
@@ -3292,7 +3298,7 @@ contract CpuOods is MemoryMap, StarkParameters {
                 }
 
                 {
-                // Calculate denominator for row 8183: x - g^8183 * z.
+                // Calculate denominator for row 8185: x - g^8185 * z.
                 let denominator := add(shiftedEvalPoint, mload(add(expmodsAndPoints, 0xc20)))
                 mstore(add(productsPtr, 0x9a0), partialProduct)
                 mstore(add(valuesPtr, 0x9a0), denominator)
@@ -3300,7 +3306,7 @@ contract CpuOods is MemoryMap, StarkParameters {
                 }
 
                 {
-                // Calculate denominator for row 8185: x - g^8185 * z.
+                // Calculate denominator for row 8187: x - g^8187 * z.
                 let denominator := add(shiftedEvalPoint, mload(add(expmodsAndPoints, 0xc40)))
                 mstore(add(productsPtr, 0x9c0), partialProduct)
                 mstore(add(valuesPtr, 0x9c0), denominator)
@@ -3308,7 +3314,7 @@ contract CpuOods is MemoryMap, StarkParameters {
                 }
 
                 {
-                // Calculate denominator for row 8189: x - g^8189 * z.
+                // Calculate denominator for row 8191: x - g^8191 * z.
                 let denominator := add(shiftedEvalPoint, mload(add(expmodsAndPoints, 0xc60)))
                 mstore(add(productsPtr, 0x9e0), partialProduct)
                 mstore(add(valuesPtr, 0x9e0), denominator)
@@ -3342,7 +3348,6 @@ contract CpuOods is MemoryMap, StarkParameters {
                 valuesPtr := add(valuesPtr, 0xa60)
             }
 
-            let productsToValuesOffset := 0x1f200
             let firstPartialProductPtr := add(batchInverseArray, 0x20)
             // Compute the inverse of the product.
             let prodInv := expmod(partialProduct, sub(PRIME, 2), PRIME)

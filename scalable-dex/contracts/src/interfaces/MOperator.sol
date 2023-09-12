@@ -1,7 +1,12 @@
 // SPDX-License-Identifier: Apache-2.0.
-pragma solidity ^0.6.11;
+pragma solidity ^0.6.12;
+
+import "./MGovernance.sol";
 
 abstract contract MOperator {
+    event LogOperatorAdded(address operator);
+    event LogOperatorRemoved(address operator);
+
     function isOperator(address testedOperator) public view virtual returns (bool);
 
     modifier onlyOperator() {
@@ -12,4 +17,6 @@ abstract contract MOperator {
     function registerOperator(address newOperator) external virtual;
 
     function unregisterOperator(address removedOperator) external virtual;
+
+    function getOperators() internal view virtual returns (mapping(address => bool) storage);
 }

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0.
-pragma solidity ^0.6.11;
+pragma solidity ^0.6.12;
 
 import "../../interfaces/ExternalInitializer.sol";
 import "../../interfaces/Identity.sol";
@@ -8,8 +8,8 @@ import "../../libraries/Common.sol";
 import "../../libraries/LibConstants.sol";
 
 /*
-  This contract is simple impelementation of an external initializing contract
-  that removes all existing verifiers and committees and insall the ones provided in parameters.
+  This contract is a simple implementation of an external initializing contract
+  that removes all existing verifiers and committees and install the ones provided in parameters.
 */
 contract ChangeVerifiersExternalInitializer is ExternalInitializer, MainStorage, LibConstants {
     using Addresses for address;
@@ -22,7 +22,7 @@ contract ChangeVerifiersExternalInitializer is ExternalInitializer, MainStorage,
       3. New availability verifier address,
       4. Keccak256 of the expected availability verifier id.
     */
-    function initialize(bytes calldata data) external override {
+    function initialize(bytes calldata data) public virtual override {
         require(data.length == 128, "UNEXPECTED_DATA_SIZE");
         address newVerifierAddress;
         bytes32 verifierIdHash;

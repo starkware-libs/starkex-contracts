@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: Apache-2.0.
-pragma solidity ^0.6.11;
+pragma solidity ^0.6.12;
 
+import "../interfaces/ContractInitializer.sol";
 import "../interfaces/IFactRegistry.sol";
+import "../interfaces/ProxySupport.sol";
 import "./StorageSlots.sol";
-import "../interfaces/BlockDirectCall.sol";
 import "../libraries/Common.sol";
 
 /**
@@ -16,67 +17,63 @@ import "../libraries/Common.sol";
   thus:
   1. Implementation address is stored in a hashed slot (other than proxy's one...).
   2. No state variable is allowed in low address ranges.
-  3. Setting of implementation is done in initialize.
-  4. isFrozen and initialize are implemented, to be compliant with Proxy.
 
   This implementation is intentionally minimal,
   and has no management or governance.
   The assumption is that if a different implementation is needed, it will be performed
   in an upgradeTo a new deployed CallProxy, pointing to a new implementation.
 */
-// NOLINTNEXTLINE locked-ether.
-contract CallProxy is BlockDirectCall, StorageSlots {
+contract CallProxy is StorageSlots, ContractInitializer, ProxySupport {
     using Addresses for address;
 
-    string public constant CALL_PROXY_VERSION = "3.1.0";
+    string public constant CALL_PROXY_VERSION = "3.2.0";
 
-    // Proxy client - initialize & isFrozen.
-    // NOLINTNEXTLINE: external-function.
-    function isFrozen() public pure returns (bool) {
-        return false;
+    /*
+      A single address is expected - the implementation that is call-proxied to.
+    */
+    function numOfSubContracts() internal pure override returns (uint256) {
+        return 1;
     }
 
     /*
-      This function is called by the Proxy upon activating an implementation.
-      The data passed in to this function contains the implementation address,
-      and if applicable, an address of an EIC (ExternalInitializerContract) and its data.
-
-      The expected data format is as following:
-
-      Case I (no EIC):
-        data.length == 64.
-        [0 :32] implementation address
-        [32:64] Zero address.
-
-      Case II (EIC):
-        data length >= 64
-        [0 :32] implementation address
-        [32:64] EIC address
-        [64:  ] EIC init data.
+      There is no initialization needed to be done after the processSubContractAddresses state
+      thus we return true, to indicate to the ProxySupport that there is no need to get into the
+      contract state initalization part.
     */
-    function initialize(bytes calldata data) external notCalledDirectly {
-        require(data.length >= 64, "INCORRECT_DATA_SIZE");
-        (address impl, address eic) = abi.decode(data, (address, address));
-        require(impl.isContract(), "ADDRESS_NOT_CONTRACT");
-        setCallProxyImplementation(impl);
-        if (eic != address(0x0)) {
-            callExternalInitializer(eic, data[64:]);
-        } else {
-            require(data.length == 64, "INVALID_INIT_DATA");
-        }
+    function isInitialized() internal view override returns (bool) {
+        return true;
     }
 
-    function callExternalInitializer(address externalInitializerAddr, bytes calldata eicData)
-        private
-    {
-        require(externalInitializerAddr.isContract(), "EIC_NOT_A_CONTRACT");
+    /*
+      Gets the implementation address from the ProxySupport initialize(),
+      and sets the implementation slot accordingly.
+    */
+    function processSubContractAddresses(bytes calldata subContractAddresses) internal override {
+        address impl = abi.decode(subContractAddresses, (address));
+        require(impl.isContract(), "ADDRESS_NOT_CONTRACT");
+        setCallProxyImplementation(impl);
+    }
 
-        // NOLINTNEXTLINE: low-level-calls, controlled-delegatecall.
-        (bool success, bytes memory returndata) = externalInitializerAddr.delegatecall(
-            abi.encodeWithSelector(this.initialize.selector, eicData)
-        );
-        require(success, string(returndata));
-        require(returndata.length == 0, string(returndata));
+    /*
+      In CallProxy a normal init flow has no data,
+      as the callProxyImplementation was already set by processSubContractAddresses().
+    */
+    function validateInitData(bytes calldata data) internal pure override {
+        require(data.length == 0, "UNEXPECTED_INIT_DATA");
+    }
+
+    /*
+      Required by ContractInitializer, Called by ProxySupport.
+      No processing is needed.
+    */
+    function initializeContractState(bytes calldata) internal override {}
+
+    /*
+      Required by ProxySupport as it inherits Governance.
+      Not expected to be called.
+    */
+    function getGovernanceInfo() internal view override returns (GovernanceInfoStruct storage) {
+        revert("NOT_IMPLEMENTED");
     }
 
     /*

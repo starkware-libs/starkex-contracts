@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0.
-pragma solidity ^0.6.11;
+pragma solidity ^0.6.12;
 
 import "./components/FactRegistry.sol";
 import "./MerkleVerifier.sol";
@@ -18,6 +18,7 @@ contract MerkleStatementContract is MerkleVerifier, FactRegistry {
         uint256 height,
         uint256 expectedRoot
     ) public {
+        // Ensure 'height' is bounded as a sanity check (the bound is somewhat arbitrary).
         require(height < 200, "Height must be < 200.");
         require(
             initialMerkleQueue.length <= MAX_N_MERKLE_VERIFIER_QUERIES * 2,
@@ -44,7 +45,10 @@ contract MerkleStatementContract is MerkleVerifier, FactRegistry {
             // Get number of queries.
             nQueries := div(mload(initialMerkleQueue), 0x2) //NOLINT: divide-before-multiply.
             // Get a pointer to the end of initialMerkleQueue.
-            let initialMerkleQueueEndPtr := add(merkleQueuePtr, mul(nQueries, 0x40))
+            let initialMerkleQueueEndPtr := add(
+                merkleQueuePtr,
+                mul(nQueries, MERKLE_SLOT_SIZE_IN_BYTES)
+            )
             // Let dataToHashPtr point to a free memory.
             dataToHashPtr := add(channelPtr, 0x20) // Next freePtr.
 
@@ -71,7 +75,7 @@ contract MerkleStatementContract is MerkleVerifier, FactRegistry {
                 mstore(add(dataToHashPtr, 0x20), mload(add(merkleQueuePtr, 0x20)))
 
                 dataToHashPtr := add(dataToHashPtr, 0x40)
-                merkleQueuePtr := add(merkleQueuePtr, 0x40)
+                merkleQueuePtr := add(merkleQueuePtr, MERKLE_SLOT_SIZE_IN_BYTES)
             }
 
             // We need to enforce that lastIdx < 2**(height+1)

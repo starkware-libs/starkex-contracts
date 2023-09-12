@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0.
-pragma solidity ^0.6.11;
+pragma solidity ^0.6.12;
 
 import "../cpu/CairoBootloaderProgram.sol";
 import "../cpu/CairoVerifierContract.sol";
@@ -18,9 +18,13 @@ contract GpsStatementVerifier is
     MemoryPageFactRegistry memoryPageFactRegistry;
     CairoVerifierContract[] cairoVerifierContractAddresses;
 
-    uint256 internal constant N_BUILTINS = 5;
+    uint256 internal constant N_BUILTINS = 6;
     uint256 internal constant N_MAIN_ARGS = N_BUILTINS;
     uint256 internal constant N_MAIN_RETURN_VALUES = N_BUILTINS;
+    // Cairo verifier program hash.
+    uint256 immutable hashedSupportedCairoVerifiers_;
+    // Simple bootloader program hash.
+    uint256 immutable simpleBootloaderProgramHash_;
 
     /*
       Constructs an instance of GpsStatementVerifier.
@@ -30,7 +34,9 @@ contract GpsStatementVerifier is
     constructor(
         address bootloaderProgramContract,
         address memoryPageFactRegistry_,
-        address[] memory cairoVerifierContracts
+        address[] memory cairoVerifierContracts,
+        uint256 hashedSupportedCairoVerifiers,
+        uint256 simpleBootloaderProgramHash
     ) public {
         bootloaderProgramContractAddress = CairoBootloaderProgram(bootloaderProgramContract);
         memoryPageFactRegistry = MemoryPageFactRegistry(memoryPageFactRegistry_);
@@ -38,10 +44,19 @@ contract GpsStatementVerifier is
         for (uint256 i = 0; i < cairoVerifierContracts.length; ++i) {
             cairoVerifierContractAddresses[i] = CairoVerifierContract(cairoVerifierContracts[i]);
         }
+        hashedSupportedCairoVerifiers_ = hashedSupportedCairoVerifiers;
+        simpleBootloaderProgramHash_ = simpleBootloaderProgramHash;
     }
 
     function identify() external pure override returns (string memory) {
-        return "StarkWare_GpsStatementVerifier_2021_3";
+        return "StarkWare_GpsStatementVerifier_2022_5";
+    }
+
+    /*
+      Returns the bootloader config.
+    */
+    function getBootloaderConfig() external view returns (uint256, uint256) {
+        return (simpleBootloaderProgramHash_, hashedSupportedCairoVerifiers_);
     }
 
     /*
@@ -82,8 +97,12 @@ contract GpsStatementVerifier is
             require(cairoAuxInput.length > publicMemoryOffset, "Invalid cairoAuxInput length.");
             publicMemoryPages = (uint256[])(cairoPublicInput[publicMemoryOffset:]);
             uint256 nPages = publicMemoryPages[0];
+            require(nPages < 10000, "Invalid nPages.");
 
-            // Each page has a page info and a hash.
+            // Validate publicMemoryPages.length.
+            // Each page has a page info and a cumulative product.
+            // There is no 'page address' in the page info for page 0, but this 'free' slot is
+            // used to store the number of pages.
             require(
                 publicMemoryPages.length == nPages * (PAGE_INFO_SIZE + 1),
                 "Invalid publicMemoryPages length."
@@ -97,8 +116,8 @@ contract GpsStatementVerifier is
             ) = registerPublicMemoryMainPage(taskMetadata, cairoAuxInput, selectedBuiltins);
 
             // Make sure the first page is valid.
-            // If the size or the hash are invalid, it may indicate that there is a mismatch between the
-            // bootloader program contract and the program in the proof.
+            // If the size or the hash are invalid, it may indicate that there is a mismatch
+            // between the prover and the verifier on the bootloader program or bootloader config.
             require(
                 publicMemoryPages[PAGE_INFO_SIZE_OFFSET] == publicMemoryLength,
                 "Invalid size for memory page 0."
@@ -142,7 +161,7 @@ contract GpsStatementVerifier is
         uint256[] calldata cairoAuxInput,
         uint256 selectedBuiltins
     )
-        internal
+        private
         returns (
             uint256 publicMemoryLength,
             uint256 memoryHash,
@@ -150,6 +169,7 @@ contract GpsStatementVerifier is
         )
     {
         uint256 nTasks = taskMetadata[0];
+        // Ensure 'nTasks' is bounded as a sanity check (the bound is somewhat arbitrary).
         require(nTasks < 2**30, "Invalid number of tasks.");
 
         // Public memory length.
@@ -158,13 +178,13 @@ contract GpsStatementVerifier is
             2 +
             N_MAIN_ARGS +
             N_MAIN_RETURN_VALUES +
+            // Bootloader config size =
+            2 +
             // Number of tasks cell =
             1 +
             2 *
             nTasks);
-        uint256[] memory publicMemory = new uint256[](
-            N_WORDS_PER_PUBLIC_MEMORY_ENTRY * publicMemoryLength
-        );
+        uint256[] memory publicMemory = new uint256[](MEMORY_PAIR_SIZE * publicMemoryLength);
 
         uint256 offset = 0;
 
@@ -233,28 +253,32 @@ contract GpsStatementVerifier is
 
         // Program output.
         {
-            // Check that there are enough range checks for the bootloader builtin validation.
-            // Each builtin is validated for each task and each validation uses one range check.
-            require(
-                cairoAuxInput[OFFSET_RANGE_CHECK_STOP_PTR] >=
-                    cairoAuxInput[OFFSET_RANGE_CHECK_BEGIN_ADDR] + N_BUILTINS * nTasks,
-                "Range-check stop pointer should be after all range checks used for validations."
-            );
-
             {
                 uint256 outputAddress = cairoAuxInput[OFFSET_OUTPUT_BEGIN_ADDR];
-                // Force that memory[outputAddress] = nTasks.
+                // Force that memory[outputAddress] and memory[outputAddress + 1] contain the
+                // bootloader config (which is 2 words size).
                 publicMemory[offset + 0] = outputAddress;
-                publicMemory[offset + 1] = nTasks;
-                offset += 2;
-                outputAddress += 1;
+                publicMemory[offset + 1] = simpleBootloaderProgramHash_;
+                publicMemory[offset + 2] = outputAddress + 1;
+                publicMemory[offset + 3] = hashedSupportedCairoVerifiers_;
+                // Force that memory[outputAddress + 2] = nTasks.
+                publicMemory[offset + 4] = outputAddress + 2;
+                publicMemory[offset + 5] = nTasks;
+                offset += 6;
+                outputAddress += 3;
 
                 uint256[] calldata taskMetadataSlice = taskMetadata[METADATA_TASKS_OFFSET:];
                 for (uint256 task = 0; task < nTasks; task++) {
                     uint256 outputSize = taskMetadataSlice[METADATA_OFFSET_TASK_OUTPUT_SIZE];
+
+                    // Ensure 'outputSize' is at least 2 and bounded from above as a sanity check
+                    // (the bound is somewhat arbitrary).
                     require(2 <= outputSize && outputSize < 2**30, "Invalid task output size.");
                     uint256 programHash = taskMetadataSlice[METADATA_OFFSET_TASK_PROGRAM_HASH];
                     uint256 nTreePairs = taskMetadataSlice[METADATA_OFFSET_TASK_N_TREE_PAIRS];
+
+                    // Ensure 'nTreePairs' is at least 1 and bounded from above as a sanity check
+                    // (the bound is somewhat arbitrary).
                     require(
                         1 <= nTreePairs && nTreePairs < 2**20,
                         "Invalid number of pairs in the Merkle tree structure."

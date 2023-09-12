@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0.
-pragma solidity ^0.6.11;
+pragma solidity ^0.6.12;
 
 import "../../interfaces/ExternalInitializer.sol";
 
@@ -14,10 +14,17 @@ contract ModifyUpgradeDelayExternalInitializer is ExternalInitializer {
     bytes32 constant UPGRADE_DELAY_SLOT =
         0xc21dbb3089fcb2c4f4c6a67854ab4db2b0f233ea4b21b21f912d52d18fc5db1f;
 
-    function initialize(bytes calldata data) external override {
+    function initialize(bytes calldata data) external virtual override {
         require(data.length == 32, "INCORRECT_INIT_DATA_SIZE_32");
         uint256 delayInSeconds;
         (delayInSeconds) = abi.decode(data, (uint256));
+
+        setUpgradeDelay(delayInSeconds);
+
+        emit LogExternalInitialize(data);
+    }
+
+    function setUpgradeDelay(uint256 delayInSeconds) internal virtual {
         require(delayInSeconds <= MAX_DELAY, "DELAY_TOO_LONG");
 
         // To support V1 Proxy - we use the expected slot.
@@ -36,7 +43,5 @@ contract ModifyUpgradeDelayExternalInitializer is ExternalInitializer {
         assembly {
             sstore(slot, delayInSeconds)
         }
-
-        emit LogExternalInitialize(data);
     }
 }

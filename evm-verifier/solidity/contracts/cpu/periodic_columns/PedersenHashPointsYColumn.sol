@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0.
-pragma solidity ^0.6.11;
+pragma solidity ^0.6.12;
 
 contract PedersenHashPointsYColumn {
     function compute(uint256 x) external pure returns(uint256 result) {

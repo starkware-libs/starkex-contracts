@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0.
-pragma solidity ^0.6.11;
+pragma solidity ^0.6.12;
 
 import "../components/FactRegistry.sol";
 import "../interfaces/IAvailabilityVerifier.sol";
@@ -14,6 +14,7 @@ contract Committee is FactRegistry, IAvailabilityVerifier, Identity {
     /// @param committeeMembers List of committee members.
     /// @param numSignaturesRequired Number of required signatures.
     constructor(address[] memory committeeMembers, uint256 numSignaturesRequired) public {
+        require(numSignaturesRequired > 0, "NO_REQUIRED_SIGNATURES");
         require(numSignaturesRequired <= committeeMembers.length, "TOO_MANY_REQUIRED_SIGNATURES");
         for (uint256 idx = 0; idx < committeeMembers.length; idx++) {
             require(
@@ -25,8 +26,8 @@ contract Committee is FactRegistry, IAvailabilityVerifier, Identity {
         signaturesRequired = numSignaturesRequired;
     }
 
-    function identify() external pure override returns (string memory) {
-        return "StarkWare_Committee_2019_1";
+    function identify() external pure virtual override returns (string memory) {
+        return "StarkWare_Committee_2022_2";
     }
 
     /// @dev Verifies the availability proof. Reverts if invalid.
@@ -40,7 +41,7 @@ contract Committee is FactRegistry, IAvailabilityVerifier, Identity {
     ///
     /// @param claimHash The hash of the claim the committee is signing on.
     /// The format is keccak256(abi.encodePacked(
-    ///    newVaultRoot, vaultTreeHeight, newOrderRoot, orderTreeHeight sequenceNumber))
+    ///    newValidiumVaultRoot, validiumTreeHeight, newOrderRoot, orderTreeHeight sequenceNumber))
     /// @param availabilityProofs Concatenated ec signatures by committee members.
     function verifyAvailabilityProof(bytes32 claimHash, bytes calldata availabilityProofs)
         external

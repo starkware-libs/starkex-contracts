@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: Apache-2.0.
-pragma solidity ^0.6.11;
+pragma solidity ^0.6.12;
 
 import "../components/Escapes.sol";
 import "../interactions/StarkExForcedActionState.sol";
 import "../interactions/UpdateState.sol";
 import "../../components/Freezable.sol";
 import "../../components/MainGovernance.sol";
-import "../../components/Operator.sol";
+import "../../components/StarkExOperator.sol";
 import "../../interactions/AcceptModifications.sol";
 import "../../interactions/StateRoot.sol";
 import "../../interactions/TokenQuantization.sol";
@@ -15,7 +15,7 @@ import "../../interfaces/SubContractor.sol";
 contract StarkExState is
     MainGovernance,
     SubContractor,
-    Operator,
+    StarkExOperator,
     Freezable,
     AcceptModifications,
     TokenQuantization,
@@ -24,16 +24,19 @@ contract StarkExState is
     Escapes,
     UpdateState
 {
-    uint256 constant INITIALIZER_SIZE = 9 * 32; // 2 * address + 6 * uint256 + 1 * bool = 288 bytes.
+    // InitializationArgStruct contains 2 * address + 8 * uint256 + 1 * bool = 352 bytes.
+    uint256 constant INITIALIZER_SIZE = 11 * 32;
 
     struct InitializationArgStruct {
+        uint256 globalConfigCode;
         address escapeVerifierAddress;
         uint256 sequenceNumber;
-        uint256 vaultRoot;
+        uint256 validiumVaultRoot;
+        uint256 rollupVaultRoot;
         uint256 orderRoot;
-        uint256 vaultTreeHeight;
+        uint256 validiumTreeHeight;
+        uint256 rollupTreeHeight;
         uint256 orderTreeHeight;
-        uint256 onchainDataVersionValue;
         bool strictVaultBalancePolicy;
         address orderRegistryAddress;
     }
@@ -46,12 +49,15 @@ contract StarkExState is
     function initialize(bytes calldata data) external virtual override {
         // This initializer sets roots etc. It must not be applied twice.
         // I.e. it can run only when the state is still empty.
-        require(vaultRoot == 0, "STATE_ALREADY_INITIALIZED");
-        require(vaultTreeHeight == 0, "STATE_ALREADY_INITIALIZED");
-        require(orderRoot == 0, "STATE_ALREADY_INITIALIZED");
-        require(orderTreeHeight == 0, "STATE_ALREADY_INITIALIZED");
+        string memory ALREADY_INITIALIZED_MSG = "STATE_ALREADY_INITIALIZED";
+        require(validiumVaultRoot == 0, ALREADY_INITIALIZED_MSG);
+        require(validiumTreeHeight == 0, ALREADY_INITIALIZED_MSG);
+        require(rollupVaultRoot == 0, ALREADY_INITIALIZED_MSG);
+        require(rollupTreeHeight == 0, ALREADY_INITIALIZED_MSG);
+        require(orderRoot == 0, ALREADY_INITIALIZED_MSG);
+        require(orderTreeHeight == 0, ALREADY_INITIALIZED_MSG);
 
-        require(data.length == INITIALIZER_SIZE, "INCORRECT_INIT_DATA_SIZE_256");
+        require(data.length == INITIALIZER_SIZE, "INCORRECT_INIT_DATA_SIZE_352");
 
         // Copies initializer values into initValues.
         InitializationArgStruct memory initValues;
@@ -59,18 +65,23 @@ contract StarkExState is
         assembly {
             initValues := add(32, _data)
         }
+        require(initValues.globalConfigCode < K_MODULUS, "GLOBAL_CONFIG_CODE >= PRIME");
+        require(initValues.validiumTreeHeight < ROLLUP_VAULTS_BIT, "INVALID_VALIDIUM_HEIGHT");
+        require(initValues.rollupTreeHeight < ROLLUP_VAULTS_BIT, "INVALID_ROLLUP_HEIGHT");
 
         initGovernance();
-        Operator.initialize();
+        StarkExOperator.initialize();
         StateRoot.initialize(
             initValues.sequenceNumber,
-            initValues.vaultRoot,
+            initValues.validiumVaultRoot,
+            initValues.rollupVaultRoot,
             initValues.orderRoot,
-            initValues.vaultTreeHeight,
+            initValues.validiumTreeHeight,
+            initValues.rollupTreeHeight,
             initValues.orderTreeHeight
         );
         Escapes.initialize(initValues.escapeVerifierAddress);
-        onchainDataVersion = initValues.onchainDataVersionValue;
+        globalConfigCode = initValues.globalConfigCode;
         strictVaultBalancePolicy = initValues.strictVaultBalancePolicy;
         orderRegistryAddress = initValues.orderRegistryAddress;
     }
@@ -83,7 +94,16 @@ contract StarkExState is
         return INITIALIZER_SIZE;
     }
 
+    function validatedSelectors() external pure override returns (bytes4[] memory selectors) {
+        uint256 len_ = 1;
+        uint256 index_ = 0;
+
+        selectors = new bytes4[](len_);
+        selectors[index_++] = Escapes.escape.selector;
+        require(index_ == len_, "INCORRECT_SELECTORS_ARRAY_LENGTH");
+    }
+
     function identify() external pure override returns (string memory) {
-        return "StarkWare_StarkExState_2021_1";
+        return "StarkWare_StarkExState_2022_5";
     }
 }

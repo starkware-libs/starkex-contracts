@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0.
-pragma solidity ^0.6.11;
+pragma solidity ^0.6.12;
 
 import "./ProxyGovernance.sol";
 import "./ProxyStorage.sol";
@@ -52,7 +52,7 @@ contract Proxy is ProxyStorage, ProxyGovernance, StorageSlots {
 
     using Addresses for address;
 
-    string public constant PROXY_VERSION = "3.0.0";
+    string public constant PROXY_VERSION = "3.0.1";
 
     constructor(uint256 upgradeActivationDelay) public {
         initGovernance();
@@ -218,11 +218,6 @@ contract Proxy is ProxyStorage, ProxyGovernance, StorageSlots {
 
         uint256 activationTime = block.timestamp + getUpgradeActivationDelay();
 
-        // First implementation should not have time-lock.
-        if (implementation() == address(0x0)) {
-            activationTime = block.timestamp;
-        }
-
         enabledTime[implVectorHash] = activationTime;
         emit ImplementationAdded(newImplementation, data, finalize);
     }
@@ -273,8 +268,12 @@ contract Proxy is ProxyStorage, ProxyGovernance, StorageSlots {
         uint256 activationTime = enabledTime[implVectorHash];
         require(activationTime > 0, "UNKNOWN_UPGRADE_INFORMATION");
         require(newImplementation.isContract(), "ADDRESS_NOT_CONTRACT");
-        // NOLINTNEXTLINE: timestamp.
-        require(activationTime <= block.timestamp, "UPGRADE_NOT_ENABLED_YET");
+
+        // On the first time an implementation is set - time-lock should not be enforced.
+        require(
+            activationTime <= block.timestamp || implementation() == address(0x0),
+            "UPGRADE_NOT_ENABLED_YET"
+        );
 
         setImplementation(newImplementation);
 

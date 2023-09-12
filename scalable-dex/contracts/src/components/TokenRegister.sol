@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0.
-pragma solidity ^0.6.11;
+pragma solidity ^0.6.12;
 
 import "../libraries/LibConstants.sol";
 import "../interfaces/MGovernance.sol";
@@ -79,7 +79,7 @@ abstract contract TokenRegister is MainStorage, LibConstants, MGovernance, MToke
     */
     function registerToken(
         uint256 assetType,
-        bytes memory assetInfo,
+        bytes calldata assetInfo,
         uint256 quantum
     ) public virtual onlyTokensAdmin {
         // Make sure it is not invalid or already registered.
