@@ -15,7 +15,7 @@ The verifier is composed of multiple contracts as described below.
 3. MerkleStatementContract - Merkle verifier used by the CpuVerifier.
 4. FriStatementContract - Fri verifier used by the CpuVerifier.
 5. MemoryPageFactRegistry - Fact registry for memory claims used by the CpuVerifier.
-6. Auxilliary contracts used by the above verifiers to calculate polynomial evaluations:
+6. Auxiliary contracts used by the above verifiers to calculate polynomial evaluations:
    1. CpuConstraintPoly
    2. EcdsaPointsXColumn
    3. EcdsaPointsYColumn
