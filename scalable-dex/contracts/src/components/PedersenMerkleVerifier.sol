@@ -195,7 +195,7 @@ contract PedersenMerkleVerifier {
 
             // For k = 0..HASHES-1, Compute the k'th hash by summing the k'th column in table.
             // Instead of k we use offset := k * sizeof(EC point).
-            // Additonally we use ptr := offset + j * rowSize to ge over the EC points we want
+            // Additionally we use ptr := offset + j * rowSize to ge over the EC points we want
             // to sum.
             for {
 
