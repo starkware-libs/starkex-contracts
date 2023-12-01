@@ -21,11 +21,11 @@ import "./GovernanceStorage.sol";
   1. First, an existing governor nominates a new governor (:sol:func:`mainNominateNewGovernor`)
   2. Then, the new governor must accept governance to become a governor (:sol:func:`mainAcceptGovernance`)
 
-  This two step procedure ensures that a governor public key cannot be nominated unless there is an
+  This two step procedure ensures that a governor's public key cannot be nominated unless there is an
   entity that has the corresponding private key. This is intended to prevent errors in the addition
   process.
 
-  The governor private key should typically be held in a secure cold wallet.
+  The governor's private key should typically be held in a secure cold wallet.
 */
 /*
   Implements Governance for the StarkDex main contract.
