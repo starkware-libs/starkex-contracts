@@ -12,7 +12,7 @@ import "./MainStorage.sol";
   of the assumed proof).
 
   The exchange contract will normally query only one verifier contract for proof validity checks.
-  However, in the event that the verifier algorithm needs to updated, additional verifiers may be
+  However, in the event that the verifier algorithm needs to be updated, additional verifiers may be
   registered with the exchange contract by the contract :sol:mod:`MainGovernance`. Such new
   verifiers are then also be required to attest to the validity of state transitions and only if all
   the verifiers attest to the validity the state transition is accepted.
