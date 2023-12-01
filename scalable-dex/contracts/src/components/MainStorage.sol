@@ -54,7 +54,7 @@ contract MainStorage is ProxyStorage {
     // True if and only if the address is allowed to add tokens.
     mapping(address => bool) tokenAdmins;
 
-    // This mapping is no longer in use, remains for backwards compatibility.
+    // This mapping is no longer in use, remains for backward compatibility.
     mapping(address => bool) userAdmins_DEPRECATED; // NOLINT: naming-convention.
 
     // True if and only if the address is an operator (allowed to update state).
@@ -69,7 +69,7 @@ contract MainStorage is ProxyStorage {
     // Mapping from contract ID to quantum.
     mapping(uint256 => uint256) assetTypeToQuantum; // NOLINT: uninitialized-state.
 
-    // This mapping is no longer in use, remains for backwards compatibility.
+    // This mapping is no longer in use, remains for backward compatibility.
     mapping(address => uint256) starkKeys_DEPRECATED; // NOLINT: naming-convention.
 
     // Mapping from STARK public key to the Ethereum public key of its owner.
@@ -91,7 +91,7 @@ contract MainStorage is ProxyStorage {
     // Onchain-data version configured for the system.
     uint256 onchainDataVersion_DEPRECATED; // NOLINT: naming-convention constable-states.
 
-    // Counter of forced action request in block. The key is the block number.
+    // Counter of forced action request in a block. The key is the block number.
     mapping(uint256 => uint256) forcedRequestsInBlock;
 
     // ForcedAction requests: actionHash => requestTime.
