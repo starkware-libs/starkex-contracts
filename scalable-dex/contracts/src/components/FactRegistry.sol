@@ -19,7 +19,7 @@ contract FactRegistry is IQueryableFactRegistry {
 
     /*
       This is an internal method to check if the fact is already registered.
-      In current implementation of FactRegistry it's identical to isValid().
+      In the current implementation of FactRegistry it's identical to isValid().
       But the check is against the local fact registry,
       So for a derived referral fact registry, it's not the same.
     */
