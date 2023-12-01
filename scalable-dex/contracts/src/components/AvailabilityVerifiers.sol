@@ -7,7 +7,7 @@ import "./MainStorage.sol";
 
 /**
   A :sol:mod:`Committee` contract is a contract that the exchange service sends committee member
-  signatures to attesting that they have a copy of the data over which a new Merkel root is to be
+  signatures to attest that they have a copy of the data over which a new Merkel root is to be
   accepted as the new state root. In addition, the exchange contract can call an availability
   verifier to check if such signatures were indeed provided by a sufficient number of committee
   members as hard coded in the :sol:mod:`Committee` contract for a given state transition
