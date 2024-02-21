@@ -6,7 +6,7 @@ import "../interfaces/MStarkExForcedActionState.sol";
 import "../../components/ActionHash.sol";
 
 /*
-  StarkExchange specific action hashses.
+  StarkExchange specific action hashes.
 */
 contract StarkExForcedActionState is StarkExStorage, ActionHash, MStarkExForcedActionState {
     function fullWithdrawActionHash(uint256 ownerKey, uint256 vaultId)

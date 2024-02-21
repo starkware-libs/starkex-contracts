@@ -6,7 +6,7 @@ import "../interfaces/MForcedWithdrawalActionState.sol";
 import "../../components/ActionHash.sol";
 
 /*
-  ForcedWithdrawal specific action hashses.
+  ForcedWithdrawal specific action hashes.
 */
 contract ForcedWithdrawalActionState is PerpetualStorage, ActionHash, MForcedWithdrawalActionState {
     function forcedWithdrawActionHash(

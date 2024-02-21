@@ -14,7 +14,7 @@ contract FriStatementContract is FriLayer, FactRegistry {
           evaluationPoint,
           friStepSize,
           keccak256(friQueue_input),
-          keccak256(friQueue_output),  // The FRI queue after proccessing the FRI layer
+          keccak256(friQueue_output),  // The FRI queue after processing the FRI layer
           expectedRoot
       )
 

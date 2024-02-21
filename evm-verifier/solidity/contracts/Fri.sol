@@ -48,7 +48,7 @@ contract Fri is MemoryMap, MemoryAccessUtils, HornerEvaluator, FriLayer {
         uint256 friStep = 1;
         uint256 nLiveQueries = ctx[MM_N_UNIQUE_QUERIES];
 
-        // Add 0 at the end of the queries array to avoid empty array check in readNextElment.
+        // Add 0 at the end of the queries array to avoid empty array check in readNextElement.
         ctx[MM_FRI_QUERIES_DELIMITER] = 0;
 
         // Rather than converting all the values from Montgomery to standard form,

@@ -48,7 +48,7 @@ abstract contract Configuration is PerpetualStorage, PerpetualConstants, MGovern
     function applyGlobalConfigurationChange(bytes32 configHash) external onlyGovernance {
         bytes32 actionKey = keccak256(abi.encode(GLOBAL_CONFIG_KEY, configHash));
         uint256 activationTime = actionsTimeLock[actionKey];
-        require(activationTime > 0, "CONFIGURATION_NOT_REGSITERED");
+        require(activationTime > 0, "CONFIGURATION_NOT_REGISTERED");
         require(activationTime <= block.timestamp, "CONFIGURATION_NOT_ENABLE_YET");
         globalConfigurationHash = configHash;
         emit LogGlobalConfigurationApplied(configHash);
@@ -56,7 +56,7 @@ abstract contract Configuration is PerpetualStorage, PerpetualConstants, MGovern
 
     function removeGlobalConfigurationChange(bytes32 configHash) external onlyGovernance {
         bytes32 actionKey = keccak256(abi.encodePacked(GLOBAL_CONFIG_KEY, configHash));
-        require(actionsTimeLock[actionKey] > 0, "CONFIGURATION_NOT_REGSITERED");
+        require(actionsTimeLock[actionKey] > 0, "CONFIGURATION_NOT_REGISTERED");
         delete actionsTimeLock[actionKey];
         emit LogGlobalConfigurationRemoved(configHash);
     }
@@ -84,7 +84,7 @@ abstract contract Configuration is PerpetualStorage, PerpetualConstants, MGovern
     {
         bytes32 actionKey = keccak256(abi.encode(assetId, configHash));
         uint256 activationTime = actionsTimeLock[actionKey];
-        require(activationTime > 0, "CONFIGURATION_NOT_REGSITERED");
+        require(activationTime > 0, "CONFIGURATION_NOT_REGISTERED");
         require(activationTime <= block.timestamp, "CONFIGURATION_NOT_ENABLE_YET");
         configurationHash[assetId] = configHash;
         emit LogAssetConfigurationApplied(assetId, configHash);
@@ -95,7 +95,7 @@ abstract contract Configuration is PerpetualStorage, PerpetualConstants, MGovern
         onlyGovernance
     {
         bytes32 actionKey = keccak256(abi.encode(assetId, configHash));
-        require(actionsTimeLock[actionKey] > 0, "CONFIGURATION_NOT_REGSITERED");
+        require(actionsTimeLock[actionKey] > 0, "CONFIGURATION_NOT_REGISTERED");
         delete actionsTimeLock[actionKey];
         emit LogAssetConfigurationRemoved(assetId, configHash);
     }

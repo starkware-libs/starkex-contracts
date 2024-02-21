@@ -26,7 +26,7 @@ import "../components/MainStorage.sol";
 
   Once a deposit is made, the exchange may include it in a proof which will result in addition
   of the amount(s) deposited to the off-chain vault with the specified ID. When the contract
-  receives such valid proof, it deducts the transfered funds from the pending deposits for the
+  receives such valid proof, it deducts the transferred funds from the pending deposits for the
   specified Stark key, asset ID and vault ID.
 
   The exchange will not be able to move the deposited funds to the off-chain vault if the Stark key

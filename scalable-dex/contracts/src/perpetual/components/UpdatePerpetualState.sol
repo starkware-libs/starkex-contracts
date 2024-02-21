@@ -83,7 +83,7 @@ abstract contract UpdatePerpetualState is
 
         validateConfigHashes(programOutput, outputMarkers);
 
-        // Caclulate previous shared state hash, and compare with stored one.
+        // Calculate previous shared state hash, and compare with stored one.
         bytes32 prevStateHash = keccak256(
             abi.encodePacked(
                 programOutput[outputMarkers.prevSharedStateOffset:outputMarkers

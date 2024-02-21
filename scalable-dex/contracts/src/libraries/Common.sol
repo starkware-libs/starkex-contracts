@@ -2,7 +2,7 @@
 pragma solidity ^0.6.12;
 
 /*
-  Common Utility librarries.
+  Common Utility libraries.
   I. Addresses (extending address).
 */
 library Addresses {
@@ -37,7 +37,7 @@ library Addresses {
 
     /*
       Validates that the passed contract address is of a real contract,
-      and that its id hash (as infered fromn identify()) matched the expected one.
+      and that its id hash (as inferred fromn identify()) matched the expected one.
     */
     function validateContractId(address contractAddress, bytes32 expectedIdHash) internal {
         require(isContract(contractAddress), "ADDRESS_NOT_CONTRACT");

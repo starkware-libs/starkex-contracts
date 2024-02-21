@@ -191,7 +191,7 @@ contract PerpetualEscapeVerifier is
 
       The escape verification has two parts:
         a. verifying that a certain position belongs to the position tree in the shared state.
-        b. computing the amount that may be withdrawan from that position.
+        b. computing the amount that may be withdrawn from that position.
 
       Part a is delegated to the PedersenMerkleVerifier.
       To this end the position is encoded in the prefix of the merkleProof and the node_selector at

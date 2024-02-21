@@ -53,7 +53,7 @@ contract PedersenMerkleVerifier {
         leaf_value = hashchain_state
 
       Then we may use this function to verify the leaf value by setting:
-      nodeIdx = merkle_idx << hashchain_lengh and for every 0 <= i < hashchain_lengh.
+      nodeIdx = merkle_idx << hashchain_length and for every 0 <= i < hashchain_length.
       left_node_0 = hashchain_state_i
       right_node_i = leaf_values_i.
 
@@ -195,7 +195,7 @@ contract PedersenMerkleVerifier {
 
             // For k = 0..HASHES-1, Compute the k'th hash by summing the k'th column in table.
             // Instead of k we use offset := k * sizeof(EC point).
-            // Additonally we use ptr := offset + j * rowSize to ge over the EC points we want
+            // Additionally we use ptr := offset + j * rowSize to ge over the EC points we want
             // to sum.
             for {
 

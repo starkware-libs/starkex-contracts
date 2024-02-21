@@ -126,10 +126,10 @@ contract TokenAssetData is MainStorage, LibConstants, MTokenAssetData {
         require(isTokenSupported(tokenSelector), "UNSUPPORTED_TOKEN_TYPE");
 
         if (tokenSelector == ETH_SELECTOR) {
-            // Assset info for ETH assetType is only a selector, i.e. 4 bytes length.
+            // Asset info for ETH assetType is only a selector, i.e. 4 bytes length.
             require(assetInfo.length == 4, "INVALID_ASSET_STRING");
         } else {
-            // Assset info for other asset types are a selector + uint256 concatanation.
+            // Asset info for other asset types are a selector + uint256 concatanation.
             // We pass the address as a uint256 (zero padded),
             // thus its length is 0x04 + 0x20 = 0x24.
             require(assetInfo.length == 0x24, "INVALID_ASSET_STRING");

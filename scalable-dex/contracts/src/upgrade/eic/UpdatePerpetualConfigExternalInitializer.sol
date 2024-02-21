@@ -6,7 +6,7 @@ import "../../perpetual/PerpetualConstants.sol";
 import "../../perpetual/components/PerpetualStorage.sol";
 
 /*
-  This contract is simple impelementation of an external initializing contract
+  This contract is simple implementation of an external initializing contract
   that configures/reconfigures main contract configuration.
 */
 contract UpdatePerpetualConfigExternalInitializer is

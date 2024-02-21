@@ -34,7 +34,7 @@ contract CpuOods is MemoryMap, StarkParameters {
             c is the evaluation sent by the prover.
     */
     fallback() external {
-        // This funciton assumes that the calldata contains the context as defined in MemoryMap.sol.
+        // This function assumes that the calldata contains the context as defined in MemoryMap.sol.
         // Note that ctx is a variable size array so the first uint256 cell contrains it's length.
         uint256[] memory ctx;
         assembly {
@@ -2477,7 +2477,7 @@ contract CpuOods is MemoryMap, StarkParameters {
       sampling boundary constraints.
 
       Since the friEvalPoints are calculated during the computation of the denominators
-      this function also adds those to the batch inverse in prepartion for the fri that follows.
+      this function also adds those to the batch inverse in preparation for the fri that follows.
 
       After this function returns, the batch_inverse_out array holds #queries
       chunks of size (2 + N_ROWS_IN_MASK) with the following structure:

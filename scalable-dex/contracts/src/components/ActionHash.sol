@@ -19,7 +19,7 @@ contract ActionHash is MainStorage, LibConstants {
     function setActionHash(bytes32 actionHash, bool premiumCost) internal {
         // The rate of forced trade requests is restricted.
         // First restriction is by capping the number of requests in a block.
-        // User can override this cap by requesting with a permium flag set,
+        // User can override this cap by requesting with a premium flag set,
         // in this case, the gas cost is high (~1M) but no "technical" limit is set.
         // However, the high gas cost creates an obvious limitation due to the block gas limit.
         if (premiumCost) {
