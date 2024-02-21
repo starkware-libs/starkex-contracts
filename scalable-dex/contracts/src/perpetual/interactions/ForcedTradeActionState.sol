@@ -6,7 +6,7 @@ import "../interfaces/MForcedTradeActionState.sol";
 import "../../components/ActionHash.sol";
 
 /*
-  ForcedTrade specific action hashses.
+  ForcedTrade specific action hashes.
 */
 contract ForcedTradeActionState is PerpetualStorage, ActionHash, MForcedTradeActionState {
     function forcedTradeActionHash(

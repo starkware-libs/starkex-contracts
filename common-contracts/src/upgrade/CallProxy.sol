@@ -38,7 +38,7 @@ contract CallProxy is StorageSlots, ContractInitializer, ProxySupport {
     /*
       There is no initialization needed to be done after the processSubContractAddresses state
       thus we return true, to indicate to the ProxySupport that there is no need to get into the
-      contract state initalization part.
+      contract state initialization part.
     */
     function isInitialized() internal view override returns (bool) {
         return true;

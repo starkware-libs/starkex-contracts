@@ -26,7 +26,7 @@ import "../components/MainStorage.sol";
   asset ID. At the same time, this also implies that this amount is deducted from the off-chain
   vault.
 
-  Once the amount to be withdrawn has been transfered to the on-chain pending withdrawals account,
+  Once the amount to be withdrawn has been transferred to the on-chain pending withdrawals account,
   the user may perform the second call mentioned above to complete the transfer of funds from the
   Stark Exchange contract to the appropriate ERC20 account. Only a user holding the Eth key
   corresponding to the Stark Key of a pending withdrawals account may perform this operation.

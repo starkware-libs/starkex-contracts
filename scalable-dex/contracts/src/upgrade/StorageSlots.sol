@@ -8,14 +8,14 @@ pragma solidity ^0.6.12;
 */
 contract StorageSlots {
     // Storage slot with the address of the current implementation.
-    // The address of the slot is keccak256("StarkWare2019.implemntation-slot").
+    // The address of the slot is keccak256("StarkWare2019.implementation-slot").
     // We need to keep this variable stored outside of the commonly used space,
     // so that it's not overrun by the logical implementation (the proxied contract).
     bytes32 internal constant IMPLEMENTATION_SLOT =
         0x177667240aeeea7e35eabe3a35e18306f336219e1386f7710a6bf8783f761b24;
 
     // Storage slot with the address of the call-proxy current implementation.
-    // The address of the slot is keccak256("'StarkWare2020.CallProxy.Implemntation.Slot'").
+    // The address of the slot is keccak256("'StarkWare2020.CallProxy.Implementation.Slot'").
     // We need to keep this variable stored outside of the commonly used space.
     // so that it's not overrun by the logical implementation (the proxied contract).
     bytes32 internal constant CALL_PROXY_IMPL_SLOT =

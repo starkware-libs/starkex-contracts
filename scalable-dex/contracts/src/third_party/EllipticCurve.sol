@@ -233,7 +233,7 @@ library EllipticCurve {
       _pp);
   }
 
-  /// @dev Substract two points (x1, y1) and (x2, y2) in affine coordinates.
+  /// @dev Subtract two points (x1, y1) and (x2, y2) in affine coordinates.
   /// @param _x1 coordinate x of P1
   /// @param _y1 coordinate y of P1
   /// @param _x2 coordinate x of P2

@@ -29,7 +29,7 @@ import "../../libraries/Common.sol";
 
   A vault operation can be a ramping operation (deposit/withdrawal) or an indication to clear
   a full withdrawal request. Each vault operation is encoded in 3 words as follows:
-  | 1. Word 0: Stark Key of the vault owner (or the requestor Stark Key for false full
+  | 1. Word 0: Stark Key of the vault owner (or the requester Stark Key for false full
   |    withdrawal).
   | 2. Word 1: Asset ID of the vault representing either the currency (for fungible tokens) or
   |    a unique token ID and its on-chain contract association (for non-fungible tokens).

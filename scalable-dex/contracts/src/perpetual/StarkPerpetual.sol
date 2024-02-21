@@ -7,7 +7,7 @@ import "./components/PerpetualStorage.sol";
 contract StarkPerpetual is MainDispatcher, PerpetualStorage {
     string public constant VERSION = "3.0.0";
 
-    // Salt for a 8 bit unique spread of all relevant selectors. Pre-caclulated.
+    // Salt for a 8 bit unique spread of all relevant selectors. Pre-calculated.
     // ---------- The following code was auto-generated. PLEASE DO NOT EDIT. ----------
     uint256 constant MAGIC_SALT = 349548;
     uint256 constant IDX_MAP_0 = 0x2124100000000202022040002000000020022010011100002003000001000000;

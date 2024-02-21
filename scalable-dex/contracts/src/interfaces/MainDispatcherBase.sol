@@ -51,7 +51,7 @@ abstract contract MainDispatcherBase is IDispatcherBase, BlockDirectCall {
       3. Extract sub-contract initializer data.
       4. Call sub-contract initializer.
 
-      The init data bytes passed to initialize are structed as following:
+      The init data bytes passed to initialize are structured as following:
       I. N slots (uin256 size) addresses of the deployed sub-contracts.
       II. An address of an external initialization contract (optional, or ZERO_ADDRESS).
       III. (Up to) N bytes sections of the sub-contracts initializers.
@@ -173,7 +173,7 @@ abstract contract MainDispatcherBase is IDispatcherBase, BlockDirectCall {
             );
 
             // The initializerSize is called via delegatecall, so that it can relate to the state,
-            // and not only to the new contract code. (e.g. return 0 if state-intialized else 192).
+            // and not only to the new contract code. (e.g. return 0 if state-initialized else 192).
             // NOLINTNEXTLINE: controlled-delegatecall low-level-calls calls-loop.
             (bool success, bytes memory returndata) = contractAddress.delegatecall(
                 abi.encodeWithSelector(SubContractor(contractAddress).initializerSize.selector)

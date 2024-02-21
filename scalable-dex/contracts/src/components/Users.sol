@@ -38,7 +38,7 @@ import "../libraries/LibConstants.sol";
   1. The key registered is not zero and has not been registered in the past by the user or anyone else.
   2. The key provided represents a valid point on the Stark-friendly elliptic curve.
   3. The linkage between the provided Ethereum address and the selected Stark Key is signed using
-     the privte key of the selected Stark Key.
+     the private key of the selected Stark Key.
 
   If the above holds, the Ethereum address is registered by the contract, mapping it to the Stark Key.
 */

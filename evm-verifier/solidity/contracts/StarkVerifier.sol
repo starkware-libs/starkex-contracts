@@ -21,7 +21,7 @@ abstract contract StarkVerifier is
     uint256 immutable numSecurityBits;
 
     /*
-      The secuirty of a proof is a composition of bits obtained by PoW and bits obtained by FRI
+      The security of a proof is a composition of bits obtained by PoW and bits obtained by FRI
       queries. The verifier requires at least minProofOfWorkBits to be obtained by PoW.
       Typical values: 20-30.
     */
@@ -49,7 +49,7 @@ abstract contract StarkVerifier is
       }
 
       Note that you can't use log in a contract that was called with staticcall
-      (ContraintPoly, Oods,...)
+      (ConstraintPoly, Oods,...)
 
       If logging is needed replace the staticcall to call and add a third argument of 0.
     */

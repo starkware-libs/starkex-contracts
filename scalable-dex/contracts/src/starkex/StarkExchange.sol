@@ -6,7 +6,7 @@ import "../interfaces/MainDispatcher.sol";
 contract StarkExchange is MainDispatcher {
     string public constant VERSION = "4.5.1";
 
-    // Salt for a 8 bit unique spread of all relevant selectors. Pre-caclulated.
+    // Salt for a 8 bit unique spread of all relevant selectors. Pre-calculated.
     // ---------- The following code was auto-generated. PLEASE DO NOT EDIT. ----------
     uint256 constant MAGIC_SALT = 1527414;
     uint256 constant IDX_MAP_0 = 0x2010501100000010050000002511000000220005410030200200200000552010;
