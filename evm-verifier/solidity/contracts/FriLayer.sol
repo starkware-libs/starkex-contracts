@@ -239,7 +239,7 @@ contract FriLayer is MerkleVerifier, FriTransform {
         // transformCoset writes exactly one element.
         uint256 inputPtr = friQueuePtr;
         uint256 inputEnd = inputPtr + (FRI_QUEUE_SLOT_SIZE_IN_BYTES * nQueries);
-        uint256 ouputPtr = friQueuePtr;
+        uint256 outputPtr = friQueuePtr;
 
         do {
             uint256 cosetOffset;
@@ -276,14 +276,14 @@ contract FriLayer is MerkleVerifier, FriTransform {
             // Add (index, friValue, FriInversedPoint) to the FRI queue.
             // Note that the index in the Merkle queue is also the index in the next FRI layer.
             assembly {
-                mstore(ouputPtr, index)
-                mstore(add(ouputPtr, 0x20), friValue)
-                mstore(add(ouputPtr, 0x40), FriInversedPoint)
+                mstore(outputPtr, index)
+                mstore(add(outputPtr, 0x20), friValue)
+                mstore(add(outputPtr, 0x40), FriInversedPoint)
             }
-            ouputPtr += FRI_QUEUE_SLOT_SIZE_IN_BYTES;
+            outputPtr += FRI_QUEUE_SLOT_SIZE_IN_BYTES;
         } while (inputPtr < inputEnd);
 
         // Return the current number of live queries.
-        return (ouputPtr - friQueuePtr) / FRI_QUEUE_SLOT_SIZE_IN_BYTES;
+        return (outputPtr - friQueuePtr) / FRI_QUEUE_SLOT_SIZE_IN_BYTES;
     }
 }
