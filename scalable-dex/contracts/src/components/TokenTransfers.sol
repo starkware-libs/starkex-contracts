@@ -55,12 +55,11 @@ abstract contract TokenTransfers is MTokenQuantization, MTokenAssetData, MTokenT
         uint256 quantizedAmount
     ) internal override {
         require(isAssetTypeWithTokenId(assetType), "FUNGIBLE_ASSET_TYPE");
-        if (quantizedAmount == 0) return;
 
         if (isERC721(assetType)) {
             require(quantizedAmount == 1, "ILLEGAL_NFT_BALANCE");
             transferInNft(assetType, tokenId);
-        } else {
+        } else if (quantizedAmount > 0) {
             transferInSft(assetType, tokenId, quantizedAmount);
         }
     }

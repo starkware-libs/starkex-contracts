@@ -5,7 +5,7 @@ import "../interfaces/MainDispatcher.sol";
 import "./components/PerpetualStorage.sol";
 
 contract StarkPerpetual is MainDispatcher, PerpetualStorage {
-    string public constant VERSION = "3.0.0";
+    string public constant VERSION = "3.2.0";
 
     // Salt for a 8 bit unique spread of all relevant selectors. Pre-caclulated.
     // ---------- The following code was auto-generated. PLEASE DO NOT EDIT. ----------
@@ -44,7 +44,7 @@ contract StarkPerpetual is MainDispatcher, PerpetualStorage {
         } else if (index == 2) {
             id = "StarkWare_PerpetualTokensAndRamping_2022_2";
         } else if (index == 3) {
-            id = "StarkWare_PerpetualState_2022_2";
+            id = "StarkWare_PerpetualState_2023_4";
         } else if (index == 4) {
             id = "StarkWare_PerpetualForcedActions_2022_2";
         } else {

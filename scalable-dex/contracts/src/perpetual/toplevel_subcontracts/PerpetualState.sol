@@ -87,6 +87,6 @@ contract PerpetualState is
     }
 
     function identify() external pure override returns (string memory) {
-        return "StarkWare_PerpetualState_2022_2";
+        return "StarkWare_PerpetualState_2023_4";
     }
 }
